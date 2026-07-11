@@ -152,12 +152,41 @@ describe('ProfileService.list', () => {
     const profiles = service.list()
     expect(profiles.map((p) => p.name)).toEqual(['A', 'B', 'C'])
   })
-
   it('hydrates JSON array columns into JS arrays', () => {
     const { service } = makeService(db)
     service.create({ name: 'A', skills: ['React', 'TypeScript'] })
     const profiles = service.list()
     expect(profiles[0]?.skills).toEqual(['React', 'TypeScript'])
     expect(profiles[0]?.targetCompanies).toEqual([])
+  })
+})
+
+describe('ProfileService.get', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('returns the hydrated profile for an existing id', () => {
+    const { service } = makeService(db)
+    const created = service.create({ name: 'Alice' })
+    const fetched = service.get(created.id)
+    expect(fetched.id).toBe(created.id)
+    expect(fetched.name).toBe('Alice')
+  })
+
+  it('throws MiNotFoundError with /Profile 不存在/ when the id has no row', () => {
+    const { service } = makeService(db)
+    expect(() => service.get('01J00000000000000000000099')).toThrow(/Profile 不存在/)
+  })
+
+  it('throws MiValidationError with /id 不能为空/ when id is empty', () => {
+    const { service } = makeService(db)
+    expect(() => service.get('')).toThrow(/id 不能为空/)
   })
 })
