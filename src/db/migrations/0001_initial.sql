@@ -27,8 +27,7 @@ CREATE TABLE IF NOT EXISTS resume_history (
   profile_id   TEXT    NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   resume_text  TEXT    NOT NULL,
   resume_path  TEXT,
-  version      INTEGER NOT NULL,
-  created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+  archived_at  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_resume_history_profile_id ON resume_history(profile_id);
