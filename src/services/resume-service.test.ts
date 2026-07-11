@@ -112,3 +112,58 @@ describe('ResumeService.importFromFile — pdf path', () => {
     expect(count.n).toBe(0)
   })
 })
+
+describe('ResumeService.importFromFile — archive previous resume', () => {
+  let db: Database
+  let service: ResumeService
+
+  beforeEach(() => {
+    db = makeDb()
+    ;({ service } = makeService(db))
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('archives the prior resume_text and resume_path before overwriting', async () => {
+    insertProfile(db, 'P1', 'Senior FE')
+    db.conn
+      .query(
+        `UPDATE profiles
+         SET resume_text = 'old content', resume_path = '/tmp/old.md',
+             updated_at = '2020-01-01 00:00:00'
+         WHERE id = 'P1'`,
+      )
+      .run()
+
+    await service.importFromFile(SAMPLE_MD, { profileId: 'P1' })
+
+    const historyRows = db.conn
+      .query(
+        'SELECT resume_text, resume_path FROM resume_history WHERE profile_id = ?',
+      )
+      .all('P1') as { resume_text: string; resume_path: string | null }[]
+    expect(historyRows).toHaveLength(1)
+    expect(historyRows[0]?.resume_text).toBe('old content')
+    expect(historyRows[0]?.resume_path).toBe('/tmp/old.md')
+
+    const after = db.conn
+      .query('SELECT resume_text, updated_at FROM profiles WHERE id = ?')
+      .get('P1') as { resume_text: string; updated_at: string }
+    const newContent = readFileSync(SAMPLE_MD, 'utf8')
+    expect(after.resume_text).toBe(newContent)
+    expect(after.updated_at).not.toBe('2020-01-01 00:00:00')
+  })
+
+  it('does not insert a history row when the profile had no prior resume', async () => {
+    insertProfile(db, 'P2', 'Junior BE')
+
+    await service.importFromFile(SAMPLE_MD, { profileId: 'P2' })
+
+    const count = db.conn
+      .query('SELECT COUNT(*) AS n FROM resume_history WHERE profile_id = ?')
+      .get('P2') as { n: number }
+    expect(count.n).toBe(0)
+  })
+})
