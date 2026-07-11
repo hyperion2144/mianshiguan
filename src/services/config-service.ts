@@ -134,11 +134,16 @@ export class ConfigService {
     const dbPath = join(dataDir, 'data.db')
     const dashboardPort =
       typeof obj.dashboardPort === 'number' ? obj.dashboardPort : DEFAULT_CONFIG.dashboardPort
+    // Backfill interviewerStyle: missing → default; present → validate (parseStyle throws on bad enum).
+    const interviewerStyle =
+      typeof obj.interviewerStyle === 'string'
+        ? this.parseStyle(obj.interviewerStyle)
+        : DEFAULT_CONFIG.interviewerStyle
 
     const config: Config = {
       dataDir,
       dbPath,
-      interviewerStyle: this.parseStyle(obj.interviewerStyle),
+      interviewerStyle,
       dashboardPort,
     }
     if (typeof obj.defaultProfile === 'string') {
