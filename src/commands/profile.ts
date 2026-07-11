@@ -99,6 +99,9 @@ export function runProfileCommand(
       case 'update':
         updateProfile(service, configService, args[1], args[2])
         return
+      case 'switch':
+        switchProfile(service, args[1] ?? '')
+        return
       default:
         throw new MiValidationError(`未知 profile 子命令: ${subcommand}`)
     }
@@ -213,6 +216,15 @@ function updateProfile(
   const patch = { [field]: patchValue } as Partial<CreateProfileInput>
   const updated = service.update(activeId, patch)
   console.log(success(`已更新 Profile ${updated.name}: ${field} = ${formatValue(patchValue)}`))
+}
+
+function switchProfile(service: ProfileService, id: string): void {
+  const trimmed = id.trim()
+  if (trimmed.length === 0) {
+    throw new MiValidationError('用法错误: mi profile switch <id>')
+  }
+  const next = service.switchActive(trimmed)
+  console.log(success(`已切换默认 Profile: ${next.defaultProfile ?? trimmed}`))
 }
 
 function parseFieldValue(field: UpdatableField, value: string): string | string[] {
