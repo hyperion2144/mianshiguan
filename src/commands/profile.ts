@@ -4,7 +4,14 @@ import { Database } from '../db/Database.ts'
 import { MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
-import { type Profile, type ProfileService, createProfileService } from '../services/profile-service.ts'
+import {
+  type CreateProfileInput,
+  type Profile,
+  type ProfileService,
+  type UpdatableField,
+  createProfileService,
+  isUpdatableField,
+} from '../services/profile-service.ts'
 
 export interface ProfileCommandOptions {
   dataDir?: string
@@ -27,6 +34,8 @@ const SHOW_HEADERS = ['字段', '值'] as const
 const ACTIVE_MARKER = '*'
 const EMPTY_FIELD_PLACEHOLDER = '(空)'
 const MISSING_PATH_PLACEHOLDER = '(无)'
+const ARRAY_FIELDS = ['skills', 'targetCompanies'] as const
+type ArrayField = (typeof ARRAY_FIELDS)[number]
 
 function runCommandAction(action: () => void): void {
   try {
@@ -86,6 +95,9 @@ export function runProfileCommand(
         return
       case 'show':
         showProfile(service, configService, args[1], Boolean(options.json))
+        return
+      case 'update':
+        updateProfile(service, configService, args[1], args[2])
         return
       default:
         throw new MiValidationError(`未知 profile 子命令: ${subcommand}`)
@@ -178,4 +190,60 @@ function showRows(profile: Profile): [string, string][] {
     ['createdAt', profile.createdAt],
     ['updatedAt', profile.updatedAt],
   ]
+}
+
+function updateProfile(
+  service: ProfileService,
+  configService: ConfigService,
+  field: string | undefined,
+  value: string | undefined,
+): void {
+  if (!field || value === undefined) {
+    throw new MiValidationError('用法错误: mi profile update <字段> <值>')
+  }
+  if (!isUpdatableField(field)) {
+    throw new MiValidationError(`未知字段: ${field}`)
+  }
+  const activeId = readActiveId(configService)
+  if (!activeId) {
+    throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
+  }
+
+  const patchValue = parseFieldValue(field, value)
+  const patch = { [field]: patchValue } as Partial<CreateProfileInput>
+  const updated = service.update(activeId, patch)
+  console.log(success(`已更新 Profile ${updated.name}: ${field} = ${formatValue(patchValue)}`))
+}
+
+function parseFieldValue(field: UpdatableField, value: string): string | string[] {
+  if (isArrayField(field)) {
+    return parseCsv(value)
+  }
+  return value
+}
+
+function isArrayField(field: UpdatableField): field is ArrayField {
+  return (ARRAY_FIELDS as readonly string[]).includes(field)
+}
+
+function parseCsv(value: string): string[] {
+  const parts = value.split(',').map((part) => part.trim())
+  for (const part of parts) {
+    if (part.length === 0) {
+      throw new MiValidationError('数组字段不能包含空段')
+    }
+  }
+  return parts
+}
+
+function formatValue(value: string | string[]): string {
+  return Array.isArray(value) ? value.join(', ') : value
+}
+
+function readActiveId(configService: ConfigService): string | undefined {
+  try {
+    return configService.load().defaultProfile
+  } catch {
+    return undefined
+  }
 }

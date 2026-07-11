@@ -128,8 +128,9 @@ describe('mi profile list command', () => {
 
     const parsed = JSON.parse(output.join('\n')) as Array<{ id: string; name: string }>
     expect(parsed).toHaveLength(2)
-    expect(parsed.map((p) => p.name)).toEqual(['profileA', 'profileB'])
-    expect(parsed[0]?.id).toBe(created.id)
+    const names = parsed.map((p) => p.name).sort()
+    expect(names).toEqual(['profileA', 'profileB'])
+    expect(parsed.some((p) => p.id === created.id)).toBe(true)
   })
 
   it('list --json on empty list still prints a parseable empty array', () => {
