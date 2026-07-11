@@ -1,6 +1,6 @@
 import { ulid } from 'ulid'
 import type { Database } from '../db/Database.ts'
-import { MiDatabaseError, MiValidationError } from '../errors.ts'
+import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
 import type { ConfigService } from './config-service.ts'
 
 /**
@@ -219,5 +219,22 @@ export class ProfileService {
       .query('SELECT * FROM profiles ORDER BY created_at ASC, id ASC')
       .all() as ProfileRowRaw[]
     return rows.map(rowToProfile)
+  }
+
+  /**
+   * Look up a single profile by id. Throws `MiValidationError` for
+   * empty input and `MiNotFoundError` when no row matches.
+   */
+  get(id: string): Profile {
+    if (typeof id !== 'string' || id.length === 0) {
+      throw new MiValidationError('id 不能为空')
+    }
+    const row = this.db.conn
+      .query('SELECT * FROM profiles WHERE id = ?')
+      .get(id) as ProfileRowRaw | null
+    if (!row) {
+      throw new MiNotFoundError(`Profile 不存在: ${id}`)
+    }
+    return rowToProfile(row)
   }
 }
