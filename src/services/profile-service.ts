@@ -1,3 +1,8 @@
+import { ulid } from 'ulid'
+import type { Database } from '../db/Database.ts'
+import { MiDatabaseError, MiValidationError } from '../errors.ts'
+import type { ConfigService } from './config-service.ts'
+
 /**
  * Public domain object — what callers (CLI, future dashboard) actually
  * consume. Camel-case fields, JSON-encoded array columns pre-parsed.
@@ -65,27 +70,133 @@ export function isUpdatableField(field: string): field is UpdatableField {
 }
 
 /**
+ * Snake-case row shape returned by `SELECT * FROM profiles`. Local to
+ * the service so the rest of the codebase never sees the schema's
+ * snake_case columns.
+ */
+interface ProfileRowRaw {
+  id: string
+  name: string
+  resume_text: string
+  resume_path: string | null
+  target_role: string
+  jd: string
+  skills: string
+  target_companies: string
+  notes: string
+  avatar_path: string | null
+  created_at: string
+  updated_at: string
+}
+
+const NAME_EMPTY_MESSAGE = '名称不能为空'
+const DUPLICATE_NAME_MESSAGE = (name: string) => `name 已存在: ${name}`
+
+function rowToProfile(row: ProfileRowRaw): Profile {
+  return {
+    id: row.id,
+    name: row.name,
+    resumeText: row.resume_text,
+    resumePath: row.resume_path,
+    targetRole: row.target_role,
+    jd: row.jd,
+    skills: JSON.parse(row.skills) as string[],
+    targetCompanies: JSON.parse(row.target_companies) as string[],
+    notes: row.notes,
+    avatarPath: row.avatar_path,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function isUniqueConstraintError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  return /UNIQUE constraint failed/i.test(err.message)
+}
+
+function toMessage(err: unknown, action: string): string {
+  const detail = err instanceof Error ? err.message : String(err)
+  return `${action} 失败: ${detail}`
+}
+
+/**
  * Service factory — wires the database and config dependencies so handlers
  * can pass them in. Kept as a free function (not a class) so test code
  * can build a fresh service per `it` block without subclassing.
- *
- * The class body is populated incrementally as each behavior task lands
- * (T-2 `create`, T-4 `list`, T-5 `get`, T-6 `update`, T-7 `delete`,
- * T-8 `switchActive`).
  */
-export function createProfileService(
-  // Placeholder signatures so the file type-checks before T-2 lands.
-  // Real wiring is introduced in the GREEN commits.
-  // biome-ignore lint/correctness/noUnusedParameters: wired in T-2+
-  _db: unknown,
-  // biome-ignore lint/correctness/noUnusedParameters: wired in T-2+
-  _config: unknown,
-): ProfileService {
-  return new ProfileService()
+export function createProfileService(db: Database, config: ConfigService): ProfileService {
+  return new ProfileService(db, config)
 }
 
+/**
+ * Pure data layer that mediates between CLI handlers and the `profiles`
+ * table. Every public method either returns a `Profile` / `Profile[]` /
+ * `Config` or throws a typed `MiError`. Handlers never reach into the
+ * SQLite connection directly.
+ */
 export class ProfileService {
-  constructor() {
-    // No-arg ctor for now; the GREEN commits add db/config dependencies.
+  constructor(
+    private readonly db: Database,
+    private readonly config: ConfigService,
+  ) {
+    // `config` is reserved for T-8 (`switchActive`); explicitly mark
+    // it retained so TS doesn't flag the private field as unused.
+    void this.config
+  }
+
+  /**
+   * Insert a new profile. The id is a fresh ULID; array fields are
+   * JSON-encoded for storage. Defaults are filled by the schema.
+   */
+  create(input: CreateProfileInput): Profile {
+    if (typeof input.name !== 'string' || input.name.trim().length === 0) {
+      throw new MiValidationError(NAME_EMPTY_MESSAGE)
+    }
+
+    const id = ulid()
+    const skills = input.skills ?? []
+    const targetCompanies = input.targetCompanies ?? []
+    const resumeText = input.resumeText ?? ''
+    const targetRole = input.targetRole ?? ''
+    const jd = input.jd ?? ''
+    const notes = input.notes ?? ''
+    const resumePath = input.resumePath ?? null
+    const avatarPath = input.avatarPath ?? null
+
+    try {
+      this.db.conn
+        .query(
+          `INSERT INTO profiles (
+             id, name, resume_text, resume_path, target_role, jd,
+             skills, target_companies, notes, avatar_path
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          id,
+          input.name,
+          resumeText,
+          resumePath,
+          targetRole,
+          jd,
+          JSON.stringify(skills),
+          JSON.stringify(targetCompanies),
+          notes,
+          avatarPath,
+        )
+    } catch (err) {
+      if (isUniqueConstraintError(err)) {
+        throw new MiValidationError(DUPLICATE_NAME_MESSAGE(input.name))
+      }
+      throw new MiDatabaseError(toMessage(err, 'create profile'))
+    }
+
+    const row = this.db.conn
+      .query('SELECT * FROM profiles WHERE id = ?')
+      .get(id) as ProfileRowRaw | null
+
+    if (!row) {
+      throw new MiDatabaseError('create profile: row missing after insert')
+    }
+    return rowToProfile(row)
   }
 }
