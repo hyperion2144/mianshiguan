@@ -12,9 +12,9 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = join(__filename, '..')
 const MIGRATION_PATH = join(__dirname, '..', 'db', 'migrations', '0001_initial.sql')
 
-/** Strip ANSI color codes so substring assertions do not depend on TTY state. */
 function stripAnsi(input: string): string {
-  return input.replace(/\u001b\[[0-9;]*m/g, '')
+  const ESC = String.fromCharCode(0x1b)
+  return input.replace(new RegExp(`${ESC}\\[[0-9;]*m`, 'g'), '')
 }
 
 function captureStdout(run: () => void): string[] {
@@ -82,7 +82,9 @@ describe('mi profile list command', () => {
     harness.service.create({ name: 'profileA', targetRole: 'FE' })
     harness.service.create({ name: 'profileB', targetRole: 'BE' })
 
-    const output = captureStdout(() => runProfileCommand(['list'], { dataDir: harness.tmpDir }, { service: harness.service }))
+    const output = captureStdout(() =>
+      runProfileCommand(['list'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    )
 
     const text = stripAnsi(output.join('\n'))
     expect(text).toContain('ID')
@@ -94,7 +96,9 @@ describe('mi profile list command', () => {
   })
 
   it('prints Chinese "暂无 Profile" message when list is empty', () => {
-    const output = captureStdout(() => runProfileCommand(['list'], { dataDir: harness.tmpDir }, { service: harness.service }))
+    const output = captureStdout(() =>
+      runProfileCommand(['list'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    )
 
     const text = stripAnsi(output.join('\n'))
     expect(text).toContain('暂无 Profile')
@@ -111,7 +115,9 @@ describe('mi profile list command', () => {
       defaultProfile: first.id,
     })
 
-    const output = captureStdout(() => runProfileCommand(['list'], { dataDir: harness.tmpDir }, { service: harness.service }))
+    const output = captureStdout(() =>
+      runProfileCommand(['list'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    )
 
     const text = stripAnsi(output.join('\n'))
     expect(text).toContain(`* ${first.id}`)
@@ -123,7 +129,11 @@ describe('mi profile list command', () => {
     harness.service.create({ name: 'profileB', targetRole: 'BE' })
 
     const output = captureStdout(() =>
-      runProfileCommand(['list', '--json'], { dataDir: harness.tmpDir, json: true }, { service: harness.service }),
+      runProfileCommand(
+        ['list', '--json'],
+        { dataDir: harness.tmpDir, json: true },
+        { service: harness.service },
+      ),
     )
 
     const parsed = JSON.parse(output.join('\n')) as Array<{ id: string; name: string }>
@@ -135,7 +145,11 @@ describe('mi profile list command', () => {
 
   it('list --json on empty list still prints a parseable empty array', () => {
     const output = captureStdout(() =>
-      runProfileCommand(['list', '--json'], { dataDir: harness.tmpDir, json: true }, { service: harness.service }),
+      runProfileCommand(
+        ['list', '--json'],
+        { dataDir: harness.tmpDir, json: true },
+        { service: harness.service },
+      ),
     )
 
     const parsed = JSON.parse(output.join('\n')) as unknown[]
@@ -157,7 +171,11 @@ describe('mi profile create command', () => {
 
   it('calls service.create and prints the Chinese success line with ULID', () => {
     const output = captureStdout(() =>
-      runProfileCommand(['create', 'My Profile'], { dataDir: harness.tmpDir }, { service: harness.service }),
+      runProfileCommand(
+        ['create', 'My Profile'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
     )
 
     const text = stripAnsi(output.join('\n'))
@@ -166,11 +184,13 @@ describe('mi profile create command', () => {
     // The ULID we just minted is in the success line.
     const match = text.match(/id=([0-9A-HJKMNP-TV-Z]{26})/)
     expect(match).not.toBeNull()
+    const ulid = match?.[1]
+    expect(ulid).not.toBeUndefined()
     const stored = harness.db.conn
       .query('SELECT id, name FROM profiles WHERE id = ?')
-      .get(match![1]!) as { id: string; name: string } | null
+      .get(ulid as string) as { id: string; name: string } | null
     expect(stored).not.toBeNull()
-    expect(stored!.name).toBe('My Profile')
+    expect(stored?.name).toBe('My Profile')
   })
 
   it('throws MiValidationError /用法错误/ when name argument is missing', () => {
@@ -246,7 +266,11 @@ describe('mi profile show command', () => {
     })
 
     const output = captureStdout(() =>
-      runProfileCommand(['show', second.id], { dataDir: harness.tmpDir }, { service: harness.service }),
+      runProfileCommand(
+        ['show', second.id],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
     )
 
     const text = stripAnsi(output.join('\n'))
@@ -262,7 +286,11 @@ describe('mi profile show command', () => {
 
   it('propagates MiNotFoundError from the service as Profile 不存在', () => {
     expect(() =>
-      runProfileCommand(['show', '01J00000000000000000000099'], { dataDir: harness.tmpDir }, { service: harness.service }),
+      runProfileCommand(
+        ['show', '01J00000000000000000000099'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
     ).toThrow(/Profile 不存在/)
   })
 
@@ -277,7 +305,11 @@ describe('mi profile show command', () => {
     })
 
     const output = captureStdout(() =>
-      runProfileCommand(['show'], { dataDir: harness.tmpDir, json: true }, { service: harness.service }),
+      runProfileCommand(
+        ['show'],
+        { dataDir: harness.tmpDir, json: true },
+        { service: harness.service },
+      ),
     )
 
     const parsed = JSON.parse(output.join('\n')) as { id: string; name: string; targetRole: string }
@@ -343,9 +375,9 @@ describe('mi profile update command', () => {
     )
 
     expect(stripAnsi(output.join('\n'))).toContain('已更新')
-    const stored = harness.db.conn
-      .query('SELECT skills FROM profiles LIMIT 1')
-      .get() as { skills: string } | null
+    const stored = harness.db.conn.query('SELECT skills FROM profiles LIMIT 1').get() as {
+      skills: string
+    } | null
     expect(stored?.skills).toBe('["React","Node","TypeScript"]')
   })
 
@@ -360,9 +392,9 @@ describe('mi profile update command', () => {
       ),
     )
 
-    const stored = harness.db.conn
-      .query('SELECT target_companies FROM profiles LIMIT 1')
-      .get() as { target_companies: string } | null
+    const stored = harness.db.conn.query('SELECT target_companies FROM profiles LIMIT 1').get() as {
+      target_companies: string
+    } | null
     expect(stored?.target_companies).toBe('["Acme","Globex"]')
   })
 
@@ -435,7 +467,11 @@ describe('mi profile switch command', () => {
     const profile = harness.service.create({ name: 'Alice' })
 
     const output = captureStdout(() =>
-      runProfileCommand(['switch', profile.id], { dataDir: harness.tmpDir }, { service: harness.service }),
+      runProfileCommand(
+        ['switch', profile.id],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
     )
 
     const text = stripAnsi(output.join('\n'))
@@ -447,7 +483,11 @@ describe('mi profile switch command', () => {
 
   it('propagates MiNotFoundError from the service as Profile 不存在', () => {
     expect(() =>
-      runProfileCommand(['switch', '01J00000000000000000000099'], { dataDir: harness.tmpDir }, { service: harness.service }),
+      runProfileCommand(
+        ['switch', '01J00000000000000000000099'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
     ).toThrow(/Profile 不存在/)
   })
 
@@ -469,7 +509,11 @@ describe('mi profile switch command', () => {
     const before = readFileSync(join(harness.tmpDir, 'config.yml'), 'utf8')
 
     expect(() =>
-      runProfileCommand(['switch', '01J00000000000000000000099'], { dataDir: harness.tmpDir }, { service: harness.service }),
+      runProfileCommand(
+        ['switch', '01J00000000000000000000099'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
     ).toThrow(/Profile 不存在/)
 
     const after = readFileSync(join(harness.tmpDir, 'config.yml'), 'utf8')

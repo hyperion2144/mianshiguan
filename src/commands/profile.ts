@@ -110,7 +110,11 @@ export function runProfileCommand(
   }
 }
 
-function listProfiles(service: ProfileService, configService: ConfigService, asJson: boolean): void {
+function listProfiles(
+  service: ProfileService,
+  configService: ConfigService,
+  asJson: boolean,
+): void {
   const profiles = service.list()
   if (asJson) {
     console.log(JSON.stringify(profiles, null, 2))
@@ -185,7 +189,9 @@ function showRows(profile: Profile): [string, string][] {
     ['skills', profile.skills.length === 0 ? EMPTY_FIELD_PLACEHOLDER : profile.skills.join(', ')],
     [
       'targetCompanies',
-      profile.targetCompanies.length === 0 ? EMPTY_FIELD_PLACEHOLDER : profile.targetCompanies.join(', '),
+      profile.targetCompanies.length === 0
+        ? EMPTY_FIELD_PLACEHOLDER
+        : profile.targetCompanies.join(', '),
     ],
     ['notes', profile.notes || EMPTY_FIELD_PLACEHOLDER],
     ['avatarPath', profile.avatarPath ?? MISSING_PATH_PLACEHOLDER],
