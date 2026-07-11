@@ -12,6 +12,7 @@ import type { ConfigService } from './config-service.ts'
  */
 export interface ResumeSnapshot {
   profileId: string
+  profileName: string
   text: string
   path: string | null
   sourceFormat: 'markdown' | 'pdf' | 'none'
@@ -56,10 +57,9 @@ const SUPPORTED_EXTENSIONS: Record<string, true> = {
   '.markdown': true,
   '.pdf': true,
 }
-
-/** Snake-case row from `SELECT * FROM profiles`. */
 interface ProfileResumeRow {
   id: string
+  name: string
   resume_text: string
   resume_path: string | null
   updated_at: string
@@ -85,6 +85,7 @@ function inferSourceFormat(path: string | null): ResumeSnapshot['sourceFormat'] 
 function buildSnapshot(row: ProfileResumeRow): ResumeSnapshot {
   return {
     profileId: row.id,
+    profileName: row.name,
     text: row.resume_text,
     path: row.resume_path,
     sourceFormat: inferSourceFormat(row.resume_path),
@@ -250,7 +251,7 @@ export class ResumeService {
 
   private loadProfileRow(profileId: string): ProfileResumeRow | null {
     return this.db.conn
-      .query('SELECT id, resume_text, resume_path, updated_at FROM profiles WHERE id = ?')
+      .query('SELECT id, name, resume_text, resume_path, updated_at FROM profiles WHERE id = ?')
       .get(profileId) as ProfileResumeRow | null
   }
 

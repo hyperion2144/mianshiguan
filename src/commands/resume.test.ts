@@ -1,15 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
 import {
   type ResumeHistoryEntry,
   type ResumeService,
   type ResumeSnapshot,
-  MiDatabaseError,
-  MiNotFoundError,
-  MiValidationError,
 } from '../services/resume-service.ts'
-
-// `runResumeCommand` is imported lazily — RED phase: file does not exist yet
-// so the import itself fails, surfacing as a test failure (not a runtime crash).
 import { runResumeCommand } from './resume.ts'
 
 function stripAnsi(input: string): string {
@@ -17,14 +12,14 @@ function stripAnsi(input: string): string {
   return input.replace(new RegExp(`${ESC}\\[[0-9;]*m`, 'g'), '')
 }
 
-function captureStdout(run: () => void): string[] {
+async function captureStdoutAsync(run: () => Promise<void>): Promise<string[]> {
   const lines: string[] = []
   const originalLog = console.log
   console.log = (message?: unknown) => {
     lines.push(String(message ?? ''))
   }
   try {
-    run()
+    await run()
     return lines
   } finally {
     console.log = originalLog
@@ -38,16 +33,19 @@ function captureStdout(run: () => void): string[] {
  * command handler, so the mock returns a Promise even when statically typed.
  */
 function makeMockService(overrides: Partial<ResumeService> = {}): ResumeService {
+  const defaultSnapshot: ResumeSnapshot = {
+    profileId: 'P1',
+    profileName: 'Senior FE',
+    text: 'MD_TEXT',
+    path: '/tmp/r.md',
+    sourceFormat: 'markdown',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+  }
   return {
-    importFromFile: vi.fn(async (_path: string, _options?: unknown) => ({
-      profileId: 'P1',
-      text: 'MD_TEXT',
-      path: '/tmp/r.md',
-      sourceFormat: 'markdown',
-      updatedAt: '2025-01-01T00:00:00.000Z',
-    })) as unknown as ResumeService['importFromFile'],
+    importFromFile: vi.fn(async () => defaultSnapshot) as unknown as ResumeService['importFromFile'],
     getCurrent: vi.fn(() => ({
       profileId: 'P1',
+      profileName: 'Senior FE',
       text: '',
       path: null,
       sourceFormat: 'none',
@@ -68,10 +66,10 @@ describe('mi resume import command', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
-
   it('calls service.importFromFile with the --file path and prints Chinese success line with markdown format marker', async () => {
     const snapshot: ResumeSnapshot = {
       profileId: 'P1',
+      profileName: 'Senior FE',
       text: 'MD_TEXT',
       path: '/tmp/r.md',
       sourceFormat: 'markdown',
@@ -80,18 +78,9 @@ describe('mi resume import command', () => {
     const importMock = vi.fn(async () => snapshot) as unknown as ResumeService['importFromFile']
     service = makeMockService({ importFromFile: importMock })
 
-    const output = await new Promise<string[]>((resolve, reject) => {
-      try {
-        resolve(
-          captureStdout(() => {
-            // importFromFile returns a Promise — wrap as fire-and-await via the handler
-            void runResumeCommand(['import', '--file', '/tmp/r.md'], {}, { service })
-          }),
-        )
-      } catch (err) {
-        reject(err)
-      }
-    })
+    const output = await captureStdoutAsync(() =>
+      runResumeCommand(['import'], { file: '/tmp/r.md' }, { service }),
+    )
 
     const text = stripAnsi(output.join('\n'))
     expect(importMock).toHaveBeenCalledWith('/tmp/r.md', { profileId: undefined })
@@ -102,6 +91,7 @@ describe('mi resume import command', () => {
   it('passes --profile through to service.importFromFile as profileId', async () => {
     const importMock = vi.fn(async () => ({
       profileId: 'PID',
+      profileName: 'PID',
       text: 'X',
       path: '/x',
       sourceFormat: 'markdown' as const,
@@ -109,74 +99,50 @@ describe('mi resume import command', () => {
     })) as unknown as ResumeService['importFromFile']
     service = makeMockService({ importFromFile: importMock })
 
-    captureStdout(() => {
-      void runResumeCommand(['import', '--file', '/x', '--profile', 'PID'], {}, { service })
-    })
+    await captureStdoutAsync(() =>
+      runResumeCommand(['import'], { file: '/x', profile: 'PID' }, { service }),
+    )
 
     expect(importMock).toHaveBeenCalledWith('/x', { profileId: 'PID' })
   })
 
-  it('throws MiValidationError /用法错误/ when --file argument is missing', () => {
-    expect(() =>
-      runResumeCommand(['import'], {}, { service }),
-    ).toThrow(MiValidationError)
-
-    try {
-      runResumeCommand(['import'], {}, { service })
-      throw new Error('expected throw')
-    } catch (err) {
-      expect(err).toBeInstanceOf(MiValidationError)
-      expect((err as MiValidationError).message).toContain('用法错误')
-    }
+  it('rejects with MiValidationError /用法错误/ when --file argument is missing', async () => {
+    await expect(runResumeCommand(['import'], {}, { service })).rejects.toBeInstanceOf(
+      MiValidationError,
+    )
+    await expect(runResumeCommand(['import'], {}, { service })).rejects.toThrow(/用法错误/)
   })
 
-  it('rethrows MiValidationError /PDF 解析失败/ from service so runCommandAction can map it to exit 1', () => {
+  it('rejects with MiValidationError /PDF 解析失败/ from service so runCommandAction can map it to exit 1', async () => {
     const importMock = vi.fn(async () => {
       throw new MiValidationError('PDF 解析失败: bad')
     }) as unknown as ResumeService['importFromFile']
     service = makeMockService({ importFromFile: importMock })
 
-    let caught: unknown
-    try {
-      runResumeCommand(['import', '--file', '/tmp/r.pdf'], {}, { service })
-    } catch (err) {
-      caught = err
-    }
-
-    expect(caught).toBeInstanceOf(MiValidationError)
-    expect((caught as MiValidationError).message).toContain('PDF 解析失败')
+    await expect(
+      runResumeCommand(['import'], { file: '/tmp/r.pdf' }, { service }),
+    ).rejects.toThrow(/PDF 解析失败/)
   })
 
-  it('rethrows MiDatabaseError from service so runCommandAction can map it to exit 2', () => {
+  it('rejects with MiDatabaseError from service so runCommandAction can map it to exit 2', async () => {
     const importMock = vi.fn(async () => {
       throw new MiDatabaseError('disk full')
     }) as unknown as ResumeService['importFromFile']
     service = makeMockService({ importFromFile: importMock })
 
-    let caught: unknown
-    try {
-      runResumeCommand(['import', '--file', '/tmp/r.md'], {}, { service })
-    } catch (err) {
-      caught = err
-    }
-
-    expect(caught).toBeInstanceOf(MiDatabaseError)
+    await expect(
+      runResumeCommand(['import'], { file: '/tmp/r.md' }, { service }),
+    ).rejects.toBeInstanceOf(MiDatabaseError)
   })
 
-  it('rethrows MiNotFoundError /Profile 不存在/ from service for unknown profileId', () => {
+  it('rejects with MiNotFoundError /Profile 不存在/ from service for unknown profileId', async () => {
     const importMock = vi.fn(async () => {
       throw new MiNotFoundError('Profile 不存在: ghost')
     }) as unknown as ResumeService['importFromFile']
     service = makeMockService({ importFromFile: importMock })
 
-    let caught: unknown
-    try {
-      runResumeCommand(['import', '--file', '/tmp/r.md', '--profile', 'ghost'], {}, { service })
-    } catch (err) {
-      caught = err
-    }
-
-    expect(caught).toBeInstanceOf(MiNotFoundError)
-    expect((caught as MiNotFoundError).message).toContain('Profile 不存在')
+    await expect(
+      runResumeCommand(['import'], { file: '/tmp/r.md', profile: 'ghost' }, { service }),
+    ).rejects.toThrow(/Profile 不存在/)
   })
 })
