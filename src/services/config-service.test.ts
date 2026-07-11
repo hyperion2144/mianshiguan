@@ -1,6 +1,6 @@
 import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { homedir, join } from 'node:path'
+import { homedir, tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ConfigService } from './config-service.ts'
 
@@ -14,7 +14,7 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true })
     // Clear any env override between tests
-    delete process.env.MIANSHIGUAN_HOME
+    process.env.MIANSHIGUAN_HOME = undefined
   })
 
   describe('load()', () => {
@@ -24,10 +24,7 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
     })
 
     it('returns parsed Config when config.yml exists', () => {
-      writeFileSync(
-        join(tmpDir, 'config.yml'),
-        'interviewerStyle: strict\ndashboardPort: 4000\n',
-      )
+      writeFileSync(join(tmpDir, 'config.yml'), 'interviewerStyle: strict\ndashboardPort: 4000\n')
       const svc = new ConfigService(tmpDir)
       const cfg = svc.load()
       expect(cfg.interviewerStyle).toBe('strict')
@@ -85,9 +82,11 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
       const svc = new ConfigService(tmpDir)
       const original = {
         dataDir: tmpDir,
+        dbPath: join(tmpDir, 'data.db'),
         interviewerStyle: 'strict' as const,
         dashboardPort: 9999,
       }
+      svc.save(original)
       const loaded = svc.load()
       expect(loaded).toEqual(original)
     })
@@ -117,7 +116,7 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
     })
 
     it('falls back to ~/.mianshiguan via os.homedir()', () => {
-      delete process.env.MIANSHIGUAN_HOME
+      process.env.MIANSHIGUAN_HOME = undefined
       expect(ConfigService.resolveDataDir()).toBe(join(homedir(), '.mianshiguan'))
     })
   })
