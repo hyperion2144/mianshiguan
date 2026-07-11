@@ -25,7 +25,7 @@ offsets.push(cursor)
 cursor += Buffer.byteLength(o1, 'binary')
 objects.push(o1)
 
-// Object 2: Pages
+const stream = `BT /F1 14 Tf 72 720 Td (${MARKER}) Tj ET\nBT /F1 12 Tf 72 700 Td (Resume Sample Profile for Test) Tj ET\nBT /F1 12 Tf 72 680 Td (Eight years building React + TypeScript UIs.) Tj ET\nBT /F1 12 Tf 72 660 Td (Owned design system at two consumer products.) Tj ET`
 const o2 = '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n'
 offsets.push(cursor)
 cursor += Buffer.byteLength(o2, 'binary')
@@ -39,7 +39,6 @@ cursor += Buffer.byteLength(o3, 'binary')
 objects.push(o3)
 
 // Object 4: Content stream carrying the marker
-const stream = `BT /F1 14 Tf 72 720 Td (${MARKER}) Tj ET`
 const o4 = `4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`
 offsets.push(cursor)
 cursor += Buffer.byteLength(o4, 'binary')

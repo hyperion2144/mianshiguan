@@ -78,3 +78,37 @@ describe('ResumeService.importFromFile — markdown path', () => {
     expect(count.n).toBe(0)
   })
 })
+
+describe('ResumeService.importFromFile — pdf path', () => {
+  let db: Database
+  let service: ResumeService
+
+  beforeEach(() => {
+    db = makeDb()
+    ;({ service } = makeService(db))
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('reads a .pdf file via pdf-parse and returns pdf snapshot', async () => {
+    const snapshot = await service.importFromFile(SAMPLE_PDF, { profileId: 'P1' })
+
+    expect(snapshot.sourceFormat).toBe('pdf')
+    expect(snapshot.text).toContain(SAMPLE_PDF_KNOWN_TEXT)
+    expect(snapshot.text.trim().length).toBeGreaterThanOrEqual(50)
+    expect(snapshot.path).toBe(SAMPLE_PDF)
+
+    const row = db.conn
+      .query('SELECT resume_text FROM profiles WHERE id = ?')
+      .get('P1') as { resume_text: string }
+    expect(row.resume_text).toBe(snapshot.text)
+
+    const count = db.conn
+      .query('SELECT COUNT(*) AS n FROM resume_history')
+      .get() as { n: number }
+    expect(count.n).toBe(0)
+  })
+})
