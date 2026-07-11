@@ -22,6 +22,7 @@ const VALID_STYLES = ['strict', 'coaching', 'friendly'] as const
 type InterviewerStyle = (typeof VALID_STYLES)[number]
 
 const NOT_FOUND_MESSAGE = '请先运行 mi init 初始化配置'
+const INVALID_STYLE_MESSAGE = 'interviewerStyle 必须是 strict / coaching / friendly'
 
 /**
  * Default config — used by `loadOrInit` to seed a fresh directory.
@@ -120,21 +121,16 @@ export class ConfigService {
     }
     const obj = raw as Record<string, unknown>
 
-    if (!VALID_STYLES.includes(obj.interviewerStyle as InterviewerStyle)) {
-      throw new MiConfigError(
-        `interviewerStyle 必须是 strict / coaching / friendly，当前值: ${String(obj.interviewerStyle)}`,
-      )
-    }
-
     const dataDir = typeof obj.dataDir === 'string' ? obj.dataDir : this.dataDir
     const dbPath = join(dataDir, 'data.db')
+    const dashboardPort =
+      typeof obj.dashboardPort === 'number' ? obj.dashboardPort : DEFAULT_CONFIG.dashboardPort
 
     const config: Config = {
       dataDir,
       dbPath,
-      interviewerStyle: obj.interviewerStyle as InterviewerStyle,
-      dashboardPort:
-        typeof obj.dashboardPort === 'number' ? obj.dashboardPort : DEFAULT_CONFIG.dashboardPort,
+      interviewerStyle: this.parseStyle(obj.interviewerStyle),
+      dashboardPort,
     }
     if (typeof obj.defaultProfile === 'string') {
       config.defaultProfile = obj.defaultProfile
@@ -146,12 +142,22 @@ export class ConfigService {
    * Throw on invalid config (used by `save` before writing).
    */
   private validate(config: Config): void {
-    if (!VALID_STYLES.includes(config.interviewerStyle)) {
-      throw new MiConfigError('interviewerStyle 必须是 strict / coaching / friendly')
-    }
+    // Narrow the type so downstream use is sound; throws if invalid.
+    this.parseStyle(config.interviewerStyle)
     if (typeof config.dashboardPort !== 'number' || config.dashboardPort <= 0) {
       throw new MiConfigError('dashboardPort 必须是正整数')
     }
+  }
+
+  /**
+   * Type guard for the interviewerStyle enum. Returns the narrowed value
+   * or throws `MiConfigError` with a Chinese message.
+   */
+  private parseStyle(value: unknown): InterviewerStyle {
+    if (VALID_STYLES.includes(value as InterviewerStyle)) {
+      return value as InterviewerStyle
+    }
+    throw new MiConfigError(`${INVALID_STYLE_MESSAGE}，当前值: ${String(value)}`)
   }
 
   private defaults(): Config {
