@@ -83,7 +83,7 @@
 
 ## Issues
 
-- [ ] Q1 — `UPDATABLE_FIELDS` includes `resumeText` not in spec whitelist (src/services/profile-service.ts:55-65) (xref Q1)
-- [ ] Q2 — `rowToProfile` raw JSON.parse could throw untyped error on corrupted data (src/services/profile-service.ts:73-74) (xref Q2)
+- [x] Q1 — `UPDATABLE_FIELDS` includes `resumeText` not in spec whitelist (src/services/profile-service.ts:55-65) (xref Q1)
+- [x] Q2 — `rowToProfile` raw JSON.parse could throw untyped error on corrupted data (src/services/profile-service.ts:73-74) (xref Q2)
 
 <!-- D prefix reserved for design flaws requiring replan; none found. -->

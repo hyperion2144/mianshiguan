@@ -59,6 +59,6 @@ Reference chain is complete: every PR is referenced by at least one DS; every DS
 
 ## Issues
 
-- [ ] R10 — `UPDATABLE_FIELDS` allows `resumeText` which is not in spec whitelist. Spec says "accepted fields SHALL be exactly: name, targetRole, jd, skills, targetCompanies, notes, avatarPath, resumePath" (8 fields); implementation accepts 9 including `resumeText` (src/services/profile-service.ts:55-65). Fix: remove `resumeText` from the array OR update design.md + spec.md to include it.
+- [x] R10 — `UPDATABLE_FIELDS` allows `resumeText` which is not in spec whitelist. Spec says "accepted fields SHALL be exactly: name, targetRole, jd, skills, targetCompanies, notes, avatarPath, resumePath" (8 fields); implementation accepts 9 including `resumeText` (src/services/profile-service.ts:55-65). Fix: remove `resumeText` from the array OR update design.md + spec.md to include it.
 
 <!-- D prefix reserved for design flaws requiring replan; none found. -->
