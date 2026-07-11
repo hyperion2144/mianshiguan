@@ -1,4 +1,7 @@
 #!/usr/bin/env bun
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 /**
  * mianshiguan CLI — root entry point.
  *
@@ -7,9 +10,6 @@
  * - Unknown commands / invalid options surface a Chinese error and exit 1.
  */
 import { cac } from 'cac'
-import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { registerCommands } from './commands/index.ts'
 
 const __filename = fileURLToPath(import.meta.url)
