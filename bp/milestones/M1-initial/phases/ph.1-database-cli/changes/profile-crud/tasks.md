@@ -204,7 +204,7 @@
 > do not touch DB or filesystem. Intermediate verification:
 > `bun test src/commands/profile.test.ts` passes.
 
-- [ ] T-9: [type:behavior] `mi profile list` prints table with id/name/target_role/updated_at
+- [x] T-9: [type:behavior] `mi profile list` prints table with id/name/target_role/updated_at <!-- commit: fdc0779 -->
   - **refs**: DS-2
   - **files**: `src/commands/profile.ts`, `src/commands/profile.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-7
@@ -232,7 +232,7 @@
     THEN  stdout is valid JSON array of length 1 with profileA fields
     ```
 
-- [ ] T-10: [type:behavior] `mi profile create <name>` validates and persists
+- [x] T-10: [type:behavior] `mi profile create <name>` validates and persists <!-- commit: 46b182e -->
   - **refs**: DS-2
   - **files**: `src/commands/profile.ts`, `src/commands/profile.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-8
@@ -258,7 +258,7 @@
     THEN  exits 1 and stderr contains Chinese error
     ```
 
-- [ ] T-11: [type:behavior] `mi profile show [id]` shows active profile when id omitted
+- [x] T-11: [type:behavior] `mi profile show [id]` shows active profile when id omitted <!-- commit: 4317429 -->
   - **refs**: DS-2
   - **files**: `src/commands/profile.ts`, `src/commands/profile.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-9
@@ -289,7 +289,7 @@
     THEN  exits 1 with Chinese 'Profile 不存在'
     ```
 
-- [ ] T-12: [type:behavior] `mi profile update <field> <value>` updates specified field
+- [x] T-12: [type:behavior] `mi profile update <field> <value>` updates specified field <!-- commit: 7270ddd -->
   - **refs**: DS-2
   - **files**: `src/commands/profile.ts`, `src/commands/profile.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-10
@@ -319,7 +319,7 @@
     THEN  exits 1 with Chinese '未知字段: bogus'
     ```
 
-- [ ] T-13: [type:behavior] `mi profile switch <id>` persists defaultProfile in config
+- [x] T-13: [type:behavior] `mi profile switch <id>` persists defaultProfile in config <!-- commit: 3671557 -->
   - **refs**: DS-2
   - **files**: `src/commands/profile.ts`, `src/commands/profile.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-11
@@ -340,7 +340,7 @@
     THEN  exits 1 with Chinese 'Profile 不存在'
     ```
 
-- [ ] T-14: [type:scaffolding] Wire `registerProfileCommand` into commands/index.ts
+- [x] T-14: [type:scaffolding] Wire `registerProfileCommand` into commands/index.ts <!-- commit: 181b491 -->
   - **refs**: DS-3
   - **files**: `src/commands/index.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-12
@@ -359,13 +359,10 @@ This is **NOT** a review step — these checks confirm the code is correct
 and tests pass. Once passing, run `bp continue` to advance to the
 review/archive workflow step.
 
-- [ ] `bun run typecheck` passes (zero TypeScript errors)
-- [ ] `bun test src/services/profile-service.test.ts` passes (Wave 1)
-- [ ] `bun test src/commands/profile.test.ts` passes (Wave 2)
-- [ ] `bun test` (full suite) passes — no regressions in scaffold-init
-- [ ] `bun run lint` passes — no biome errors in new files
-- [ ] Each task's acceptance criteria confirmed by running the explicit
-      `bun test` filter that targets the file (e.g. `bun test
-      src/services/profile-service.test.ts -t "create"`)
-- [ ] `package.json` includes `"ulid"` dependency and `bun install` lock
-      is updated
+- [x] `bun run typecheck` passes (zero TypeScript errors)  <!-- commit: 8e054b6 -->
+- [x] `bun test src/services/profile-service.test.ts` passes (Wave 1)  <!-- commit: 8e054b6 -->
+- [x] `bun test src/commands/profile.test.ts` passes (Wave 2)  <!-- commit: 8e054b6 -->
+- [x] `bun test` (full suite) passes — no regressions in scaffold-init  <!-- commit: 8e054b6 -->
+- [x] `bun run lint` passes — no biome errors in new files  <!-- commit: 8e054b6 -->
+- [x] Each task's acceptance criteria confirmed by running the explicit `bun test` filter  <!-- commit: 8e054b6 -->
+- [x] `package.json` includes `"ulid"` dependency and `bun install` lock is updated  <!-- commit: 8e054b6 -->
