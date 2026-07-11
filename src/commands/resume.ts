@@ -1,10 +1,13 @@
 import type { CAC } from 'cac'
+import Table from 'cli-table3'
 import { Database } from '../db/Database.ts'
 import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
 import { error, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import {
   type ImportOptions,
+  type ListHistoryOptions,
+  type ResumeHistoryEntry,
   type ResumeService,
   type ResumeSnapshot,
   createResumeService,
@@ -22,11 +25,16 @@ export interface ResumeCommandOptions {
 export interface ResumeCommandDeps {
   service?: ResumeService
 }
+
 const USAGE_IMPORT_MESSAGE = '用法错误: mi resume import --file <path> [--profile <id>]'
 const EMPTY_RESUME_MESSAGE = '尚未导入简历'
+const EMPTY_HISTORY_MESSAGE = '暂无历史版本'
 const CURRENT_PROFILE_PREFIX = '当前 Profile: '
 const TRUNCATION_HINT_TEMPLATE = (n: number) => `… 还有 ${n} 行未显示，使用 --json 查看全文`
 const SHOW_PREVIEW_LINE_LIMIT = 60
+const HISTORY_HEADERS = ['ID', 'ARCHIVED_AT', 'PATH', 'SIZE'] as const
+const MISSING_PATH_PLACEHOLDER = '(无)'
+
 export function registerResumeCommand(program: CAC): void {
   program
     .command('resume [...args]', '管理简历：import / show / history')
@@ -79,8 +87,10 @@ export async function runResumeCommand(
       return
     }
     case 'history': {
-      void resolveProfileIdFromOptions(options)
-      throw new MiValidationError(`未实现的子命令: history`)
+      const listOptions = parseListHistoryOptions(options)
+      const entries = service.listHistory(resolveProfileIdFromOptions(options), listOptions)
+      printHistoryOutput(entries, Boolean(options.json))
+      return
     }
     default:
       throw new MiValidationError(`未知 resume 子命令: ${subcommand}`)
@@ -104,6 +114,44 @@ function printShowOutput(snapshot: ResumeSnapshot, asJson: boolean): void {
     const remaining = lines.length - SHOW_PREVIEW_LINE_LIMIT
     console.log(TRUNCATION_HINT_TEMPLATE(remaining))
   }
+}
+
+function parseListHistoryOptions(options: ResumeCommandOptions): ListHistoryOptions {
+  const result: ListHistoryOptions = {}
+  if (options.limit !== undefined) {
+    const limit = Number(options.limit)
+    if (Number.isFinite(limit) && limit > 0) {
+      result.limit = limit
+    }
+  }
+  if (options.offset !== undefined) {
+    const offset = Number(options.offset)
+    if (Number.isFinite(offset) && offset >= 0) {
+      result.offset = offset
+    }
+  }
+  return result
+}
+
+function printHistoryOutput(entries: ResumeHistoryEntry[], asJson: boolean): void {
+  if (asJson) {
+    console.log(JSON.stringify(entries, null, 2))
+    return
+  }
+  if (entries.length === 0) {
+    console.log(EMPTY_HISTORY_MESSAGE)
+    return
+  }
+  const table = new Table({ head: [...HISTORY_HEADERS] })
+  for (const entry of entries) {
+    table.push([
+      String(entry.id),
+      entry.archivedAt,
+      entry.path ?? MISSING_PATH_PLACEHOLDER,
+      String(Buffer.byteLength(entry.text, 'utf8')),
+    ])
+  }
+  console.log(table.toString())
 }
 
 function resolveProfileIdFromOptions(options: ResumeCommandOptions): string | undefined {
