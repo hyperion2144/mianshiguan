@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -36,6 +36,17 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
       const svc = new ConfigService(tmpDir)
       expect(() => svc.load()).toThrow(/配置/)
     })
+
+    it('dbPath on loaded Config is always join(dataDir, data.db), ignoring any saved dbPath', () => {
+      writeFileSync(
+        join(tmpDir, 'config.yml'),
+        'dataDir: /custom/path\ndbPath: /wrong/ignored.db\ninterviewerStyle: coaching\n',
+      )
+      const svc = new ConfigService(tmpDir)
+      const cfg = svc.load()
+      expect(cfg.dbPath).toBe(join('/custom/path', 'data.db'))
+      expect(cfg.dbPath).not.toBe('/wrong/ignored.db')
+    })
   })
 
   describe('save()', () => {
@@ -63,6 +74,18 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
       const stat = statSync(join(tmpDir, 'config.yml'))
       // mode & 0o777 extracts the permission bits
       expect(stat.mode & 0o777).toBe(0o600)
+    })
+
+    it('does not write dbPath to YAML — dbPath is computed, not stored', () => {
+      const svc = new ConfigService(tmpDir)
+      svc.save({
+        dataDir: tmpDir,
+        dbPath: join(tmpDir, 'data.db'),
+        interviewerStyle: 'coaching',
+        dashboardPort: 3456,
+      })
+      const yamlContent = readFileSync(join(tmpDir, 'config.yml'), 'utf8')
+      expect(yamlContent).not.toContain('dbPath')
     })
 
     it('throws MiConfigError when interviewerStyle is invalid', () => {
