@@ -1,0 +1,2 @@
+These are plain notes, not a resume.
+They use a .txt extension to test the unsupported-extension path.

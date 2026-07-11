@@ -1,0 +1,3 @@
+This is not a valid PDF.
+It is plain text masquerading as a PDF so the parser must reject it
+without leaking the raw library error.
