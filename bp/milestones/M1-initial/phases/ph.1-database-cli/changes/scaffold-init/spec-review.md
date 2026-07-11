@@ -52,6 +52,6 @@ The implementation satisfies the main scaffold, migration runner, config CRUD, a
 
 ## Issues
 
-- [ ] R3 — `mi init` existing-directory error does not list existing files (xref R3)
-- [ ] R8 — help output still exposes English built-in flag descriptions (xref R8)
-- [ ] R12 — `resume_history` schema uses `version`/`created_at` instead of required `archived_at` (xref R12)
+- [x] R3 — `mi init` existing-directory error does not list existing files (xref R3)
+- [x] R8 — help output still exposes English built-in flag descriptions (xref R8)
+- [x] R12 — `resume_history` schema uses `version`/`created_at` instead of required `archived_at` (xref R12)

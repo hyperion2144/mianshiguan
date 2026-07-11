@@ -31,5 +31,5 @@ The scaffold is functional and the verification commands pass, but the change is
 
 ## Issues
 
-- [ ] G2 — database foundation is partial: wrong `resume_history` columns and missing `src/db/schema.ts` row-type file (xref G2)
-- [ ] G4 — config CRUD is partial: `dbPath` set is a silent no-op and partial YAML defaults are not fully backfilled (xref G4)
+- [x] G2 — database foundation is partial: wrong `resume_history` columns and missing `src/db/schema.ts` row-type file (xref G2)
+- [x] G4 — config CRUD is partial: `dbPath` set is a silent no-op and partial YAML defaults are not fully backfilled (xref G4)

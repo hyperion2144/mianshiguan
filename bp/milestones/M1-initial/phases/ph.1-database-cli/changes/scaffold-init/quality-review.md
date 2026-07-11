@@ -41,8 +41,8 @@ The implementation is well-structured and the requested verification commands pa
 
 ## Issues
 
-- [ ] Q1 — `resume_history` migration column set diverges from storage contract (xref Q1)
-- [ ] Q2 — `mi config set dbPath` silently does not persist the configured path (xref Q2)
-- [ ] Q3 — partial YAML configs do not backfill default `interviewerStyle` (xref Q3)
-- [ ] Q4 — root help includes English built-in descriptions (xref Q4)
-- [ ] Q5 — tests do not assert initial schema column contracts (xref Q5)
+- [x] Q1 — `resume_history` migration column set diverges from storage contract (xref Q1)
+- [x] Q2 — `mi config set dbPath` silently does not persist the configured path (xref Q2)
+- [x] Q3 — partial YAML configs do not backfill default `interviewerStyle` (xref Q3)
+- [x] Q4 — root help includes English built-in descriptions (xref Q4)
+- [x] Q5 — tests do not assert initial schema column contracts (xref Q5)
