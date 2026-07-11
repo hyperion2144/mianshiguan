@@ -27,7 +27,7 @@ for the PDF/MD IO paths.
 
 **Intermediate verification**: `bun test src/services/resume-service.test.ts` passes.
 
-- [ ] T-1: [type:config] Add `pdf-parse` dependency and define resume domain types
+- [x] T-1: [type:config] Add `pdf-parse` dependency and define resume domain types <!-- commit: cd85e13 -->
   - **refs**: DS-1
   - **files**: `package.json`, `src/services/resume-service.ts`
   - **spec_ref**: specs/resume/spec.md (no specific SHALL; scaffolding for service)
@@ -41,7 +41,7 @@ for the PDF/MD IO paths.
       `createProfileService`'s shape
     - `tsc --noEmit` passes
 
-- [ ] T-2: [type:behavior] ResumeService.importFromFile reads .md and persists to profile
+- [x] T-2: [type:behavior] ResumeService.importFromFile reads .md and persists to profile <!-- commit: 7899067 -->
   - **refs**: DS-1
   - **files**: `src/services/resume-service.ts`, `src/services/resume-service.test.ts`, `tests/fixtures/resume/sample.md`
   - **spec_ref**: specs/resume/spec.md SHALL-1
@@ -74,7 +74,7 @@ for the PDF/MD IO paths.
     AND  SELECT count(*) FROM resume_history === 0
     ```
 
-- [ ] T-3: [type:behavior] ResumeService.importFromFile reads .pdf via pdf-parse and persists extracted text
+- [x] T-3: [type:behavior] ResumeService.importFromFile reads .pdf via pdf-parse and persists extracted text <!-- commit: b027348 -->
   - **refs**: DS-1
   - **files**: `src/services/resume-service.ts`, `src/services/resume-service.test.ts`, `tests/fixtures/resume/sample.pdf`
   - **spec_ref**: specs/resume/spec.md SHALL-1
@@ -100,7 +100,7 @@ for the PDF/MD IO paths.
     AND  SELECT resume_text FROM profiles WHERE id='P1' === returned text
     ```
 
-- [ ] T-4: [type:behavior] ResumeService.importFromFile archives previous resume to resume_history before overwrite
+- [x] T-4: [type:behavior] ResumeService.importFromFile archives previous resume to resume_history before overwrite <!-- commit: 4f3e10b -->
   - **refs**: DS-1
   - **files**: `src/services/resume-service.ts`, `src/services/resume-service.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-1
@@ -129,7 +129,7 @@ for the PDF/MD IO paths.
     THEN SELECT count(*) FROM resume_history WHERE profile_id='P2' === 0
     ```
 
-- [ ] T-5: [type:behavior] ResumeService.importFromFile rejects invalid paths, extensions, and content
+- [x] T-5: [type:behavior] ResumeService.importFromFile rejects invalid paths, extensions, and content <!-- commit: 14e219b -->
   - **refs**: DS-1
   - **files**: `src/services/resume-service.ts`, `src/services/resume-service.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-1
@@ -159,7 +159,7 @@ for the PDF/MD IO paths.
     AND after every call: SELECT count(*) FROM resume_history === 0
     ```
 
-- [ ] T-6: [type:behavior] ResumeService.importFromFile rejects oversized files and unknown profile
+- [x] T-6: [type:behavior] ResumeService.importFromFile rejects oversized files and unknown profile <!-- commit: 9968eb1 -->
   - **refs**: DS-1
   - **files**: `src/services/resume-service.ts`, `src/services/resume-service.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-1
@@ -181,7 +181,7 @@ for the PDF/MD IO paths.
     AND  profiles table unchanged
     ```
 
-- [ ] T-7: [type:behavior] ResumeService.getCurrent returns profile's current resume with format inference
+- [x] T-7: [type:behavior] ResumeService.getCurrent returns profile's current resume with format inference <!-- commit: 878b6c7 -->
   - **refs**: DS-1
   - **files**: `src/services/resume-service.ts`, `src/services/resume-service.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-2
@@ -214,7 +214,7 @@ for the PDF/MD IO paths.
     THEN throws MiNotFoundError(/Profile 不存在/)
     ```
 
-- [ ] T-8: [type:behavior] ResumeService.listHistory returns archived snapshots newest-first with limit/offset
+- [x] T-8: [type:behavior] ResumeService.listHistory returns archived snapshots newest-first with limit/offset <!-- commit: a6c8f96 -->
   - **refs**: DS-1
   - **files**: `src/services/resume-service.ts`, `src/services/resume-service.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-3
@@ -256,7 +256,7 @@ filesystem.
 
 **Intermediate verification**: `bun test src/commands/resume.test.ts` passes.
 
-- [ ] T-9: [type:behavior] `mi resume import --file <path>` reads, archives, prints Chinese success
+- [x] T-9: [type:behavior] `mi resume import --file <path>` reads, archives, prints Chinese success <!-- commit: d479a3b -->
   - **refs**: DS-2
   - **files**: `src/commands/resume.ts`, `src/commands/resume.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-4
@@ -291,7 +291,7 @@ filesystem.
     THEN service.importFromFile called with '/x', { profileId: 'PID' }
     ```
 
-- [ ] T-10: [type:behavior] `mi resume show` prints current profile's resume preview or JSON
+- [x] T-10: [type:behavior] `mi resume show` prints current profile's resume preview or JSON <!-- commit: fb025f8 -->
   - **refs**: DS-2
   - **files**: `src/commands/resume.ts`, `src/commands/resume.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-5
@@ -327,7 +327,7 @@ filesystem.
     AND  exit code 0
     ```
 
-- [ ] T-11: [type:behavior] `mi resume history` prints archived snapshots table with limit/json support
+- [x] T-11: [type:behavior] `mi resume history` prints archived snapshots table with limit/json support <!-- commit: 40ba1a5 -->
   - **refs**: DS-2
   - **files**: `src/commands/resume.ts`, `src/commands/resume.test.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-6
@@ -359,7 +359,7 @@ filesystem.
     THEN stdout === JSON.stringify([e1,e2,e3], null, 2)
     ```
 
-- [ ] T-12: [type:scaffolding] Wire `registerResumeCommand` into `src/commands/index.ts`
+- [x] T-12: [type:scaffolding] Wire `registerResumeCommand` into `src/commands/index.ts` <!-- commit: 899b086 -->
   - **refs**: DS-3
   - **files**: `src/commands/index.ts`
   - **spec_ref**: specs/resume/spec.md SHALL-7
@@ -383,15 +383,11 @@ This is **NOT** a review step — these checks confirm the code is correct
 and tests pass. Once passing, run `bp continue` to advance to the
 review/archive workflow step.
 
-- [ ] `bun run typecheck` passes (zero TypeScript errors)
-- [ ] `bun test src/services/resume-service.test.ts` passes (Wave 1)
-- [ ] `bun test src/commands/resume.test.ts` passes (Wave 2)
-- [ ] `bun test` (full suite) passes — no regressions in scaffold-init,
-      config-crud, profile-crud
-- [ ] `bun run lint` passes — no biome errors in new files
-- [ ] Each task's acceptance criteria confirmed by running the explicit
-      `bun test` filter for that task's file
-- [ ] `package.json` includes `"pdf-parse"` dependency and `bun install`
-      lock is updated
-- [ ] `tests/fixtures/resume/sample.md` and `tests/fixtures/resume/sample.pdf`
-      fixtures committed alongside the test that consumes them
+- [x] `bun run typecheck` passes (zero TypeScript errors)  <!-- commit: d89a55f -->
+- [x] `bun test src/services/resume-service.test.ts` passes (Wave 1)  <!-- commit: d89a55f -->
+- [x] `bun test src/commands/resume.test.ts` passes (Wave 2)  <!-- commit: d89a55f -->
+- [x] `bun test` (full suite) passes  <!-- commit: d89a55f -->
+- [x] `bun run lint` passes  <!-- commit: d89a55f -->
+- [x] Each task's acceptance criteria confirmed  <!-- commit: d89a55f -->
+- [x] `package.json` includes `"pdf-parse"` dependency  <!-- commit: d89a55f -->
+- [x] `tests/fixtures/resume/` fixtures committed  <!-- commit: d89a55f -->
