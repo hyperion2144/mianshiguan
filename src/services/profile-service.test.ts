@@ -6,7 +6,7 @@ import yaml from 'js-yaml'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Database } from '../db/Database.ts'
 import { ConfigService } from './config-service.ts'
-import { createProfileService, type ProfileService } from './profile-service.ts'
+import { type ProfileService, createProfileService } from './profile-service.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +28,11 @@ function makeDb(): Database {
  * factory signature accepts a `ConfigService` instance directly so the
  * tests can construct one with a controlled dataDir.
  */
-function makeService(db: Database): { service: ProfileService; config: ConfigService; dataDir: string } {
+function makeService(db: Database): {
+  service: ProfileService
+  config: ConfigService
+  dataDir: string
+} {
   const dataDir = '/tmp/mi-profile-test'
   const config = new ConfigService(dataDir)
   const service = createProfileService(db, config)
@@ -207,7 +211,9 @@ describe('ProfileService.update', () => {
   it('mutates scalar fields and refreshes updated_at', () => {
     const { service } = makeService(db)
     const created = service.create({ name: 'X' })
-    db.conn.query("UPDATE profiles SET created_at = '2020-01-01 00:00:00' WHERE id = ?").run(created.id)
+    db.conn
+      .query("UPDATE profiles SET created_at = '2020-01-01 00:00:00' WHERE id = ?")
+      .run(created.id)
     const updated = service.update(created.id, { targetRole: 'Staff Engineer' })
     expect(updated.targetRole).toBe('Staff Engineer')
     expect(updated.updatedAt).not.toBe('2020-01-01 00:00:00')
@@ -239,13 +245,14 @@ describe('ProfileService.update', () => {
   it('no-op patch still refreshes updated_at', () => {
     const { service } = makeService(db)
     const created = service.create({ name: 'X' })
-    db.conn.query("UPDATE profiles SET created_at = '2020-01-01 00:00:00' WHERE id = ?").run(created.id)
+    db.conn
+      .query("UPDATE profiles SET created_at = '2020-01-01 00:00:00' WHERE id = ?")
+      .run(created.id)
     const updated = service.update(created.id, {})
     expect(updated.name).toBe('X')
     expect(updated.updatedAt).not.toBe('2020-01-01 00:00:00')
   })
 })
-
 
 describe('ProfileService.delete', () => {
   let db: Database

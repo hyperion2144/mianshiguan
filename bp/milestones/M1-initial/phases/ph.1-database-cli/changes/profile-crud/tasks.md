@@ -24,7 +24,7 @@
 > All tasks run against `:memory:` SQLite in `beforeEach`. Intermediate
 > verification: `bun test src/services/profile-service.test.ts` passes.
 
-- [ ] T-1: [type:config] Add `ulid` dependency and domain types
+- [x] T-1: [type:config] Add `ulid` dependency and domain types <!-- commit: 8a6a862 -->
   - **refs**: DS-1
   - **files**: `package.json`, `src/services/profile-service.ts`
   - **spec_ref**: specs/profile/spec.md
@@ -35,7 +35,7 @@
       `UpdateProfilePatch` interfaces — no implementation methods yet
   - **depends_on**: []
 
-- [ ] T-2: [type:behavior] ProfileService.create generates ULID and inserts row
+- [x] T-2: [type:behavior] ProfileService.create generates ULID and inserts row <!-- commit: cf523e9 -->
   - **refs**: DS-1
   - **files**: `src/services/profile-service.ts`, `src/services/profile-service.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-1
@@ -64,7 +64,7 @@
     AND   a SELECT count(*) FROM profiles returns 1
     ```
 
-- [ ] T-3: [type:behavior] ProfileService.create rejects empty and duplicate names
+- [x] T-3: [type:behavior] ProfileService.create rejects empty and duplicate names <!-- commit: 2f0360f -->
   - **refs**: DS-1
   - **files**: `src/services/profile-service.ts`, `src/services/profile-service.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-1
@@ -85,7 +85,7 @@
     AND   profiles table still has exactly 1 row
     ```
 
-- [ ] T-4: [type:behavior] ProfileService.list returns profiles ordered by created_at
+- [x] T-4: [type:behavior] ProfileService.list returns profiles ordered by created_at <!-- commit: 0fc3db2 -->
   - **refs**: DS-1
   - **files**: `src/services/profile-service.ts`, `src/services/profile-service.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-2
@@ -107,7 +107,7 @@
     AND   result[0].skills === ['React','TypeScript']
     ```
 
-- [ ] T-5: [type:behavior] ProfileService.get returns one profile or throws MiNotFoundError
+- [x] T-5: [type:behavior] ProfileService.get returns one profile or throws MiNotFoundError <!-- commit: 17b8975 -->
   - **refs**: DS-1
   - **files**: `src/services/profile-service.ts`, `src/services/profile-service.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-3
@@ -128,7 +128,7 @@
     THEN  throws MiValidationError(/id 不能为空/)
     ```
 
-- [ ] T-6: [type:behavior] ProfileService.update mutates fields and refreshes updated_at
+- [x] T-6: [type:behavior] ProfileService.update mutates fields and refreshes updated_at <!-- commit: fc39229 -->
   - **refs**: DS-1
   - **files**: `src/services/profile-service.ts`, `src/services/profile-service.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-4
@@ -155,7 +155,7 @@
     THEN  throws MiNotFoundError
     ```
 
-- [ ] T-7: [type:behavior] ProfileService.delete removes profile and cascades resume_history
+- [x] T-7: [type:behavior] ProfileService.delete removes profile and cascades resume_history <!-- commit: 109483b -->
   - **refs**: DS-1
   - **files**: `src/services/profile-service.ts`, `src/services/profile-service.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-5
@@ -175,7 +175,7 @@
     THEN  throws MiNotFoundError
     ```
 
-- [ ] T-8: [type:behavior] ProfileService.switchActive updates config defaultProfile atomically
+- [x] T-8: [type:behavior] ProfileService.switchActive updates config defaultProfile atomically <!-- commit: 0d23012 -->
   - **refs**: DS-1
   - **files**: `src/services/profile-service.ts`, `src/services/profile-service.test.ts`
   - **spec_ref**: specs/profile/spec.md SHALL-6

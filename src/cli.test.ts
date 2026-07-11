@@ -41,5 +41,5 @@ describe('src/cli.ts — cac root CLI entry', () => {
     const stdout = result.stdout
     expect(stdout).toContain('显示版本号')
     expect(stdout).toContain('显示帮助信息')
-   })
+  })
 })
