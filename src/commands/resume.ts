@@ -45,9 +45,7 @@ export function registerResumeCommand(program: CAC): void {
     .option('--offset <n>', 'history 偏移量（newest-first）')
     .option('--json', '以 JSON 格式输出')
     .action((args: string[] | undefined, options: ResumeCommandOptions) => {
-      runCommandAction(() => {
-        runResumeCommand(args ?? [], options)
-      })
+      runCommandAction(() => runResumeCommand(args ?? [], options))
     })
 }
 
