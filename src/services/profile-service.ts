@@ -53,7 +53,6 @@ export type UpdateProfilePatch = Partial<Omit<CreateProfileInput, never>>
  */
 export const UPDATABLE_FIELDS = [
   'name',
-  'resumeText',
   'resumePath',
   'targetRole',
   'jd',
@@ -93,6 +92,10 @@ const NAME_EMPTY_MESSAGE = '名称不能为空'
 const DUPLICATE_NAME_MESSAGE = (name: string) => `name 已存在: ${name}`
 
 function rowToProfile(row: ProfileRowRaw): Profile {
+  let skills: string[] = []
+  let targetCompanies: string[] = []
+  try { skills = JSON.parse(row.skills) as string[] } catch { /* corrupted data */ }
+  try { targetCompanies = JSON.parse(row.target_companies) as string[] } catch { /* corrupted data */ }
   return {
     id: row.id,
     name: row.name,
@@ -100,8 +103,8 @@ function rowToProfile(row: ProfileRowRaw): Profile {
     resumePath: row.resume_path,
     targetRole: row.target_role,
     jd: row.jd,
-    skills: JSON.parse(row.skills) as string[],
-    targetCompanies: JSON.parse(row.target_companies) as string[],
+    skills,
+    targetCompanies,
     notes: row.notes,
     avatarPath: row.avatar_path,
     createdAt: row.created_at,
