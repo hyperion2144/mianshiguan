@@ -35,6 +35,7 @@ function seedConfig(dataDir: string, defaultProfile?: string): void {
   const configService = new ConfigService(dataDir)
   configService.save({
     dataDir,
+    dbPath: join(dataDir, 'data.db'),
     interviewerStyle: 'coaching',
     dashboardPort: 3456,
     ...(defaultProfile !== undefined && { defaultProfile }),
@@ -104,6 +105,7 @@ describe('mi profile list command', () => {
     const second = harness.service.create({ name: 'profileB', targetRole: 'BE' })
     harness.configService.save({
       dataDir: harness.tmpDir,
+      dbPath: join(harness.tmpDir, 'data.db'),
       interviewerStyle: 'coaching',
       dashboardPort: 3456,
       defaultProfile: first.id,
