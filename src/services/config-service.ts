@@ -130,13 +130,16 @@ export class ConfigService {
     }
     const obj = raw as Record<string, unknown>
 
+    // Each field follows the same shape: present + valid → use as-is;
+    // missing → fall back to default. `parseStyle` validates enum
+    // members and throws on bad input, so we only call it when the key
+    // is actually present.
     const dataDir = typeof obj.dataDir === 'string' ? obj.dataDir : this.dataDir
     const dbPath = join(dataDir, 'data.db')
     const dashboardPort =
       typeof obj.dashboardPort === 'number' ? obj.dashboardPort : DEFAULT_CONFIG.dashboardPort
-    // Backfill interviewerStyle: missing → default; present → validate (parseStyle throws on bad enum).
     const interviewerStyle =
-      typeof obj.interviewerStyle === 'string'
+      obj.interviewerStyle !== undefined
         ? this.parseStyle(obj.interviewerStyle)
         : DEFAULT_CONFIG.interviewerStyle
 
