@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
-import {
-  type ResumeHistoryEntry,
-  type ResumeService,
-  type ResumeSnapshot,
+import type {
+  ResumeHistoryEntry,
+  ResumeService,
+  ResumeSnapshot,
 } from '../services/resume-service.ts'
 import { runResumeCommand } from './resume.ts'
 
@@ -42,7 +42,9 @@ function makeMockService(overrides: Partial<ResumeService> = {}): ResumeService 
     updatedAt: '2025-01-01T00:00:00.000Z',
   }
   return {
-    importFromFile: vi.fn(async () => defaultSnapshot) as unknown as ResumeService['importFromFile'],
+    importFromFile: vi.fn(
+      async () => defaultSnapshot,
+    ) as unknown as ResumeService['importFromFile'],
     getCurrent: vi.fn(() => ({
       profileId: 'P1',
       profileName: 'Senior FE',
@@ -119,9 +121,9 @@ describe('mi resume import command', () => {
     }) as unknown as ResumeService['importFromFile']
     service = makeMockService({ importFromFile: importMock })
 
-    await expect(
-      runResumeCommand(['import'], { file: '/tmp/r.pdf' }, { service }),
-    ).rejects.toThrow(/PDF 解析失败/)
+    await expect(runResumeCommand(['import'], { file: '/tmp/r.pdf' }, { service })).rejects.toThrow(
+      /PDF 解析失败/,
+    )
   })
 
   it('rejects with MiDatabaseError from service so runCommandAction can map it to exit 2', async () => {
@@ -174,9 +176,7 @@ describe('mi resume show command', () => {
     const getCurrentMock = vi.fn(() => snapshot) as unknown as ResumeService['getCurrent']
     service = makeMockService({ getCurrent: getCurrentMock })
 
-    const output = await captureStdoutAsync(() =>
-      runResumeCommand(['show'], {}, { service }),
-    )
+    const output = await captureStdoutAsync(() => runResumeCommand(['show'], {}, { service }))
 
     expect(getCurrentMock).toHaveBeenCalled()
     const text = stripAnsi(output.join('\n'))
@@ -219,9 +219,7 @@ describe('mi resume show command', () => {
     const getCurrentMock = vi.fn(() => snapshot) as unknown as ResumeService['getCurrent']
     service = makeMockService({ getCurrent: getCurrentMock })
 
-    const output = await captureStdoutAsync(() =>
-      runResumeCommand(['show'], {}, { service }),
-    )
+    const output = await captureStdoutAsync(() => runResumeCommand(['show'], {}, { service }))
 
     expect(stripAnsi(output.join('\n'))).toContain('尚未导入简历')
   })
@@ -262,9 +260,7 @@ describe('mi resume history command', () => {
     const listMock = vi.fn(() => entries) as unknown as ResumeService['listHistory']
     service = makeMockService({ listHistory: listMock })
 
-    const output = await captureStdoutAsync(() =>
-      runResumeCommand(['history'], {}, { service }),
-    )
+    const output = await captureStdoutAsync(() => runResumeCommand(['history'], {}, { service }))
 
     expect(listMock).toHaveBeenCalled()
     const text = stripAnsi(output.join('\n'))
@@ -279,12 +275,12 @@ describe('mi resume history command', () => {
   })
 
   it('prints 暂无历史版本 hint when history is empty', async () => {
-    const listMock = vi.fn(() => [] as ResumeHistoryEntry[]) as unknown as ResumeService['listHistory']
+    const listMock = vi.fn(
+      () => [] as ResumeHistoryEntry[],
+    ) as unknown as ResumeService['listHistory']
     service = makeMockService({ listHistory: listMock })
 
-    const output = await captureStdoutAsync(() =>
-      runResumeCommand(['history'], {}, { service }),
-    )
+    const output = await captureStdoutAsync(() => runResumeCommand(['history'], {}, { service }))
 
     expect(stripAnsi(output.join('\n'))).toContain('暂无历史版本')
   })
@@ -293,9 +289,7 @@ describe('mi resume history command', () => {
     const listMock = vi.fn(() => []) as unknown as ResumeService['listHistory']
     service = makeMockService({ listHistory: listMock })
 
-    await captureStdoutAsync(() =>
-      runResumeCommand(['history'], { limit: 2 }, { service }),
-    )
+    await captureStdoutAsync(() => runResumeCommand(['history'], { limit: 2 }, { service }))
 
     expect(listMock).toHaveBeenCalledWith(undefined, { limit: 2 })
   })

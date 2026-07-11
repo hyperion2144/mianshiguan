@@ -74,11 +74,7 @@ export async function runResumeCommand(
         importOptions.profileId = profileId
       }
       const snapshot = await service.importFromFile(file, importOptions)
-      console.log(
-        success(
-          `已导入简历 (${snapshot.sourceFormat}) → profile=${snapshot.profileId}`,
-        ),
-      )
+      console.log(success(`已导入简历 (${snapshot.sourceFormat}) → profile=${snapshot.profileId}`))
       return
     }
     case 'show': {
