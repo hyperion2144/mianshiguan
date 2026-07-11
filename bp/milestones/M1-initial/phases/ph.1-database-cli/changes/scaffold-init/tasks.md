@@ -24,7 +24,7 @@
      - Multiple DS merge into one T only if they cannot compile/test separately.
      - 1 wave by default. Add Wave 2, 3 only when layer dependencies exist (model→service→api). -->
 
-- [ ] T-1: [type:scaffolding] Initialize Bun/TypeScript project (package.json, tsconfig.json, biome.json, .gitignore)
+- [x] T-1: [type:scaffolding] Initialize Bun/TypeScript project (package.json, tsconfig.json, biome.json, .gitignore) <!-- commit: 4754b62 -->
   - **refs**: DS-1
   - **files**: `package.json`, `tsconfig.json`, `biome.json`, `.gitignore`
   - **spec_ref**: (none — scaffolding)
@@ -35,7 +35,7 @@
     - `.gitignore` excludes `node_modules/`, `*.db`, `*.db-wal`, `*.db-shm`, `bun.lockb`
     - `biome.json` configures indent_width=2, line_width=100, enables recommended rules
 
-- [ ] T-2: [type:behavior] Implement cac root CLI entry + command router stub
+- [x] T-2: [type:behavior] Implement cac root CLI entry + command router stub <!-- commit: 3527643 -->
   - **refs**: DS-1
   - **files**: `src/cli.ts`, `src/commands/index.ts`, `src/cli.test.ts`
   - **spec_ref**: specs/cli-config/spec.md (implicit: --help prints registered subcommands)
@@ -46,7 +46,7 @@
     - `src/commands/index.ts` exports `registerCommands(program: Command)` that wires up `init` and `config` from sibling files (init/config files may still be stubs at this wave's end)
   - **RED test**: GIVEN `bun run src/cli.ts --help` WHEN invoked THEN stdout contains the strings `init`, `config`, `version`, AND exit code is 0.
 
-- [ ] T-3: [type:behavior] Define typed error class hierarchy (`MiError` + subclasses)
+- [x] T-3: [type:behavior] Define typed error class hierarchy (`MiError` + subclasses) <!-- commit: 0c13973 -->
   - **refs**: DS-1
   - **files**: `src/errors.ts`, `src/errors.test.ts`
   - **spec_ref**: specs/cli-config/spec.md (error → exit code mapping for CLI handlers)
@@ -58,7 +58,7 @@
     - `throw new MiValidationError('请先运行 mi init 初始化配置')` carries Chinese message
   - **RED test**: GIVEN `new MiValidationError('x')` WHEN inspecting `.code` THEN string equals `'E_VALIDATION'`; AND `instanceof MiError` returns true; AND `instanceof MiValidationError` returns true; AND `message === 'x'`.
 
-- [ ] T-4: [type:scaffolding] Output/UX helpers (picocolors wrappers + nanospinner withSpinner)
+- [x] T-4: [type:scaffolding] Output/UX helpers (picocolors wrappers + nanospinner withSpinner) <!-- commit: 8443849 -->
   - **refs**: DS-1
   - **files**: `src/output/colors.ts`, `src/output/spinner.ts`
   - **spec_ref**: (none — scaffolding)
@@ -72,7 +72,7 @@
 
 ## Wave 2: Data + Service Layers (storage, migration runner, config service)
 
-- [ ] T-5: [type:scaffolding] Ship canonical initial migration SQL
+- [x] T-5: [type:scaffolding] Ship canonical initial migration SQL <!-- commit: f56f127 -->
   - **refs**: DS-2
   - **files**: `src/db/migrations/0001_initial.sql`
   - **spec_ref**: specs/storage/spec.md
@@ -83,7 +83,7 @@
     - All tables use snake_case columns; all timestamps use `datetime('now')` defaults
     - File is lexicographically smallest migration filename (no `0000_*`)
 
-- [ ] T-6: [type:behavior] Implement Database wrapper (`bun:sqlite` + WAL + FK pragmas)
+- [x] T-6: [type:behavior] Implement Database wrapper (`bun:sqlite` + WAL + FK pragmas) <!-- commit: 7056763 -->
   - **refs**: DS-2
   - **files**: `src/db/Database.ts`, `src/db/Database.test.ts`
   - **spec_ref**: specs/storage/spec.md
@@ -95,7 +95,7 @@
     - Database is a thin wrapper; no business logic; no implicit migration
   - **RED test**: GIVEN `new Database(':memory:')` WHEN querying `PRAGMA journal_mode` THEN result is `'wal'`; AND `PRAGMA foreign_keys` returns `1`; AND `db.conn` is defined.
 
-- [ ] T-7: [type:behavior] Implement migration runner
+- [x] T-7: [type:behavior] Implement migration runner <!-- commit: da5985c -->
   - **refs**: DS-2
   - **files**: `src/db/migrate.ts`, `src/db/migrate.ts`
   - **spec_ref**: specs/storage/spec.md
@@ -107,7 +107,7 @@
     - Filter non-`.sql` files
   - **RED test**: GIVEN fresh `:memory:` DB and migrations dir with `0001_initial.sql` and a synthetic `0002_add_foo.sql` WHEN running `.run()` THEN applied returns `[1, 2]`; WHEN re-running THEN applied returns `[]` (idempotent); GIVEN broken SQL injected WHEN running THEN throws `MiDatabaseError` AND `_schema_version` row count is unchanged from before.
 
-- [ ] T-8: [type:behavior] Implement ConfigService (YAML atomic read/write)
+- [x] T-8: [type:behavior] Implement ConfigService (YAML atomic read/write) <!-- commit: 9a57754 -->
   - **refs**: DS-3
   - **files**: `src/services/config-service.ts`, `src/services/config-service.test.ts`
   - **spec_ref**: specs/cli-config/spec.md
@@ -124,7 +124,7 @@
 
 ## Wave 3: CLI Handlers + Integration Test
 
-- [ ] T-9: [type:behavior] Implement `mi init` command
+- [x] T-9: [type:behavior] Implement `mi init` command <!-- commit: 4c02f79 -->
   - **refs**: DS-4
   - **files**: `src/commands/init.ts`, `src/commands/init.test.ts`
   - **spec_ref**: specs/cli-config/spec.md
@@ -138,7 +138,7 @@
     - Migration runner failure bubbles up as `MiDatabaseError`; exit 2
   - **RED test**: GIVEN empty temp dir WHEN handler invoked THEN data dir created with mode 0o700 AND `config.yml` exists AND `data.db` exists AND `_schema_version.version = 1`; GIVEN already-initialized dir without `--force` WHEN handler invoked THEN throws `MiValidationError`.
 
-- [ ] T-10: [type:behavior] Implement `mi config get|set|list`
+- [x] T-10: [type:behavior] Implement `mi config get|set|list` <!-- commit: 40b8f3b -->
   - **refs**: DS-4
   - **files**: `src/commands/config.ts`, `src/commands/config.test.ts`
   - **spec_ref**: specs/cli-config/spec.md
@@ -150,7 +150,7 @@
     - When `config.yml` missing on any subcommand → throws `MiConfigError('请先运行 mi init 初始化配置')`; exit 1.
   - **RED test**: GIVEN initialized temp dir with `interviewerStyle=coaching` WHEN `mi config get interviewerStyle` invoked THEN stdout contains `"coaching"`; AND `mi config list --json` parses to `{ interviewerStyle: "coaching", ... }`; AND `mi config set interviewerStyle strict` followed by `mi config get interviewerStyle` returns `"strict"`.
 
-- [ ] T-11: [type:scaffolding] Wire init + config handlers into command router
+- [x] T-11: [type:scaffolding] Wire init + config handlers into command router <!-- commit: 452d24f -->
   - **refs**: DS-1, DS-4
   - **files**: `src/commands/index.ts` (modify from T-2 stub)
   - **spec_ref**: (none — scaffolding)
@@ -161,7 +161,7 @@
     - `bun run src/cli.ts init --help` shows `init` flags (`--force`, `--dry-run`, `--data-dir`)
     - `bun run src/cli.ts config --help` shows `config get/set/list` subcommands
 
-- [ ] T-12: [type:behavior] End-to-end integration test (CLI as child_process)
+- [x] T-12: [type:behavior] End-to-end integration test (CLI as child_process) <!-- commit: eabda99 -->
   - **refs**: DS-2, DS-3, DS-4
   - **files**: `tests/e2e/init-and-config.test.ts`
   - **spec_ref**: specs/cli-config/spec.md, specs/storage/spec.md
@@ -172,7 +172,7 @@
     - Each spawn's exit code + stdout/stderr captured and asserted
   - **RED test**: GIVEN temp `MIANSHIGUAN_HOME` WHEN running the sequential command script THEN every step's expected exit code matches; AND DB tables are present; AND `config.yml` written.
 
-- [ ] T-13: [type:docs] Update `coding-standards.md` to reflect cac + new dependencies
+- [x] T-13: [type:docs] Update `coding-standards.md` to reflect cac + new dependencies <!-- commit: 9ef219d -->
   - **refs**: DS-1
   - **files**: `bp/conventions/coding-standards.md` (modify)
   - **spec_ref**: (none — docs)
