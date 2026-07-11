@@ -243,3 +243,51 @@ describe('ProfileService.update', () => {
     expect(updated.updatedAt).not.toBe('2020-01-01 00:00:00')
   })
 })
+
+
+describe('ProfileService.delete', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('removes the profile row and returns void', () => {
+    const { service } = makeService(db)
+    const created = service.create({ name: 'X' })
+    const result = service.delete(created.id)
+    expect(result).toBeUndefined()
+    const row = db.conn.query('SELECT id FROM profiles WHERE id = ?').get(created.id)
+    expect(row).toBeNull()
+  })
+
+  it('cascades resume_history rows when the profile is deleted', () => {
+    const { service } = makeService(db)
+    const created = service.create({ name: 'X' })
+    db.conn
+      .query('INSERT INTO resume_history (profile_id, resume_text) VALUES (?, ?)')
+      .run(created.id, 'snapshot-1')
+    db.conn
+      .query('INSERT INTO resume_history (profile_id, resume_text) VALUES (?, ?)')
+      .run(created.id, 'snapshot-2')
+    service.delete(created.id)
+    const historyCount = db.conn
+      .query('SELECT COUNT(*) AS n FROM resume_history WHERE profile_id = ?')
+      .get(created.id) as { n: number }
+    expect(historyCount.n).toBe(0)
+  })
+
+  it('throws MiNotFoundError for an unknown id', () => {
+    const { service } = makeService(db)
+    expect(() => service.delete('ghost')).toThrow(/Profile 不存在/)
+  })
+
+  it('throws MiValidationError for empty id', () => {
+    const { service } = makeService(db)
+    expect(() => service.delete('')).toThrow(/id 不能为空/)
+  })
+})
