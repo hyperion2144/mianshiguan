@@ -5,7 +5,7 @@ import type { CAC } from 'cac'
 import { Database } from '../db/Database.ts'
 import { MigrationRunner } from '../db/migrate.ts'
 import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
-import { success, error as formatError } from '../output/colors.ts'
+import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 
 export interface InitCommandOptions {

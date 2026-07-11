@@ -3,7 +3,7 @@ import type { CAC } from 'cac'
 import Table from 'cli-table3'
 import { MiConfigError, MiDatabaseError, MiError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
-import { ConfigService, type Config } from '../services/config-service.ts'
+import { type Config, ConfigService } from '../services/config-service.ts'
 
 export interface ConfigCommandOptions {
   dataDir?: string

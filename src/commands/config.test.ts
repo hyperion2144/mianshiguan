@@ -37,14 +37,16 @@ describe('mi config command handler', () => {
   })
 
   afterEach(() => {
-    delete process.env.MIANSHIGUAN_HOME
+    process.env.MIANSHIGUAN_HOME = undefined
     rmSync(tmpDir, { recursive: true, force: true })
   })
 
   it('get <key> prints only that value via success output', () => {
     seedConfig(tmpDir)
 
-    const output = captureStdout(() => runConfigCommand(['get', 'interviewerStyle'], { dataDir: tmpDir }))
+    const output = captureStdout(() =>
+      runConfigCommand(['get', 'interviewerStyle'], { dataDir: tmpDir }),
+    )
 
     expect(output.join('\n')).toContain('coaching')
     expect(output.join('\n')).not.toContain('dashboardPort')
@@ -54,7 +56,10 @@ describe('mi config command handler', () => {
     seedConfig(tmpDir)
 
     const output = captureStdout(() => runConfigCommand(['list'], { dataDir: tmpDir, json: true }))
-    const parsed = JSON.parse(output.join('\n')) as { interviewerStyle: string; dashboardPort: number }
+    const parsed = JSON.parse(output.join('\n')) as {
+      interviewerStyle: string
+      dashboardPort: number
+    }
 
     expect(parsed.interviewerStyle).toBe('coaching')
     expect(parsed.dashboardPort).toBe(3456)
@@ -106,9 +111,9 @@ describe('mi config command handler', () => {
     expect(() => runConfigCommand(['get', 'interviewerStyle'], { dataDir: tmpDir })).toThrow(
       MiConfigError,
     )
-    expect(() => runConfigCommand(['set', 'interviewerStyle', 'strict'], { dataDir: tmpDir })).toThrow(
-      MiConfigError,
-    )
+    expect(() =>
+      runConfigCommand(['set', 'interviewerStyle', 'strict'], { dataDir: tmpDir }),
+    ).toThrow(MiConfigError)
     expect(() => runConfigCommand(['list'], { dataDir: tmpDir })).toThrow(MiConfigError)
   })
 })

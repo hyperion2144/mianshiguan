@@ -28,7 +28,7 @@ describe('mi init command handler', () => {
   })
 
   afterEach(() => {
-    delete process.env.MIANSHIGUAN_HOME
+    process.env.MIANSHIGUAN_HOME = undefined
     rmSync(tmpDir, { recursive: true, force: true })
   })
 
