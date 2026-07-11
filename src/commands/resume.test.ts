@@ -235,3 +235,101 @@ describe('mi resume show command', () => {
     await expect(runResumeCommand(['show'], {}, { service })).rejects.toThrow(/Profile 不存在/)
   })
 })
+
+describe('mi resume history command', () => {
+  let service: ResumeService
+
+  beforeEach(() => {
+    service = makeMockService()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function makeEntries(count: number): ResumeHistoryEntry[] {
+    return Array.from({ length: count }, (_, i) => ({
+      id: 100 + i,
+      profileId: 'P1',
+      text: `archived-${i}`,
+      path: `/tmp/h-${i}.md`,
+      archivedAt: `2025-01-01T00:00:${String(i).padStart(2, '0')}.000Z`,
+    }))
+  }
+
+  it('prints cli-table3 with ID|ARCHIVED_AT|PATH|SIZE headers and one row per entry', async () => {
+    const entries = makeEntries(3)
+    const listMock = vi.fn(() => entries) as unknown as ResumeService['listHistory']
+    service = makeMockService({ listHistory: listMock })
+
+    const output = await captureStdoutAsync(() =>
+      runResumeCommand(['history'], {}, { service }),
+    )
+
+    expect(listMock).toHaveBeenCalled()
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('ID')
+    expect(text).toContain('ARCHIVED_AT')
+    expect(text).toContain('PATH')
+    expect(text).toContain('SIZE')
+    // Each entry id should appear in output
+    for (const entry of entries) {
+      expect(text).toContain(String(entry.id))
+    }
+  })
+
+  it('prints 暂无历史版本 hint when history is empty', async () => {
+    const listMock = vi.fn(() => [] as ResumeHistoryEntry[]) as unknown as ResumeService['listHistory']
+    service = makeMockService({ listHistory: listMock })
+
+    const output = await captureStdoutAsync(() =>
+      runResumeCommand(['history'], {}, { service }),
+    )
+
+    expect(stripAnsi(output.join('\n'))).toContain('暂无历史版本')
+  })
+
+  it('--limit N forwards to service.listHistory as { limit: N }', async () => {
+    const listMock = vi.fn(() => []) as unknown as ResumeService['listHistory']
+    service = makeMockService({ listHistory: listMock })
+
+    await captureStdoutAsync(() =>
+      runResumeCommand(['history'], { limit: 2 }, { service }),
+    )
+
+    expect(listMock).toHaveBeenCalledWith(undefined, { limit: 2 })
+  })
+
+  it('--offset N --limit M forwards both to service.listHistory', async () => {
+    const listMock = vi.fn(() => []) as unknown as ResumeService['listHistory']
+    service = makeMockService({ listHistory: listMock })
+
+    await captureStdoutAsync(() =>
+      runResumeCommand(['history'], { limit: 2, offset: 1 }, { service }),
+    )
+
+    expect(listMock).toHaveBeenCalledWith(undefined, { limit: 2, offset: 1 })
+  })
+
+  it('--json mode prints JSON.stringify of the entries', async () => {
+    const entries = makeEntries(3)
+    const listMock = vi.fn(() => entries) as unknown as ResumeService['listHistory']
+    service = makeMockService({ listHistory: listMock })
+
+    const output = await captureStdoutAsync(() =>
+      runResumeCommand(['history'], { json: true }, { service }),
+    )
+
+    const parsed = JSON.parse(output.join('\n'))
+    expect(parsed).toEqual(entries)
+  })
+
+  it('rejects with MiNotFoundError /Profile 不存在/ when listHistory fails', async () => {
+    const listMock = vi.fn(() => {
+      throw new MiNotFoundError('Profile 不存在: ghost')
+    }) as unknown as ResumeService['listHistory']
+    service = makeMockService({ listHistory: listMock })
+
+    await expect(runResumeCommand(['history'], {}, { service })).rejects.toThrow(/Profile 不存在/)
+  })
+})
