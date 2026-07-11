@@ -237,4 +237,79 @@ export class ProfileService {
     }
     return rowToProfile(row)
   }
+
+  /**
+   * Apply a partial patch. Empty / missing fields are left untouched.
+   * `updated_at` is always refreshed to `datetime('now')` (even for a
+   * no-op patch) so downstream code can rely on it as a "last touched"
+   * signal. Throws `MiNotFoundError` for unknown ids.
+   */
+  update(id: string, patch: UpdateProfilePatch): Profile {
+    if (typeof id !== 'string' || id.length === 0) {
+      throw new MiValidationError('id 不能为空')
+    }
+    // Pre-check existence so a no-op patch on a missing id still 404s.
+    this.get(id)
+
+    const sets: string[] = []
+    const params: (string | number | null)[] = []
+
+    if (patch.name !== undefined) {
+      if (typeof patch.name !== 'string' || patch.name.trim().length === 0) {
+        throw new MiValidationError('名称不能为空')
+      }
+      sets.push('name = ?')
+      params.push(patch.name)
+    }
+    if (patch.resumeText !== undefined) {
+      sets.push('resume_text = ?')
+      params.push(patch.resumeText)
+    }
+    if (patch.resumePath !== undefined) {
+      sets.push('resume_path = ?')
+      params.push(patch.resumePath)
+    }
+    if (patch.targetRole !== undefined) {
+      sets.push('target_role = ?')
+      params.push(patch.targetRole)
+    }
+    if (patch.jd !== undefined) {
+      sets.push('jd = ?')
+      params.push(patch.jd)
+    }
+    if (patch.skills !== undefined) {
+      sets.push('skills = ?')
+      params.push(JSON.stringify(patch.skills))
+    }
+    if (patch.targetCompanies !== undefined) {
+      sets.push('target_companies = ?')
+      params.push(JSON.stringify(patch.targetCompanies))
+    }
+    if (patch.notes !== undefined) {
+      sets.push('notes = ?')
+      params.push(patch.notes)
+    }
+    if (patch.avatarPath !== undefined) {
+      sets.push('avatar_path = ?')
+      params.push(patch.avatarPath)
+    }
+
+    // Always refresh updated_at; even an empty patch bumps the timestamp
+    // so clients can rely on it.
+    sets.push("updated_at = datetime('now')")
+
+    if (sets.length > 1) {
+      params.push(id)
+      try {
+        this.db.conn.query(`UPDATE profiles SET ${sets.join(', ')} WHERE id = ?`).run(...params)
+      } catch (err) {
+        if (isUniqueConstraintError(err)) {
+          throw new MiValidationError(DUPLICATE_NAME_MESSAGE(patch.name ?? ''))
+        }
+        throw new MiDatabaseError(toMessage(err, 'update profile'))
+      }
+    }
+
+    return this.get(id)
+  }
 }
