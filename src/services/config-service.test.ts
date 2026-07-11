@@ -47,6 +47,24 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
       expect(cfg.dbPath).toBe(join('/custom/path', 'data.db'))
       expect(cfg.dbPath).not.toBe('/wrong/ignored.db')
     })
+
+    it('partial config with only dataDir backfills interviewerStyle=coaching and dashboardPort=3456', () => {
+      writeFileSync(join(tmpDir, 'config.yml'), 'dataDir: /only/data/dir\n')
+      const svc = new ConfigService(tmpDir)
+      const cfg = svc.load()
+      expect(cfg.dataDir).toBe('/only/data/dir')
+      expect(cfg.interviewerStyle).toBe('coaching')
+      expect(cfg.dashboardPort).toBe(3456)
+      expect(cfg.dbPath).toBe('/only/data/dir/data.db')
+    })
+
+    it('partial config with only dataDir + interviewerStyle backfills dashboardPort=3456', () => {
+      writeFileSync(join(tmpDir, 'config.yml'), 'dataDir: /x\ninterviewerStyle: strict\n')
+      const svc = new ConfigService(tmpDir)
+      const cfg = svc.load()
+      expect(cfg.interviewerStyle).toBe('strict')
+      expect(cfg.dashboardPort).toBe(3456)
+    })
   })
 
   describe('save()', () => {
