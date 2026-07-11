@@ -24,8 +24,9 @@ export interface ResumeCommandDeps {
 }
 const USAGE_IMPORT_MESSAGE = '用法错误: mi resume import --file <path> [--profile <id>]'
 const EMPTY_RESUME_MESSAGE = '尚未导入简历'
+const CURRENT_PROFILE_PREFIX = '当前 Profile: '
+const TRUNCATION_HINT_TEMPLATE = (n: number) => `… 还有 ${n} 行未显示，使用 --json 查看全文`
 const SHOW_PREVIEW_LINE_LIMIT = 60
-
 export function registerResumeCommand(program: CAC): void {
   program
     .command('resume [...args]', '管理简历：import / show / history')
@@ -91,7 +92,7 @@ function printShowOutput(snapshot: ResumeSnapshot, asJson: boolean): void {
     console.log(JSON.stringify(snapshot, null, 2))
     return
   }
-  console.log(`当前 Profile: ${snapshot.profileName}`)
+  console.log(`${CURRENT_PROFILE_PREFIX}${snapshot.profileName}`)
   if (snapshot.text.length === 0) {
     console.log(EMPTY_RESUME_MESSAGE)
     return
@@ -101,7 +102,7 @@ function printShowOutput(snapshot: ResumeSnapshot, asJson: boolean): void {
   console.log(visible.join('\n'))
   if (lines.length > SHOW_PREVIEW_LINE_LIMIT) {
     const remaining = lines.length - SHOW_PREVIEW_LINE_LIMIT
-    console.log(`… 还有 ${remaining} 行未显示，使用 --json 查看全文`)
+    console.log(TRUNCATION_HINT_TEMPLATE(remaining))
   }
 }
 
