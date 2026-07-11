@@ -190,3 +190,56 @@ describe('ProfileService.get', () => {
     expect(() => service.get('')).toThrow(/id 不能为空/)
   })
 })
+
+describe('ProfileService.update', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('mutates scalar fields and refreshes updated_at', () => {
+    const { service } = makeService(db)
+    const created = service.create({ name: 'X' })
+    db.conn.query("UPDATE profiles SET created_at = '2020-01-01 00:00:00' WHERE id = ?").run(created.id)
+    const updated = service.update(created.id, { targetRole: 'Staff Engineer' })
+    expect(updated.targetRole).toBe('Staff Engineer')
+    expect(updated.updatedAt).not.toBe('2020-01-01 00:00:00')
+    expect(updated.createdAt).toBe('2020-01-01 00:00:00')
+  })
+
+  it('re-serialises array fields to JSON', () => {
+    const { service } = makeService(db)
+    const created = service.create({ name: 'X', skills: ['A'] })
+    const updated = service.update(created.id, { skills: ['X', 'Y'] })
+    expect(updated.skills).toEqual(['X', 'Y'])
+    const raw = db.conn.query('SELECT skills FROM profiles WHERE id = ?').get(created.id) as {
+      skills: string
+    }
+    expect(raw.skills).toBe('["X","Y"]')
+  })
+
+  it('preserves fields not present in the patch', () => {
+    const { service } = makeService(db)
+    const created = service.create({ name: 'X', notes: 'old note' })
+    const updated = service.update(created.id, { targetRole: 'Y' })
+    expect(updated.notes).toBe('old note')
+  })
+  it('throws MiValidationError with /id 不能为空/ for empty id', () => {
+    const { service } = makeService(db)
+    expect(() => service.update('', { targetRole: 'X' })).toThrow(/id 不能为空/)
+  })
+
+  it('no-op patch still refreshes updated_at', () => {
+    const { service } = makeService(db)
+    const created = service.create({ name: 'X' })
+    db.conn.query("UPDATE profiles SET created_at = '2020-01-01 00:00:00' WHERE id = ?").run(created.id)
+    const updated = service.update(created.id, {})
+    expect(updated.name).toBe('X')
+    expect(updated.updatedAt).not.toBe('2020-01-01 00:00:00')
+  })
+})
