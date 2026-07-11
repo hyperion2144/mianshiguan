@@ -51,13 +51,14 @@ describe('mi init command handler', () => {
     }
   })
 
-  it('rejects an existing non-empty directory without --force', () => {
+  it('rejects an existing non-empty directory without --force and lists existing entries', () => {
     const dataDir = join(tmpDir, 'non-empty')
     mkdirSync(dataDir)
     writeFileSync(join(dataDir, 'existing.txt'), 'already here')
 
     expect(() => runInitCommand({ dataDir })).toThrow(MiValidationError)
     expect(() => runInitCommand({ dataDir })).toThrow(/数据目录已存在且非空/)
+    expect(() => runInitCommand({ dataDir })).toThrow(/existing\.txt/)
   })
 
   it('with --force overwrites config while preserving an existing database', () => {

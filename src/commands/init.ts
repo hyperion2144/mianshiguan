@@ -65,7 +65,11 @@ function ensureDataDirWritable(dataDir: string, force: boolean): void {
     }
     const entries = readdirSync(dataDir)
     if (entries.length > 0 && !force) {
-      throw new MiValidationError(`数据目录已存在且非空: ${dataDir}。请使用 --force 重新初始化。`)
+      const sample = entries.slice(0, 3).join(', ')
+      const more = entries.length > 3 ? ` 等 ${entries.length} 项` : ''
+      throw new MiValidationError(
+        `数据目录已存在且非空: ${dataDir}（包含: ${sample}${more}）。请使用 --force 重新初始化。`,
+      )
     }
   }
 
