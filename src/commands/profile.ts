@@ -2,7 +2,7 @@ import type { CAC } from 'cac'
 import Table from 'cli-table3'
 import { Database } from '../db/Database.ts'
 import { MiError, MiValidationError } from '../errors.ts'
-import { error as formatError } from '../output/colors.ts'
+import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import { type ProfileService, createProfileService } from '../services/profile-service.ts'
 
@@ -77,6 +77,9 @@ export function runProfileCommand(
       case 'list':
         listProfiles(service, configService, Boolean(options.json))
         return
+      case 'create':
+        createProfile(service, args[1] ?? '')
+        return
       default:
         throw new MiValidationError(`未知 profile 子命令: ${subcommand}`)
     }
@@ -111,4 +114,13 @@ function listProfiles(service: ProfileService, configService: ConfigService, asJ
     table.push([`${marker} ${profile.id}`, profile.name, profile.targetRole, profile.updatedAt])
   }
   console.log(table.toString())
+}
+
+function createProfile(service: ProfileService, name: string): void {
+  const trimmed = name.trim()
+  if (trimmed.length === 0) {
+    throw new MiValidationError('用法错误: mi profile create <名称>')
+  }
+  const profile = service.create({ name: trimmed })
+  console.log(success(`已创建 Profile: ${profile.name} (id=${profile.id})`))
 }

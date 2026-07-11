@@ -155,8 +155,6 @@ describe('mi profile create command', () => {
   })
 
   it('calls service.create and prints the Chinese success line with ULID', () => {
-    const created = harness.service.create({ name: 'My Profile', targetRole: 'FE' })
-
     const output = captureStdout(() =>
       runProfileCommand(['create', 'My Profile'], { dataDir: harness.tmpDir }, { service: harness.service }),
     )
@@ -164,7 +162,14 @@ describe('mi profile create command', () => {
     const text = stripAnsi(output.join('\n'))
     expect(text).toContain('已创建 Profile')
     expect(text).toContain('My Profile')
-    expect(text).toContain(created.id)
+    // The ULID we just minted is in the success line.
+    const match = text.match(/id=([0-9A-HJKMNP-TV-Z]{26})/)
+    expect(match).not.toBeNull()
+    const stored = harness.db.conn
+      .query('SELECT id, name FROM profiles WHERE id = ?')
+      .get(match![1]!) as { id: string; name: string } | null
+    expect(stored).not.toBeNull()
+    expect(stored!.name).toBe('My Profile')
   })
 
   it('throws MiValidationError /用法错误/ when name argument is missing', () => {
