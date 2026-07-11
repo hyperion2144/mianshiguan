@@ -353,3 +353,90 @@ describe('ResumeService.getCurrent', () => {
     db2.close()
   })
 })
+
+describe('ResumeService.listHistory', () => {
+  let db: Database
+  let service: ResumeService
+
+  beforeEach(() => {
+    db = makeDb()
+    ;({ service } = makeService(db))
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  function insertHistory(count: number, profileId: string, start = 1): number[] {
+    const ids: number[] = []
+    for (let i = 0; i < count; i += 1) {
+      const result = db.conn
+        .query(
+          `INSERT INTO resume_history
+             (profile_id, resume_text, resume_path, archived_at)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(
+          profileId,
+          `text-${start + i}`,
+          `/tmp/h-${start + i}.md`,
+          `2020-01-01 00:00:${String(start + i).padStart(2, '0')}`,
+        )
+      ids.push(Number(result.lastInsertRowid))
+    }
+    return ids
+  }
+
+  it('returns all rows newest-first by archived_at then id', () => {
+    insertProfile(db, 'P1', 'Senior FE')
+    const ids = insertHistory(5, 'P1')
+
+    const entries = service.listHistory('P1')
+    expect(entries).toHaveLength(5)
+    expect(entries[0]?.archivedAt > entries[4]?.archivedAt).toBe(true)
+    expect(entries[0]?.id).toBe(ids[ids.length - 1])
+    expect(entries[4]?.id).toBe(ids[0])
+  })
+
+  it('respects limit', () => {
+    insertProfile(db, 'P1', 'Senior FE')
+    insertHistory(5, 'P1')
+
+    const entries = service.listHistory('P1', { limit: 2 })
+    expect(entries).toHaveLength(2)
+    expect(entries[0]?.id).toBeGreaterThan(entries[1]?.id ?? 0)
+  })
+
+  it('respects limit + offset pagination', () => {
+    insertProfile(db, 'P1', 'Senior FE')
+    insertHistory(5, 'P1')
+
+    const first = service.listHistory('P1', { limit: 2, offset: 0 })
+    const second = service.listHistory('P1', { limit: 2, offset: 2 })
+    expect(first).toHaveLength(2)
+    expect(second).toHaveLength(2)
+    const firstIds = new Set(first.map((e) => e.id))
+    for (const e of second) {
+      expect(firstIds.has(e.id)).toBe(false)
+    }
+  })
+
+  it('returns [] for a profile with no history', () => {
+    insertProfile(db, 'P2', 'Junior BE')
+
+    expect(service.listHistory('P2')).toEqual([])
+  })
+
+  it('throws MiNotFoundError /Profile 不存在/ for unknown id', () => {
+    expect(() => service.listHistory('ghost')).toThrow(/Profile 不存在/)
+  })
+
+  it('hard-caps limit at 500', () => {
+    insertProfile(db, 'P1', 'Senior FE')
+    insertHistory(3, 'P1')
+
+    const entries = service.listHistory('P1', { limit: 10_000 })
+    expect(entries.length).toBeLessThanOrEqual(500)
+    expect(entries).toHaveLength(3)
+  })
+})
