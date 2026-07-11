@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { MiDatabaseError } from '../errors.ts'
 import type { Database } from './Database.ts'
 
+const VERSION_PREFIX = /^(\d{4})_/
 /**
  * Apply SQL migrations from a directory to a `Database` connection.
  *
@@ -73,7 +74,7 @@ export class MigrationRunner {
   }
 
   private parseVersion(filename: string): number {
-    const match = /^(\d{4})_/.exec(filename)
+    const match = VERSION_PREFIX.exec(filename)
     if (!match) {
       throw new MiDatabaseError(`无法解析迁移文件版本号: ${filename}`)
     }
