@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -272,5 +272,84 @@ describe('ResumeService.importFromFile — size and profile guards', () => {
       .query('SELECT COUNT(*) AS n FROM profiles')
       .get() as { n: number }
     expect(finalCount.n).toBe(initialCount.n)
+  })
+})
+
+describe('ResumeService.getCurrent', () => {
+  let db: Database
+  let service: ResumeService
+
+  beforeEach(() => {
+    db = makeDb()
+    ;({ service } = makeService(db))
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('infers sourceFormat = markdown from .md path', () => {
+    insertProfile(db, 'P1', 'Senior FE')
+    db.conn
+      .query(
+        `UPDATE profiles
+         SET resume_text = 'hello', resume_path = '/x/a.md'
+         WHERE id = 'P1'`,
+      )
+      .run()
+
+    const snap = service.getCurrent('P1')
+    expect(snap.sourceFormat).toBe('markdown')
+    expect(snap.text).toBe('hello')
+    expect(snap.path).toBe('/x/a.md')
+    expect(snap.profileId).toBe('P1')
+  })
+
+  it('infers sourceFormat = pdf from .pdf path', () => {
+    insertProfile(db, 'P2', 'Senior BE')
+    db.conn
+      .query(
+        `UPDATE profiles
+         SET resume_text = 'hi', resume_path = '/x/a.pdf'
+         WHERE id = 'P2'`,
+      )
+      .run()
+
+    const snap = service.getCurrent('P2')
+    expect(snap.sourceFormat).toBe('pdf')
+  })
+
+  it('infers sourceFormat = none when path is null', () => {
+    insertProfile(db, 'P3', 'Junior FE')
+
+    const snap = service.getCurrent('P3')
+    expect(snap.sourceFormat).toBe('none')
+    expect(snap.text).toBe('')
+    expect(snap.path).toBeNull()
+  })
+
+  it('throws MiNotFoundError /Profile 不存在/ for unknown id', () => {
+    expect(() => service.getCurrent('ghost')).toThrow(/Profile 不存在/)
+  })
+
+  it('falls back to active profile when profileId is omitted', () => {
+    const dataDir = join(tmpdir(), `mi-resume-active-${crypto.randomUUID()}`)
+    mkdirSync(dataDir, { recursive: true })
+    const cfg = new ConfigService(dataDir)
+    cfg.save({
+      dataDir,
+      dbPath: join(dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P4',
+    })
+    const db2 = makeDb()
+    insertProfile(db2, 'P4', 'Active FE')
+    const svc = createResumeService(db2, cfg)
+
+    const snap = svc.getCurrent()
+    expect(snap.profileId).toBe('P4')
+
+    db2.close()
   })
 })
