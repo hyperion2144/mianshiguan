@@ -1,6 +1,8 @@
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import yaml from 'js-yaml'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Database } from '../db/Database.ts'
 import { ConfigService } from './config-service.ts'
@@ -289,5 +291,49 @@ describe('ProfileService.delete', () => {
   it('throws MiValidationError for empty id', () => {
     const { service } = makeService(db)
     expect(() => service.delete('')).toThrow(/id 不能为空/)
+  })
+})
+
+describe('ProfileService.switchActive', () => {
+  let db: Database
+  let tmpDir: string
+  let config: ConfigService
+
+  beforeEach(() => {
+    db = makeDb()
+    tmpDir = mkdtempSync(join(tmpdir(), 'mi-profile-switch-'))
+    config = new ConfigService(tmpDir)
+  })
+
+  afterEach(() => {
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('persists the profile id to config.yml and returns the updated Config', () => {
+    config.save({
+      dataDir: tmpDir,
+      dbPath: join(tmpDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+    })
+    const service = createProfileService(db, config)
+    const created = service.create({ name: 'X' })
+    const cfg = service.switchActive(created.id)
+    expect(cfg.defaultProfile).toBe(created.id)
+    const onDisk = yaml.load(readFileSync(join(tmpDir, 'config.yml'), 'utf8')) as Record<
+      string,
+      unknown
+    >
+    expect(onDisk.defaultProfile).toBe(created.id)
+  })
+
+  it('throws MiNotFoundError for an unknown id and leaves config.yml byte-identical', () => {
+    const initial = 'interviewerStyle: strict\ndashboardPort: 4000\n'
+    writeFileSync(join(tmpDir, 'config.yml'), initial)
+    const service = createProfileService(db, config)
+    expect(() => service.switchActive('ghost')).toThrow(/Profile 不存在/)
+    const after = readFileSync(join(tmpDir, 'config.yml'), 'utf8')
+    expect(after).toBe(initial)
   })
 })
