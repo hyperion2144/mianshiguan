@@ -15,6 +15,13 @@
 - `--json` flag on every list/detail command for machine consumption
 - Help text: auto-generated from command definition, Chinese output
 
+Runtime dependencies example:
+- `cac` — CLI parser with flat subcommands and auto-help
+- `js-yaml` — YAML config read/write for `config.yml`
+- `picocolors` — small color helper for success/error/warning CLI output
+- `nanospinner` — spinner helper for long-running CLI operations
+- `cli-table3` — table output for human-readable `list` commands
+
 ## Project Structure
 ```
 src/
