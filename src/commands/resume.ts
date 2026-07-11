@@ -6,6 +6,7 @@ import { ConfigService } from '../services/config-service.ts'
 import {
   type ImportOptions,
   type ResumeService,
+  type ResumeSnapshot,
   createResumeService,
 } from '../services/resume-service.ts'
 
@@ -21,8 +22,9 @@ export interface ResumeCommandOptions {
 export interface ResumeCommandDeps {
   service?: ResumeService
 }
-
 const USAGE_IMPORT_MESSAGE = '用法错误: mi resume import --file <path> [--profile <id>]'
+const EMPTY_RESUME_MESSAGE = '尚未导入简历'
+const SHOW_PREVIEW_LINE_LIMIT = 60
 
 export function registerResumeCommand(program: CAC): void {
   program
@@ -71,8 +73,9 @@ export async function runResumeCommand(
       return
     }
     case 'show': {
-      void service.getCurrent(resolveProfileIdFromOptions(options))
-      throw new MiValidationError(`未实现的子命令: show`)
+      const snapshot = service.getCurrent(resolveProfileIdFromOptions(options))
+      printShowOutput(snapshot, Boolean(options.json))
+      return
     }
     case 'history': {
       void resolveProfileIdFromOptions(options)
@@ -80,6 +83,25 @@ export async function runResumeCommand(
     }
     default:
       throw new MiValidationError(`未知 resume 子命令: ${subcommand}`)
+  }
+}
+
+function printShowOutput(snapshot: ResumeSnapshot, asJson: boolean): void {
+  if (asJson) {
+    console.log(JSON.stringify(snapshot, null, 2))
+    return
+  }
+  console.log(`当前 Profile: ${snapshot.profileName}`)
+  if (snapshot.text.length === 0) {
+    console.log(EMPTY_RESUME_MESSAGE)
+    return
+  }
+  const lines = snapshot.text.split('\n')
+  const visible = lines.slice(0, SHOW_PREVIEW_LINE_LIMIT)
+  console.log(visible.join('\n'))
+  if (lines.length > SHOW_PREVIEW_LINE_LIMIT) {
+    const remaining = lines.length - SHOW_PREVIEW_LINE_LIMIT
+    console.log(`… 还有 ${remaining} 行未显示，使用 --json 查看全文`)
   }
 }
 
