@@ -153,6 +153,16 @@ export class ProfileService {
       throw new MiValidationError(NAME_EMPTY_MESSAGE)
     }
 
+    // The `profiles.name` column is NOT a unique index in the initial
+    // schema, so we must pre-check before INSERT. WAL + single-process
+    // CLI mean the read-then-write race is not a real concern.
+    const existing = this.db.conn
+      .query('SELECT id FROM profiles WHERE name = ?')
+      .get(input.name) as { id: string } | null
+    if (existing) {
+      throw new MiValidationError(DUPLICATE_NAME_MESSAGE(input.name))
+    }
+
     const id = ulid()
     const skills = input.skills ?? []
     const targetCompanies = input.targetCompanies ?? []
