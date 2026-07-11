@@ -234,3 +234,43 @@ describe('ResumeService.importFromFile — input validation', () => {
     expect(count.n).toBe(0)
   })
 })
+
+describe('ResumeService.importFromFile — size and profile guards', () => {
+  let db: Database
+  let service: ResumeService
+
+  beforeEach(() => {
+    db = makeDb()
+    ;({ service } = makeService(db))
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('rejects file larger than maxBytes with /文件过大/ and the limit in message', async () => {
+    await expect(
+      service.importFromFile(BIG_MD, { profileId: 'P1', maxBytes: 100 }),
+    ).rejects.toThrow(/文件过大/)
+
+    await expect(
+      service.importFromFile(BIG_MD, { profileId: 'P1', maxBytes: 100 }),
+    ).rejects.toThrow(/100/)
+  })
+
+  it('throws MiNotFoundError /Profile 不存在/ for unknown profileId', async () => {
+    const initialCount = db.conn
+      .query('SELECT COUNT(*) AS n FROM profiles')
+      .get() as { n: number }
+
+    await expect(
+      service.importFromFile(SAMPLE_MD, { profileId: 'ghost' }),
+    ).rejects.toThrow(/Profile 不存在/)
+
+    const finalCount = db.conn
+      .query('SELECT COUNT(*) AS n FROM profiles')
+      .get() as { n: number }
+    expect(finalCount.n).toBe(initialCount.n)
+  })
+})
