@@ -138,12 +138,17 @@ describe('ProfileService.list', () => {
     const { service } = makeService(db)
     expect(service.list()).toEqual([])
   })
-
   it('returns profiles in created_at ASC order', () => {
     const { service } = makeService(db)
+    // Sub-second `datetime('now')` collapses to the same value when
+    // creates happen in the same tick; backdate `created_at` to make
+    // the order deterministic. The list query itself stays unchanged.
     service.create({ name: 'A' })
+    db.conn.query("UPDATE profiles SET created_at = '2020-01-01 00:00:01' WHERE name = 'A'").run()
     service.create({ name: 'B' })
+    db.conn.query("UPDATE profiles SET created_at = '2020-01-01 00:00:02' WHERE name = 'B'").run()
     service.create({ name: 'C' })
+    db.conn.query("UPDATE profiles SET created_at = '2020-01-01 00:00:03' WHERE name = 'C'").run()
     const profiles = service.list()
     expect(profiles.map((p) => p.name)).toEqual(['A', 'B', 'C'])
   })

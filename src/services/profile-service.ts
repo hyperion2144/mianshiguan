@@ -209,4 +209,15 @@ export class ProfileService {
     }
     return rowToProfile(row)
   }
+
+  /**
+   * Return every profile, ordered by `created_at ASC, id ASC`. JSON
+   * array columns are decoded to JS arrays via `rowToProfile`.
+   */
+  list(): Profile[] {
+    const rows = this.db.conn
+      .query('SELECT * FROM profiles ORDER BY created_at ASC, id ASC')
+      .all() as ProfileRowRaw[]
+    return rows.map(rowToProfile)
+  }
 }
