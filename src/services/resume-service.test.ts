@@ -72,9 +72,7 @@ describe('ResumeService.importFromFile — markdown path', () => {
     expect(row.resume_text).toBe(fileContent)
     expect(row.resume_path).toBe(SAMPLE_MD)
 
-    const count = db.conn
-      .query('SELECT COUNT(*) AS n FROM resume_history')
-      .get() as { n: number }
+    const count = db.conn.query('SELECT COUNT(*) AS n FROM resume_history').get() as { n: number }
     expect(count.n).toBe(0)
   })
 })
@@ -101,14 +99,12 @@ describe('ResumeService.importFromFile — pdf path', () => {
     expect(snapshot.text.trim().length).toBeGreaterThanOrEqual(50)
     expect(snapshot.path).toBe(SAMPLE_PDF)
 
-    const row = db.conn
-      .query('SELECT resume_text FROM profiles WHERE id = ?')
-      .get('P1') as { resume_text: string }
+    const row = db.conn.query('SELECT resume_text FROM profiles WHERE id = ?').get('P1') as {
+      resume_text: string
+    }
     expect(row.resume_text).toBe(snapshot.text)
 
-    const count = db.conn
-      .query('SELECT COUNT(*) AS n FROM resume_history')
-      .get() as { n: number }
+    const count = db.conn.query('SELECT COUNT(*) AS n FROM resume_history').get() as { n: number }
     expect(count.n).toBe(0)
   })
 })
@@ -140,9 +136,7 @@ describe('ResumeService.importFromFile — archive previous resume', () => {
     await service.importFromFile(SAMPLE_MD, { profileId: 'P1' })
 
     const historyRows = db.conn
-      .query(
-        'SELECT resume_text, resume_path FROM resume_history WHERE profile_id = ?',
-      )
+      .query('SELECT resume_text, resume_path FROM resume_history WHERE profile_id = ?')
       .all('P1') as { resume_text: string; resume_path: string | null }[]
     expect(historyRows).toHaveLength(1)
     expect(historyRows[0]?.resume_text).toBe('old content')
@@ -168,7 +162,6 @@ describe('ResumeService.importFromFile — archive previous resume', () => {
   })
 })
 
-
 describe('ResumeService.importFromFile — input validation', () => {
   let db: Database
   let service: ResumeService
@@ -184,9 +177,7 @@ describe('ResumeService.importFromFile — input validation', () => {
   })
 
   it('rejects empty path with /路径不能为空/', async () => {
-    await expect(service.importFromFile('', { profileId: 'P1' })).rejects.toThrow(
-      /路径不能为空/,
-    )
+    await expect(service.importFromFile('', { profileId: 'P1' })).rejects.toThrow(/路径不能为空/)
     const row = db.conn
       .query('SELECT resume_text, resume_path FROM profiles WHERE id = ?')
       .get('P1') as { resume_text: string; resume_path: string | null }
@@ -195,42 +186,38 @@ describe('ResumeService.importFromFile — input validation', () => {
   })
 
   it('rejects nonexistent path with /文件不存在/', async () => {
-    await expect(
-      service.importFromFile('/no/such/file.md', { profileId: 'P1' }),
-    ).rejects.toThrow(/文件不存在/)
+    await expect(service.importFromFile('/no/such/file.md', { profileId: 'P1' })).rejects.toThrow(
+      /文件不存在/,
+    )
   })
 
   it('rejects directory with /不是文件/', async () => {
-    await expect(
-      service.importFromFile(tmpdir(), { profileId: 'P1' }),
-    ).rejects.toThrow(/不是文件/)
+    await expect(service.importFromFile(tmpdir(), { profileId: 'P1' })).rejects.toThrow(/不是文件/)
   })
 
   it('rejects unsupported extension with /不支持的文件类型/', async () => {
-    await expect(
-      service.importFromFile(NOTES_TXT, { profileId: 'P1' }),
-    ).rejects.toThrow(/不支持的文件类型/)
+    await expect(service.importFromFile(NOTES_TXT, { profileId: 'P1' })).rejects.toThrow(
+      /不支持的文件类型/,
+    )
   })
 
   it('rejects empty .md with /文件内容为空/', async () => {
-    await expect(
-      service.importFromFile(EMPTY_MD, { profileId: 'P1' }),
-    ).rejects.toThrow(/文件内容为空/)
+    await expect(service.importFromFile(EMPTY_MD, { profileId: 'P1' })).rejects.toThrow(
+      /文件内容为空/,
+    )
   })
 
   it('rejects broken .pdf with /PDF 解析失败/ and leaves DB unchanged', async () => {
-    await expect(
-      service.importFromFile(BROKEN_PDF, { profileId: 'P1' }),
-    ).rejects.toThrow(/PDF 解析失败/)
+    await expect(service.importFromFile(BROKEN_PDF, { profileId: 'P1' })).rejects.toThrow(
+      /PDF 解析失败/,
+    )
 
     const row = db.conn
       .query('SELECT resume_text, resume_path FROM profiles WHERE id = ?')
       .get('P1') as { resume_text: string; resume_path: string | null }
     expect(row.resume_text).toBe('')
     expect(row.resume_path).toBeNull()
-    const count = db.conn
-      .query('SELECT COUNT(*) AS n FROM resume_history')
-      .get() as { n: number }
+    const count = db.conn.query('SELECT COUNT(*) AS n FROM resume_history').get() as { n: number }
     expect(count.n).toBe(0)
   })
 })
@@ -260,17 +247,13 @@ describe('ResumeService.importFromFile — size and profile guards', () => {
   })
 
   it('throws MiNotFoundError /Profile 不存在/ for unknown profileId', async () => {
-    const initialCount = db.conn
-      .query('SELECT COUNT(*) AS n FROM profiles')
-      .get() as { n: number }
+    const initialCount = db.conn.query('SELECT COUNT(*) AS n FROM profiles').get() as { n: number }
 
-    await expect(
-      service.importFromFile(SAMPLE_MD, { profileId: 'ghost' }),
-    ).rejects.toThrow(/Profile 不存在/)
+    await expect(service.importFromFile(SAMPLE_MD, { profileId: 'ghost' })).rejects.toThrow(
+      /Profile 不存在/,
+    )
 
-    const finalCount = db.conn
-      .query('SELECT COUNT(*) AS n FROM profiles')
-      .get() as { n: number }
+    const finalCount = db.conn.query('SELECT COUNT(*) AS n FROM profiles').get() as { n: number }
     expect(finalCount.n).toBe(initialCount.n)
   })
 })
@@ -393,7 +376,10 @@ describe('ResumeService.listHistory', () => {
 
     const entries = service.listHistory('P1')
     expect(entries).toHaveLength(5)
-    expect(entries[0]?.archivedAt > entries[4]?.archivedAt).toBe(true)
+    const newest = entries[0]
+    const oldest = entries[4]
+    if (!newest || !oldest) throw new Error('expected 5 entries')
+    expect(newest.archivedAt > oldest.archivedAt).toBe(true)
     expect(entries[0]?.id).toBe(ids[ids.length - 1])
     expect(entries[4]?.id).toBe(ids[0])
   })

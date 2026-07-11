@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { extname } from 'node:path'
 import pdfParse from 'pdf-parse'
-import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
 import type { Database } from '../db/Database.ts'
+import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
 import type { ConfigService } from './config-service.ts'
 
 /**
@@ -92,10 +92,7 @@ function buildSnapshot(row: ProfileResumeRow): ResumeSnapshot {
   }
 }
 
-function resolveProfileId(
-  options: ImportOptions,
-  config: ConfigService,
-): string {
+function resolveProfileId(options: ImportOptions, config: ConfigService): string {
   if (options.profileId !== undefined && options.profileId.length > 0) {
     return options.profileId
   }
@@ -146,11 +143,11 @@ export class ResumeService {
       throw new MiValidationError('路径不能为空')
     }
     if (!existsSync(filePath)) {
-      throw new MiValidationError('文件不存在: ' + filePath)
+      throw new MiValidationError(`文件不存在: ${filePath}`)
     }
     const stat = statSync(filePath)
     if (!stat.isFile()) {
-      throw new MiValidationError('不是文件: ' + filePath)
+      throw new MiValidationError(`不是文件: ${filePath}`)
     }
     const ext = extname(filePath).toLowerCase()
     if (SUPPORTED_EXTENSIONS[ext] !== true) {
@@ -203,9 +200,10 @@ export class ResumeService {
    * imported a resume.
    */
   getCurrent(profileId?: string): ResumeSnapshot {
-    const id = profileId !== undefined && profileId.length > 0
-      ? profileId
-      : resolveProfileId({}, this.config)
+    const id =
+      profileId !== undefined && profileId.length > 0
+        ? profileId
+        : resolveProfileId({}, this.config)
     const row = this.loadProfileRow(id)
     if (row === null) {
       throw new MiNotFoundError(`Profile 不存在: ${id}`)
@@ -218,22 +216,17 @@ export class ResumeService {
    * (`archived_at DESC, id DESC`). `limit` defaults to 50 and is
    * hard-capped at 500.
    */
-  listHistory(
-    profileId?: string,
-    options: ListHistoryOptions = {},
-  ): ResumeHistoryEntry[] {
-    const id = profileId !== undefined && profileId.length > 0
-      ? profileId
-      : resolveProfileId({}, this.config)
+  listHistory(profileId?: string, options: ListHistoryOptions = {}): ResumeHistoryEntry[] {
+    const id =
+      profileId !== undefined && profileId.length > 0
+        ? profileId
+        : resolveProfileId({}, this.config)
     const row = this.loadProfileRow(id)
     if (row === null) {
       throw new MiNotFoundError(`Profile 不存在: ${id}`)
     }
 
-    const limit = Math.min(
-      options.limit ?? DEFAULT_HISTORY_LIMIT,
-      MAX_HISTORY_LIMIT,
-    )
+    const limit = Math.min(options.limit ?? DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT)
     const offset = options.offset ?? 0
 
     const rows = this.db.conn
@@ -257,9 +250,7 @@ export class ResumeService {
 
   private loadProfileRow(profileId: string): ProfileResumeRow | null {
     return this.db.conn
-      .query(
-        'SELECT id, resume_text, resume_path, updated_at FROM profiles WHERE id = ?',
-      )
+      .query('SELECT id, resume_text, resume_path, updated_at FROM profiles WHERE id = ?')
       .get(profileId) as ProfileResumeRow | null
   }
 
@@ -295,6 +286,6 @@ async function parsePdfText(buffer: Buffer): Promise<string> {
     return data.text
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
-    throw new MiValidationError('PDF 解析失败: ' + detail)
+    throw new MiValidationError(`PDF 解析失败: ${detail}`)
   }
 }
