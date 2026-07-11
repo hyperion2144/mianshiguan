@@ -88,3 +88,37 @@ describe('ProfileService.create', () => {
     expect(raw.target_companies).toBe('["Acme"]')
   })
 })
+
+describe('ProfileService.create — input validation', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('throws MiValidationError with /名称不能为空/ when name is empty', () => {
+    const { service } = makeService(db)
+    expect(() => service.create({ name: '' })).toThrow(/名称不能为空/)
+    const count = db.conn.query('SELECT COUNT(*) AS n FROM profiles').get() as { n: number }
+    expect(count.n).toBe(0)
+  })
+
+  it('throws MiValidationError when name is only whitespace', () => {
+    const { service } = makeService(db)
+    expect(() => service.create({ name: '   ' })).toThrow(/名称不能为空/)
+    const count = db.conn.query('SELECT COUNT(*) AS n FROM profiles').get() as { n: number }
+    expect(count.n).toBe(0)
+  })
+
+  it('throws MiValidationError with /name 已存在/ when name duplicates an existing profile', () => {
+    const { service } = makeService(db)
+    service.create({ name: 'X' })
+    expect(() => service.create({ name: 'X' })).toThrow(/name 已存在/)
+    const count = db.conn.query('SELECT COUNT(*) AS n FROM profiles').get() as { n: number }
+    expect(count.n).toBe(1)
+  })
+})
