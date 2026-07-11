@@ -7,7 +7,7 @@
 - ESModules only. No CommonJS (`require` / `module.exports`)
 
 ## CLI Design
-- Entry point: `src/cli.ts` — Commander or bare `process.argv` parsing
+- Entry point: `src/cli.ts` — cac (CLI parser, ~30KB, flat subcommands with auto-help)
 - Subcommands grouped by domain: `src/commands/interview/`, `src/commands/question/`, etc.
 - Each command: thin handler → delegates to service layer. No business logic in CLI handlers
 - Exit codes: 0 = success, 1 = user error, 2 = system error
