@@ -312,4 +312,26 @@ export class ProfileService {
 
     return this.get(id)
   }
+
+  /**
+   * Remove a profile. The `ON DELETE CASCADE` foreign key on
+   * `resume_history.profile_id` cleans up the archived snapshots in
+   * the same transaction. Throws `MiNotFoundError` when no row with
+   * the given id exists.
+   */
+  delete(id: string): void {
+    if (typeof id !== 'string' || id.length === 0) {
+      throw new MiValidationError('id 不能为空')
+    }
+    let changes = 0
+    try {
+      const result = this.db.conn.query('DELETE FROM profiles WHERE id = ?').run(id)
+      changes = result.changes
+    } catch (err) {
+      throw new MiDatabaseError(toMessage(err, 'delete profile'))
+    }
+    if (changes === 0) {
+      throw new MiNotFoundError(`Profile 不存在: ${id}`)
+    }
+  }
 }
