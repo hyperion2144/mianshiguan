@@ -83,14 +83,12 @@ export class ConfigService {
 
   save(config: Config): void {
     this.validate(config)
-    // Strip `dbPath` before serializing — it's computed, never persisted.
+    // Strip `dbPath` before serializing — it's derived, never persisted.
     const stored: Omit<Config, 'dbPath'> = {
       dataDir: config.dataDir,
       interviewerStyle: config.interviewerStyle,
       dashboardPort: config.dashboardPort,
-    }
-    if (config.defaultProfile !== undefined) {
-      stored.defaultProfile = config.defaultProfile
+      ...(config.defaultProfile !== undefined && { defaultProfile: config.defaultProfile }),
     }
     const path = this.configPath()
     const tmp = `${path}.tmp`
@@ -100,6 +98,7 @@ export class ConfigService {
     renameSync(tmp, path)
     chmodSync(path, 0o600)
   }
+
   /**
    * Load the config; if missing, write defaults and return them.
    * Any other error (parse failure, permission) propagates.
