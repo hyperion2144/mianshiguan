@@ -21,7 +21,8 @@ export class Database {
 
   constructor(path: string) {
     this.conn = new BunDatabase(path)
-    // PRAGMA journal_mode returns the new mode; assign to discard the result.
+    // Issue pragmas via `exec` so a side effect is unambiguous; both return
+    // rows that we don't need to read.
     this.conn.exec('PRAGMA journal_mode = wal')
     this.conn.exec('PRAGMA foreign_keys = ON')
   }
