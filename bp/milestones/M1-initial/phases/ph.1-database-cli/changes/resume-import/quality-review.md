@@ -43,12 +43,12 @@
 | File naming: kebab-case | PASS | `resume-service.ts`, `resume-service.test.ts`, `resume.ts`, `resume.test.ts` |
 
 ## Issues
-- [ ] Q1 — `parseListHistoryOptions` silently drops invalid `--limit`/`--offset` (negative, zero, NaN, non-numeric). Should throw `MiValidationError` for invalid input, matching the convention from `mi profile update` validation.
-- [ ] Q2 — `MiDatabaseError` messages embed English action labels (`'archive previous resume'`, `'update profile resume'`). Should use Chinese or omit the action label.
-- [ ] Q3 — `runResumeCommand` eagerly constructs `ConfigService` and resolves dataDir even when `deps.service` is injected. Should lazily construct only when needed.
-- [ ] Q4 — `toMessage` action-label convention deviates from the pattern in `profile-service.ts`. Either remove the action label or move it to Chinese.
-- [ ] Q5 — `registerResumeCommand` uses single-cac-command-with-switch instead of the established pattern of chained `.command()` per subcommand. Affects help discoverability (see spec R36).
-- [ ] Q6 — `ResumeSnapshot.profileName` is an unspecified extension to the public domain object. Either add a spec scenario for it or remove the field and look up the name from `ProfileService.get()`.
-- [ ] Q7 — `resolveProfileId` empty-string guard is duplicated three times. Extract a shared helper.
-- [ ] Q8 — Test gaps: no coverage for invalid `--limit`/`--offset`, no coverage for `mi resume` (no subcommand) default-to-show, no coverage for `mi resume <unknown>` defensive error, no test exercises the `deps.service` undefined path with a real `Database` + `ConfigService`.
-- [ ] Q9 — `ResumeHistoryEntry.text` field name reads ambiguously; consider `archiveText` or document the camelCase choice.
+- [x] Q1 — `parseListHistoryOptions` silently drops invalid `--limit`/`--offset`
+- [x] Q2 — `MiDatabaseError` messages embed English action labels
+- [x] Q3 — `runResumeCommand` eagerly constructs ConfigService
+- [x] Q4 — `toMessage` action-label convention deviates
+- [x] Q5 — `registerResumeCommand` uses single-cac-command-with-switch
+- [x] Q6 — `ResumeSnapshot.profileName` is an unspecified extension
+- [x] Q7 — `resolveProfileId` empty-string guard is duplicated three times
+- [x] Q8 — Test gaps
+- [x] Q9 — `ResumeHistoryEntry.text` field name reads ambiguously

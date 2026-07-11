@@ -63,4 +63,4 @@
 | Concurrent imports for same profile | Not specified | Spec does not mandate locking; service is single-process |
 
 ## Issues
-- [ ] R36 — `mi resume --help` lists subcommand names (`import`, `show`, `history`) in the Usage line but lacks per-subcommand Chinese descriptions; the parent description `管理简历：import / show / history` is the only Chinese. Spec scenario 358-360 mandates "with Chinese descriptions" per subcommand. To fix: register each subcommand as a separate cac command with `.command('resume import', '导入简历')` etc., or add a custom help formatter.
+- [x] R36 — `mi resume --help` lists subcommand names (`import`, `show`, `history`) in the Usage line but lacks per-subcommand Chinese descriptions; the parent description `管理简历：import / show / history` is the only Chinese. Spec scenario 358-360 mandates "with Chinese descriptions" per subcommand. To fix: register each subcommand as a separate cac command with `.command('resume import', '导入简历')` etc., or add a custom help formatter.

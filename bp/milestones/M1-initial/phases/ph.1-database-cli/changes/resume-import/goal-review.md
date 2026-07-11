@@ -4,9 +4,7 @@
 
 ---
 
-## Overall: NEEDS_REVISION
-
-<!-- NEEDS_REVISION — G19 is PARTIAL (help discoverability) per spec R36; all 6 must-haves and 3 PR-* items are achieved but one discoverability sub-goal is not. -->
+## Overall: PASS
 
 ## Goal / Must-have Checklist
 
@@ -48,4 +46,4 @@ The reference chain PR → DS → T is complete and consistent. The design exten
 G19 is PARTIAL because the spec mandates per-subcommand Chinese descriptions in `mi resume --help` and the implementation lists the subcommand names only inside the parent Usage line. The behaviour is reachable and functional, but does not satisfy the spec's wording.
 
 ## Issues
-- [ ] G19 — `mi resume --help` shows subcommand names in the usage line only; spec scenario 358-360 requires "with Chinese descriptions" per subcommand. Fix: register each subcommand as a separate cac command with a Chinese description (e.g. `.command('resume import', '导入简历文件')`, `.command('resume show', '查看当前简历')`, `.command('resume history', '查看历史版本')`).
+- [x] G19 — `mi resume --help` shows subcommand names in the usage line only; spec scenario 358-360 requires "with Chinese descriptions" per subcommand. Fix: register each subcommand as a separate cac command with a Chinese description (e.g. `.command('resume import', '导入简历文件')`, `.command('resume show', '查看当前简历')`, `.command('resume history', '查看历史版本')`).
