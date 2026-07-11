@@ -103,6 +103,66 @@ describe('CLI e2e: init and config', () => {
       expect(tableNames).toContain('_schema_version')
       expect(tableNames).toContain('profiles')
       expect(tableNames).toContain('resume_history')
+
+      interface ColumnInfo {
+        cid: number
+        name: string
+        type: string
+        notnull: 0 | 1
+        dflt_value: string | null
+        pk: 0 | 1
+      }
+
+      const tableColumns = (table: string): ColumnInfo[] =>
+        db.query(`PRAGMA table_info(${table})`).all() as ColumnInfo[]
+
+      // SQLite quirk: INTEGER PRIMARY KEY is implicitly NOT NULL but PRAGMA
+      // reports notnull=0. Verify PK presence + type instead.
+      const schemaVersionCols = tableColumns('_schema_version')
+      const versionCol = schemaVersionCols.find((c) => c.name === 'version')
+      expect(versionCol).toMatchObject({ type: 'INTEGER', pk: 1 })
+      const appliedAt = schemaVersionCols.find((c) => c.name === 'applied_at')
+      expect(appliedAt).toMatchObject({ type: 'TEXT', notnull: 1 })
+      expect(appliedAt?.dflt_value).toContain('datetime')
+      const profileCols = tableColumns('profiles')
+      // profiles.id is TEXT PRIMARY KEY (implicitly NOT NULL but PRAGMA reports notnull=0)
+      const idCol = profileCols.find((c) => c.name === 'id')
+      expect(idCol).toMatchObject({ type: 'TEXT', pk: 1 })
+      const profileRequired: Array<Pick<ColumnInfo, 'name' | 'type' | 'notnull'>> = [
+        { name: 'name', type: 'TEXT', notnull: 1 },
+        { name: 'resume_text', type: 'TEXT', notnull: 1 },
+        { name: 'target_role', type: 'TEXT', notnull: 1 },
+        { name: 'jd', type: 'TEXT', notnull: 1 },
+        { name: 'skills', type: 'TEXT', notnull: 1 },
+        { name: 'target_companies', type: 'TEXT', notnull: 1 },
+        { name: 'notes', type: 'TEXT', notnull: 1 },
+        { name: 'created_at', type: 'TEXT', notnull: 1 },
+        { name: 'updated_at', type: 'TEXT', notnull: 1 },
+      ]
+      for (const req of profileRequired) {
+        const col = profileCols.find((c) => c.name === req.name)
+        expect(col, `profiles.${req.name} should exist`).toBeDefined()
+        expect(col).toMatchObject(req)
+      }
+      // Nullable columns: resume_path, avatar_path
+      for (const nullableName of ['resume_path', 'avatar_path']) {
+        const col = profileCols.find((c) => c.name === nullableName)
+        expect(col, `profiles.${nullableName} should exist`).toBeDefined()
+        expect(col?.notnull).toBe(0)
+      }
+
+      const resumeHistoryCols = tableColumns('resume_history')
+      const resumeIdCol = resumeHistoryCols.find((c) => c.name === 'id')
+      expect(resumeIdCol).toMatchObject({ type: 'INTEGER', pk: 1 })
+      const resumePath = resumeHistoryCols.find((c) => c.name === 'resume_path')
+      expect(resumePath).toBeDefined()
+      expect(resumePath?.notnull).toBe(0)
+      const archivedAt = resumeHistoryCols.find((c) => c.name === 'archived_at')
+      expect(archivedAt).toMatchObject({ type: 'TEXT', notnull: 1 })
+      expect(archivedAt?.dflt_value).toContain('datetime')
+      // Resume history must NOT have legacy columns
+      expect(resumeHistoryCols.find((c) => c.name === 'version')).toBeUndefined()
+      expect(resumeHistoryCols.find((c) => c.name === 'created_at')).toBeUndefined()
     } finally {
       db.close()
     }
