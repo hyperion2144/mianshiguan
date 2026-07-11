@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Bun lockfile (binary; we commit package.json changes explicitly)
+bun.lockb
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# SQLite databases and WAL artifacts
+*.db
+*.db-wal
+*.db-shm
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Test artifacts
+coverage/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local

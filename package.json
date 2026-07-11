@@ -1,0 +1,39 @@
+{
+  "name": "mianshiguan",
+  "version": "0.1.0",
+  "description": "AI 面试教练 CLI — practice mock interviews and get feedback against your resume",
+  "type": "module",
+  "bin": {
+    "mi": "./src/cli.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src"
+  },
+  "dependencies": {
+    "cac": "^6.7.14",
+    "cli-table3": "^0.6.5",
+    "js-yaml": "^4.1.0",
+    "nanospinner": "^1.2.2",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "latest",
+    "@types/js-yaml": "^4.0.9",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ]
+}
