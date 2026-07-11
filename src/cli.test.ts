@@ -31,4 +31,15 @@ describe('src/cli.ts — cac root CLI entry', () => {
     expect(stdout).toContain('config')
     expect(stdout).toContain('version')
   })
+
+  it('--help Chinese 显示版本号 / 显示帮助信息 descriptions for version and help flags', () => {
+    if (!existsSync(CLI_PATH)) {
+      throw new Error(`CLI entry not found at ${CLI_PATH} — RED test pre-implementation guard`)
+    }
+    const result = runCli(['--help'])
+    expect(result.status).toBe(0)
+    const stdout = result.stdout
+    expect(stdout).toContain('显示版本号')
+    expect(stdout).toContain('显示帮助信息')
+   })
 })
