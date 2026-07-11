@@ -285,3 +285,135 @@ describe('mi profile show command', () => {
     expect(parsed.targetRole).toBe('FE')
   })
 })
+
+describe('mi profile update command', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.tmpDir, { recursive: true, force: true })
+  })
+
+  function makeActiveProfile(name: string) {
+    const profile = harness.service.create({ name })
+    harness.configService.save({
+      dataDir: harness.tmpDir,
+      dbPath: join(harness.tmpDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: profile.id,
+    })
+    return profile
+  }
+
+  it('updates a scalar field on the active profile and prints the success line', () => {
+    const profile = makeActiveProfile('Alice')
+
+    const output = captureStdout(() =>
+      runProfileCommand(
+        ['update', 'targetRole', 'Staff Engineer'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('已更新')
+    expect(text).toContain('Alice')
+    expect(text).toContain('targetRole')
+    expect(text).toContain('Staff Engineer')
+    const reloaded = harness.service.get(profile.id)
+    expect(reloaded.targetRole).toBe('Staff Engineer')
+  })
+
+  it('parses comma-separated skills into an array, trimming whitespace', () => {
+    makeActiveProfile('Alice')
+
+    const output = captureStdout(() =>
+      runProfileCommand(
+        ['update', 'skills', 'React, Node, TypeScript'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
+    )
+
+    expect(stripAnsi(output.join('\n'))).toContain('已更新')
+    const stored = harness.db.conn
+      .query('SELECT skills FROM profiles LIMIT 1')
+      .get() as { skills: string } | null
+    expect(stored?.skills).toBe('["React","Node","TypeScript"]')
+  })
+
+  it('parses comma-separated targetCompanies into an array', () => {
+    makeActiveProfile('Alice')
+
+    captureStdout(() =>
+      runProfileCommand(
+        ['update', 'targetCompanies', 'Acme,Globex'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
+    )
+
+    const stored = harness.db.conn
+      .query('SELECT target_companies FROM profiles LIMIT 1')
+      .get() as { target_companies: string } | null
+    expect(stored?.target_companies).toBe('["Acme","Globex"]')
+  })
+
+  it('rejects an unknown field with 未知字段: <name>', () => {
+    makeActiveProfile('Alice')
+
+    expect(() =>
+      runProfileCommand(
+        ['update', 'bogus', 'x'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
+    ).toThrow(/未知字段: bogus/)
+  })
+
+  it('rejects missing field or value with 用法错误', () => {
+    makeActiveProfile('Alice')
+
+    expect(() =>
+      runProfileCommand(['update'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/用法错误/)
+    expect(() =>
+      runProfileCommand(
+        ['update', 'targetRole'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
+    ).toThrow(/用法错误/)
+  })
+
+  it('rejects empty segments in comma-separated array input', () => {
+    makeActiveProfile('Alice')
+
+    expect(() =>
+      runProfileCommand(
+        ['update', 'skills', 'React,,Node'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
+    ).toThrow()
+  })
+
+  it('propagates MiNotFoundError from the service as Profile 不存在', () => {
+    const profile = makeActiveProfile('Alice')
+    harness.db.conn.query('DELETE FROM profiles WHERE id = ?').run(profile.id)
+
+    expect(() =>
+      runProfileCommand(
+        ['update', 'targetRole', 'Staff'],
+        { dataDir: harness.tmpDir },
+        { service: harness.service },
+      ),
+    ).toThrow(/Profile 不存在/)
+  })
+})
