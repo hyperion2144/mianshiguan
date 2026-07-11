@@ -57,10 +57,10 @@ export async function runResumeCommand(
       if (file.length === 0) {
         throw new MiValidationError(USAGE_IMPORT_MESSAGE)
       }
-      const profileIdRaw = (options.profile ?? '').trim()
       const importOptions: ImportOptions = {}
-      if (profileIdRaw.length > 0) {
-        importOptions.profileId = profileIdRaw
+      const profileId = resolveProfileIdFromOptions(options)
+      if (profileId !== undefined) {
+        importOptions.profileId = profileId
       }
       const snapshot = await service.importFromFile(file, importOptions)
       console.log(
@@ -71,20 +71,21 @@ export async function runResumeCommand(
       return
     }
     case 'show': {
-      const profileIdRaw = (options.profile ?? '').trim()
-      const profileId = profileIdRaw.length > 0 ? profileIdRaw : undefined
-      void service.getCurrent(profileId)
+      void service.getCurrent(resolveProfileIdFromOptions(options))
       throw new MiValidationError(`未实现的子命令: show`)
     }
     case 'history': {
-      const profileIdRaw = (options.profile ?? '').trim()
-      const profileId = profileIdRaw.length > 0 ? profileIdRaw : undefined
-      void profileId
+      void resolveProfileIdFromOptions(options)
       throw new MiValidationError(`未实现的子命令: history`)
     }
     default:
       throw new MiValidationError(`未知 resume 子命令: ${subcommand}`)
   }
+}
+
+function resolveProfileIdFromOptions(options: ResumeCommandOptions): string | undefined {
+  const raw = (options.profile ?? '').trim()
+  return raw.length > 0 ? raw : undefined
 }
 
 function createDefaultService(configService: ConfigService): ResumeService {
