@@ -141,3 +141,54 @@ describe('mi profile list command', () => {
     expect(parsed).toEqual([])
   })
 })
+
+describe('mi profile create command', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.tmpDir, { recursive: true, force: true })
+  })
+
+  it('calls service.create and prints the Chinese success line with ULID', () => {
+    const created = harness.service.create({ name: 'My Profile', targetRole: 'FE' })
+
+    const output = captureStdout(() =>
+      runProfileCommand(['create', 'My Profile'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('已创建 Profile')
+    expect(text).toContain('My Profile')
+    expect(text).toContain(created.id)
+  })
+
+  it('throws MiValidationError /用法错误/ when name argument is missing', () => {
+    expect(() =>
+      runProfileCommand(['create'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/用法错误/)
+  })
+
+  it('propagates MiValidationError from the service when name is duplicated', () => {
+    harness.service.create({ name: 'X' })
+
+    expect(() =>
+      runProfileCommand(['create', 'X'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/name 已存在/)
+  })
+
+  it('prints no success line when the name argument is missing', () => {
+    const output = captureStdout(() =>
+      expect(() =>
+        runProfileCommand(['create'], { dataDir: harness.tmpDir }, { service: harness.service }),
+      ).toThrow(),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).not.toContain('已创建')
+  })
+})
