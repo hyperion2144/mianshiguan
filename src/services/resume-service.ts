@@ -173,7 +173,7 @@ export class ResumeService {
     try {
       this.archiveIfPresent(existing)
     } catch (err) {
-      throw new MiDatabaseError(toMessage(err, 'archive previous resume'))
+      throw new MiDatabaseError(toMessage(err, '存档旧简历'))
     }
 
     try {
@@ -183,7 +183,7 @@ export class ResumeService {
         )
         .run(text, filePath, profileId)
     } catch (err) {
-      throw new MiDatabaseError(toMessage(err, 'update profile resume'))
+      throw new MiDatabaseError(toMessage(err, '更新简历'))
     }
 
     const refreshed = this.loadProfileRow(profileId)

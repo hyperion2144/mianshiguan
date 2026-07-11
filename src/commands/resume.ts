@@ -37,15 +37,30 @@ const MISSING_PATH_PLACEHOLDER = '(无)'
 
 export function registerResumeCommand(program: CAC): void {
   program
-    .command('resume [...args]', '管理简历：import / show / history')
-    .usage('resume <import|show|history> [选项]')
-    .option('--file <path>', '简历文件路径 (.md / .markdown / .pdf)')
+    .command('resume-import <filepath>', '导入简历文件')
+    .usage('resume-import <filepath> [选项]')
     .option('--profile <id>', '指定 Profile（覆盖当前激活）')
-    .option('--limit <n>', 'history 返回行数（默认 50，上限 500）')
-    .option('--offset <n>', 'history 偏移量（newest-first）')
+    .action((filepath: string, options: Record<string, unknown>) => {
+      runCommandAction(() => runResumeCommand(['import', '--file', filepath], options))
+    })
+
+  program
+    .command('resume-show', '查看当前简历')
+    .option('--profile <id>', '指定 Profile（覆盖当前激活）')
     .option('--json', '以 JSON 格式输出')
-    .action((args: string[] | undefined, options: ResumeCommandOptions) => {
-      runCommandAction(() => runResumeCommand(args ?? [], options))
+    .action((options: Record<string, unknown>) => {
+      runCommandAction(() => runResumeCommand(['show'], options))
+    })
+
+  program
+    .command('resume-history', '查看简历历史')
+    .option('--profile <id>', '指定 Profile（覆盖当前激活）')
+    .option('--limit <n>', '返回行数（默认 50，上限 500）')
+    .option('--offset <n>', '偏移量（newest-first）')
+    .option('--json', '以 JSON 格式输出')
+    .option('--file <path>', '简历文件路径')
+    .action((options: Record<string, unknown>) => {
+      runCommandAction(() => runResumeCommand(['history'], options))
     })
 }
 
@@ -54,9 +69,12 @@ export async function runResumeCommand(
   options: ResumeCommandOptions = {},
   deps: ResumeCommandDeps = {},
 ): Promise<void> {
-  const dataDir = ConfigService.resolveDataDir(options.dataDir)
-  const configService = new ConfigService(dataDir)
-  const service = deps.service ?? createDefaultService(configService)
+  const service =
+    deps.service ??
+    (() => {
+      const dataDir = ConfigService.resolveDataDir(options.dataDir)
+      return createDefaultService(new ConfigService(dataDir))
+    })()
 
   const [subcommand = 'show'] = args
 
@@ -114,15 +132,17 @@ function parseListHistoryOptions(options: ResumeCommandOptions): ListHistoryOpti
   const result: ListHistoryOptions = {}
   if (options.limit !== undefined) {
     const limit = Number(options.limit)
-    if (Number.isFinite(limit) && limit > 0) {
-      result.limit = limit
+    if (!Number.isFinite(limit) || limit < 1) {
+      throw new MiValidationError('--limit 必须是正整数')
     }
+    result.limit = limit
   }
   if (options.offset !== undefined) {
     const offset = Number(options.offset)
-    if (Number.isFinite(offset) && offset >= 0) {
-      result.offset = offset
+    if (!Number.isFinite(offset) || offset < 0) {
+      throw new MiValidationError('--offset 必须是非负整数')
     }
+    result.offset = offset
   }
   return result
 }
