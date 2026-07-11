@@ -197,3 +197,91 @@ describe('mi profile create command', () => {
     expect(text).not.toContain('已创建')
   })
 })
+
+describe('mi profile show command', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.tmpDir, { recursive: true, force: true })
+  })
+
+  it('with no id resolves the active profile from config and prints all fields', () => {
+    const profile = harness.service.create({ name: 'Alice', targetRole: 'FE' })
+    harness.configService.save({
+      dataDir: harness.tmpDir,
+      dbPath: join(harness.tmpDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: profile.id,
+    })
+
+    const output = captureStdout(() =>
+      runProfileCommand(['show'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('Alice')
+    expect(text).toContain('FE')
+    expect(text).toContain(profile.id)
+    expect(text).toContain('targetRole')
+    expect(text).toContain('skills')
+    expect(text).toContain('createdAt')
+  })
+
+  it('with an explicit id uses that id rather than the active profile', () => {
+    const first = harness.service.create({ name: 'Alpha' })
+    const second = harness.service.create({ name: 'Beta' })
+    harness.configService.save({
+      dataDir: harness.tmpDir,
+      dbPath: join(harness.tmpDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: first.id,
+    })
+
+    const output = captureStdout(() =>
+      runProfileCommand(['show', second.id], { dataDir: harness.tmpDir }, { service: harness.service }),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('Beta')
+    expect(text).not.toContain('Alpha')
+  })
+
+  it('with no id and no active profile throws 请先创建或切换 Profile', () => {
+    expect(() =>
+      runProfileCommand(['show'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/请先创建或切换 Profile/)
+  })
+
+  it('propagates MiNotFoundError from the service as Profile 不存在', () => {
+    expect(() =>
+      runProfileCommand(['show', '01J00000000000000000000099'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/Profile 不存在/)
+  })
+
+  it('show --json mode prints JSON.stringify of the profile object', () => {
+    const profile = harness.service.create({ name: 'Alice', targetRole: 'FE' })
+    harness.configService.save({
+      dataDir: harness.tmpDir,
+      dbPath: join(harness.tmpDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: profile.id,
+    })
+
+    const output = captureStdout(() =>
+      runProfileCommand(['show', '--json'], { dataDir: harness.tmpDir, json: true }, { service: harness.service }),
+    )
+
+    const parsed = JSON.parse(output.join('\n')) as { id: string; name: string; targetRole: string }
+    expect(parsed.id).toBe(profile.id)
+    expect(parsed.name).toBe('Alice')
+    expect(parsed.targetRole).toBe('FE')
+  })
+})
