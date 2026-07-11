@@ -138,11 +138,7 @@ export class ProfileService {
   constructor(
     private readonly db: Database,
     private readonly config: ConfigService,
-  ) {
-    // `config` is reserved for T-8 (`switchActive`); explicitly mark
-    // it retained so TS doesn't flag the private field as unused.
-    void this.config
-  }
+  ) {}
 
   /**
    * Insert a new profile. The id is a fresh ULID; array fields are
