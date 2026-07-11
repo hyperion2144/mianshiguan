@@ -1,4 +1,3 @@
-import { join } from 'node:path'
 import type { CAC } from 'cac'
 import Table from 'cli-table3'
 import { MiConfigError, MiDatabaseError, MiError } from '../errors.ts'
@@ -10,11 +9,12 @@ export interface ConfigCommandOptions {
   json?: boolean
 }
 
-type ConfigKey = 'dataDir' | 'dbPath' | 'defaultProfile' | 'interviewerStyle' | 'dashboardPort'
+type ConfigKey = 'dataDir' | 'defaultProfile' | 'interviewerStyle' | 'dashboardPort'
 
+// `dbPath` is intentionally NOT a writable config key — it is derived from
+// `dataDir` in `ConfigService.materialize()` and never persisted.
 const CONFIG_KEYS: readonly ConfigKey[] = [
   'dataDir',
-  'dbPath',
   'defaultProfile',
   'interviewerStyle',
   'dashboardPort',
@@ -101,9 +101,8 @@ function setConfigValue(config: Config, key: string, value: string): Config {
       return { ...config, dashboardPort }
     }
     case 'dataDir':
-      return { ...config, dataDir: value, dbPath: join(value, 'data.db') }
-    case 'dbPath':
-      return { ...config, dbPath: value }
+      // dbPath is auto-derived from dataDir in materialize(); no manual sync needed.
+      return { ...config, dataDir: value }
     case 'defaultProfile':
       return { ...config, defaultProfile: value }
   }

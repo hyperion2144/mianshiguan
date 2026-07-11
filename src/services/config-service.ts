@@ -7,12 +7,14 @@ import { MiConfigError } from '../errors.ts'
 /**
  * Project configuration shape. Stored as YAML at `{dataDir}/config.yml`.
  *
- * `dbPath` is derived from `dataDir` at write time — callers should not
- * persist a `dbPath` that disagrees with the data directory.
+ * `dbPath` is **derived** from `dataDir` and never persisted — it is
+ * computed by `materialize()` on every load and stripped from `save()`.
+ * Marking it `readonly` makes the field available on `Config` for callers
+ * that need the resolved path, but prevents mutating it after construction.
  */
 export interface Config {
   dataDir: string
-  dbPath: string
+  readonly dbPath: string
   defaultProfile?: string
   interviewerStyle: 'strict' | 'coaching' | 'friendly'
   dashboardPort: number
@@ -81,15 +83,23 @@ export class ConfigService {
 
   save(config: Config): void {
     this.validate(config)
+    // Strip `dbPath` before serializing — it's computed, never persisted.
+    const stored: Omit<Config, 'dbPath'> = {
+      dataDir: config.dataDir,
+      interviewerStyle: config.interviewerStyle,
+      dashboardPort: config.dashboardPort,
+    }
+    if (config.defaultProfile !== undefined) {
+      stored.defaultProfile = config.defaultProfile
+    }
     const path = this.configPath()
     const tmp = `${path}.tmp`
-    const dump = yaml.dump(config, { lineWidth: 100, noRefs: true })
+    const dump = yaml.dump(stored, { lineWidth: 100, noRefs: true })
     writeFileSync(tmp, dump, 'utf8')
     chmodSync(tmp, 0o600)
     renameSync(tmp, path)
     chmodSync(path, 0o600)
   }
-
   /**
    * Load the config; if missing, write defaults and return them.
    * Any other error (parse failure, permission) propagates.
