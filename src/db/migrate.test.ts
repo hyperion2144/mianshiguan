@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -12,7 +12,7 @@ describe('MigrationRunner — applies pending SQL in numeric order', () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'mi-migrate-test-'))
     migrationsDir = join(tmpDir, 'migrations')
-    // fs.mkdirSync(migrationsDir, { recursive: true }) — writeFileSync creates dirs
+    mkdirSync(migrationsDir, { recursive: true })
   })
 
   afterEach(() => {
@@ -24,7 +24,10 @@ describe('MigrationRunner — applies pending SQL in numeric order', () => {
       join(migrationsDir, '0001_initial.sql'),
       'CREATE TABLE foo (id INTEGER PRIMARY KEY);',
     )
-    writeFileSync(join(migrationsDir, '0002_add_bar.sql'), 'CREATE TABLE bar (id INTEGER PRIMARY KEY);')
+    writeFileSync(
+      join(migrationsDir, '0002_add_bar.sql'),
+      'CREATE TABLE bar (id INTEGER PRIMARY KEY);',
+    )
 
     const db = new Database(':memory:')
     const runner = new MigrationRunner(db, migrationsDir)
@@ -93,15 +96,12 @@ describe('MigrationRunner — applies pending SQL in numeric order', () => {
       join(migrationsDir, '0001_good.sql'),
       'CREATE TABLE good (id INTEGER PRIMARY KEY);',
     )
-    writeFileSync(
-      join(migrationsDir, '0002_broken.sql'),
-      'THIS IS NOT VALID SQL;',
-    )
+    writeFileSync(join(migrationsDir, '0002_broken.sql'), 'THIS IS NOT VALID SQL;')
 
     const db = new Database(':memory:')
     const runner = new MigrationRunner(db, migrationsDir)
 
-    expect(() => runner.run()).toThrow() // MiDatabaseError
+    expect(() => runner.run()).toThrow()
     const row = db.conn.query('SELECT version FROM _schema_version').all() as Array<{
       version: number
     }>
@@ -120,7 +120,7 @@ describe('MigrationRunner — applies pending SQL in numeric order', () => {
     const runner = new MigrationRunner(db, migrationsDir)
 
     runner.run()
-    const row = db.conn.query('SELECT version FROM _schema_version').all() as Array<{
+    const row = db.conn.query('SELECT version, applied_at FROM _schema_version').all() as Array<{
       version: number
       applied_at: string
     }>
