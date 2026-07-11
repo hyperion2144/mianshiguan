@@ -167,3 +167,70 @@ describe('ResumeService.importFromFile — archive previous resume', () => {
     expect(count.n).toBe(0)
   })
 })
+
+
+describe('ResumeService.importFromFile — input validation', () => {
+  let db: Database
+  let service: ResumeService
+
+  beforeEach(() => {
+    db = makeDb()
+    ;({ service } = makeService(db))
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('rejects empty path with /路径不能为空/', async () => {
+    await expect(service.importFromFile('', { profileId: 'P1' })).rejects.toThrow(
+      /路径不能为空/,
+    )
+    const row = db.conn
+      .query('SELECT resume_text, resume_path FROM profiles WHERE id = ?')
+      .get('P1') as { resume_text: string; resume_path: string | null }
+    expect(row.resume_text).toBe('')
+    expect(row.resume_path).toBeNull()
+  })
+
+  it('rejects nonexistent path with /文件不存在/', async () => {
+    await expect(
+      service.importFromFile('/no/such/file.md', { profileId: 'P1' }),
+    ).rejects.toThrow(/文件不存在/)
+  })
+
+  it('rejects directory with /不是文件/', async () => {
+    await expect(
+      service.importFromFile(tmpdir(), { profileId: 'P1' }),
+    ).rejects.toThrow(/不是文件/)
+  })
+
+  it('rejects unsupported extension with /不支持的文件类型/', async () => {
+    await expect(
+      service.importFromFile(NOTES_TXT, { profileId: 'P1' }),
+    ).rejects.toThrow(/不支持的文件类型/)
+  })
+
+  it('rejects empty .md with /文件内容为空/', async () => {
+    await expect(
+      service.importFromFile(EMPTY_MD, { profileId: 'P1' }),
+    ).rejects.toThrow(/文件内容为空/)
+  })
+
+  it('rejects broken .pdf with /PDF 解析失败/ and leaves DB unchanged', async () => {
+    await expect(
+      service.importFromFile(BROKEN_PDF, { profileId: 'P1' }),
+    ).rejects.toThrow(/PDF 解析失败/)
+
+    const row = db.conn
+      .query('SELECT resume_text, resume_path FROM profiles WHERE id = ?')
+      .get('P1') as { resume_text: string; resume_path: string | null }
+    expect(row.resume_text).toBe('')
+    expect(row.resume_path).toBeNull()
+    const count = db.conn
+      .query('SELECT COUNT(*) AS n FROM resume_history')
+      .get() as { n: number }
+    expect(count.n).toBe(0)
+  })
+})
