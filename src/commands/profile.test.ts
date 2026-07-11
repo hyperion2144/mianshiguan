@@ -418,3 +418,61 @@ describe('mi profile update command', () => {
     ).toThrow(/Profile 不存在/)
   })
 })
+
+describe('mi profile switch command', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.tmpDir, { recursive: true, force: true })
+  })
+
+  it('persists defaultProfile in config.yml and prints Chinese success line', () => {
+    const profile = harness.service.create({ name: 'Alice' })
+
+    const output = captureStdout(() =>
+      runProfileCommand(['switch', profile.id], { dataDir: harness.tmpDir }, { service: harness.service }),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('已切换默认 Profile')
+    expect(text).toContain(profile.id)
+    const reloaded = harness.configService.load()
+    expect(reloaded.defaultProfile).toBe(profile.id)
+  })
+
+  it('propagates MiNotFoundError from the service as Profile 不存在', () => {
+    expect(() =>
+      runProfileCommand(['switch', '01J00000000000000000000099'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/Profile 不存在/)
+  })
+
+  it('throws MiValidationError when id argument is missing', () => {
+    expect(() =>
+      runProfileCommand(['switch'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/用法错误/)
+  })
+
+  it('does not modify config.yml when the id does not exist', () => {
+    const profile = harness.service.create({ name: 'Alice' })
+    harness.configService.save({
+      dataDir: harness.tmpDir,
+      dbPath: join(harness.tmpDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: profile.id,
+    })
+    const before = readFileSync(join(harness.tmpDir, 'config.yml'), 'utf8')
+
+    expect(() =>
+      runProfileCommand(['switch', '01J00000000000000000000099'], { dataDir: harness.tmpDir }, { service: harness.service }),
+    ).toThrow(/Profile 不存在/)
+
+    const after = readFileSync(join(harness.tmpDir, 'config.yml'), 'utf8')
+    expect(after).toBe(before)
+  })
+})
