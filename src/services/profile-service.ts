@@ -1,7 +1,7 @@
 import { ulid } from 'ulid'
 import type { Database } from '../db/Database.ts'
 import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
-import type { ConfigService } from './config-service.ts'
+import type { Config, ConfigService } from './config-service.ts'
 
 /**
  * Public domain object — what callers (CLI, future dashboard) actually
@@ -333,5 +333,25 @@ export class ProfileService {
     if (changes === 0) {
       throw new MiNotFoundError(`Profile 不存在: ${id}`)
     }
+  }
+
+  /**
+   * Persist `id` as the active profile in `config.yml`. Atomic via
+   * `ConfigService.save()` (tmp-file rename). Throws `MiNotFoundError`
+   * when the profile does not exist; in that case the config is
+   * untouched because the existence check happens *before* the write.
+   */
+  switchActive(id: string): Config {
+    if (typeof id !== 'string' || id.length === 0) {
+      throw new MiValidationError('id 不能为空')
+    }
+    // Existence check first so we never write a defaultProfile pointing
+    // at a non-existent row.
+    this.get(id)
+
+    const current = this.config.load()
+    const next: Config = { ...current, defaultProfile: id }
+    this.config.save(next)
+    return next
   }
 }
