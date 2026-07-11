@@ -4,7 +4,7 @@ import { Database } from '../db/Database.ts'
 import { MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
-import { type ProfileService, createProfileService } from '../services/profile-service.ts'
+import { type Profile, type ProfileService, createProfileService } from '../services/profile-service.ts'
 
 export interface ProfileCommandOptions {
   dataDir?: string
@@ -21,8 +21,12 @@ export interface ProfileCommandDeps {
 }
 
 const EMPTY_LIST_MESSAGE = '暂无 Profile，请先创建。'
+const NO_ACTIVE_PROFILE_MESSAGE = '请先创建或切换 Profile'
 const LIST_HEADERS = ['ID', 'NAME', 'TARGET_ROLE', 'UPDATED_AT'] as const
+const SHOW_HEADERS = ['字段', '值'] as const
 const ACTIVE_MARKER = '*'
+const EMPTY_FIELD_PLACEHOLDER = '(空)'
+const MISSING_PATH_PLACEHOLDER = '(无)'
 
 function runCommandAction(action: () => void): void {
   try {
@@ -80,6 +84,9 @@ export function runProfileCommand(
       case 'create':
         createProfile(service, args[1] ?? '')
         return
+      case 'show':
+        showProfile(service, configService, args[1], Boolean(options.json))
+        return
       default:
         throw new MiValidationError(`未知 profile 子命令: ${subcommand}`)
     }
@@ -123,4 +130,52 @@ function createProfile(service: ProfileService, name: string): void {
   }
   const profile = service.create({ name: trimmed })
   console.log(success(`已创建 Profile: ${profile.name} (id=${profile.id})`))
+}
+
+function showProfile(
+  service: ProfileService,
+  configService: ConfigService,
+  idArg: string | undefined,
+  asJson: boolean,
+): void {
+  let id = idArg
+  if (!id) {
+    try {
+      id = configService.load().defaultProfile
+    } catch {
+      id = undefined
+    }
+  }
+  if (!id) {
+    throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
+  }
+  const profile = service.get(id)
+  if (asJson) {
+    console.log(JSON.stringify(profile, null, 2))
+    return
+  }
+  const table = new Table({ head: [...SHOW_HEADERS] })
+  for (const [field, value] of showRows(profile)) {
+    table.push([field, value])
+  }
+  console.log(table.toString())
+}
+
+function showRows(profile: Profile): [string, string][] {
+  return [
+    ['id', profile.id],
+    ['name', profile.name],
+    ['targetRole', profile.targetRole],
+    ['jd', profile.jd || EMPTY_FIELD_PLACEHOLDER],
+    ['skills', profile.skills.length === 0 ? EMPTY_FIELD_PLACEHOLDER : profile.skills.join(', ')],
+    [
+      'targetCompanies',
+      profile.targetCompanies.length === 0 ? EMPTY_FIELD_PLACEHOLDER : profile.targetCompanies.join(', '),
+    ],
+    ['notes', profile.notes || EMPTY_FIELD_PLACEHOLDER],
+    ['avatarPath', profile.avatarPath ?? MISSING_PATH_PLACEHOLDER],
+    ['resumePath', profile.resumePath ?? MISSING_PATH_PLACEHOLDER],
+    ['createdAt', profile.createdAt],
+    ['updatedAt', profile.updatedAt],
+  ]
 }

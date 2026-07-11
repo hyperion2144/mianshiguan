@@ -276,7 +276,7 @@ describe('mi profile show command', () => {
     })
 
     const output = captureStdout(() =>
-      runProfileCommand(['show', '--json'], { dataDir: harness.tmpDir, json: true }, { service: harness.service }),
+      runProfileCommand(['show'], { dataDir: harness.tmpDir, json: true }, { service: harness.service }),
     )
 
     const parsed = JSON.parse(output.join('\n')) as { id: string; name: string; targetRole: string }
