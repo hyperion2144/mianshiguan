@@ -146,3 +146,92 @@ describe('mi resume import command', () => {
     ).rejects.toThrow(/Profile 不存在/)
   })
 })
+
+describe('mi resume show command', () => {
+  let service: ResumeService
+
+  beforeEach(() => {
+    service = makeMockService()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function makeLines(count: number): string {
+    return Array.from({ length: count }, (_, i) => `line-${i + 1}`).join('\n')
+  }
+
+  it('prints 当前 Profile: <name> header and first 60 lines + truncation hint 还有 20 行未显示 when text has 80 lines', async () => {
+    const snapshot: ResumeSnapshot = {
+      profileId: 'P1',
+      profileName: 'Senior FE',
+      text: makeLines(80),
+      path: null,
+      sourceFormat: 'none',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    }
+    const getCurrentMock = vi.fn(() => snapshot) as unknown as ResumeService['getCurrent']
+    service = makeMockService({ getCurrent: getCurrentMock })
+
+    const output = await captureStdoutAsync(() =>
+      runResumeCommand(['show'], {}, { service }),
+    )
+
+    expect(getCurrentMock).toHaveBeenCalled()
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('当前 Profile: Senior FE')
+    expect(text).toContain('line-1')
+    expect(text).toContain('line-60')
+    expect(text).not.toContain('line-61')
+    expect(text).toContain('还有 20 行未显示')
+  })
+
+  it('--json mode prints JSON.stringify of the snapshot', async () => {
+    const snapshot: ResumeSnapshot = {
+      profileId: 'P1',
+      profileName: 'Senior FE',
+      text: 'hello',
+      path: '/x.md',
+      sourceFormat: 'markdown',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    }
+    const getCurrentMock = vi.fn(() => snapshot) as unknown as ResumeService['getCurrent']
+    service = makeMockService({ getCurrent: getCurrentMock })
+
+    const output = await captureStdoutAsync(() =>
+      runResumeCommand(['show'], { json: true }, { service }),
+    )
+
+    const parsed = JSON.parse(output.join('\n'))
+    expect(parsed).toEqual(snapshot)
+  })
+
+  it('prints 尚未导入简历 hint when resume text is empty and exits successfully', async () => {
+    const snapshot: ResumeSnapshot = {
+      profileId: 'P1',
+      profileName: 'Senior FE',
+      text: '',
+      path: null,
+      sourceFormat: 'none',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+    }
+    const getCurrentMock = vi.fn(() => snapshot) as unknown as ResumeService['getCurrent']
+    service = makeMockService({ getCurrent: getCurrentMock })
+
+    const output = await captureStdoutAsync(() =>
+      runResumeCommand(['show'], {}, { service }),
+    )
+
+    expect(stripAnsi(output.join('\n'))).toContain('尚未导入简历')
+  })
+
+  it('rejects with MiNotFoundError /Profile 不存在/ when getCurrent fails', async () => {
+    const getCurrentMock = vi.fn(() => {
+      throw new MiNotFoundError('Profile 不存在: ghost')
+    }) as unknown as ResumeService['getCurrent']
+    service = makeMockService({ getCurrent: getCurrentMock })
+
+    await expect(runResumeCommand(['show'], {}, { service })).rejects.toThrow(/Profile 不存在/)
+  })
+})
