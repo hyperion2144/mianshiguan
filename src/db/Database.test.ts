@@ -9,6 +9,14 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const MIGRATION_PATH = join(__dirname, 'migrations', '0001_initial.sql')
 
+type ColumnRow = {
+  name: string
+  type: string
+  notnull: number
+  dflt_value: string | null
+  pk: number
+}
+
 describe('Database wrapper — bun:sqlite + WAL + FK pragmas', () => {
   let tmpDir: string
 
@@ -65,21 +73,11 @@ describe('Database wrapper — bun:sqlite + WAL + FK pragmas', () => {
 
   it('applies initial migration: resume_history has archived_at (not version/created_at)', () => {
     // Reads the canonical migration from disk to ensure contract is enforced.
-    // RED: current schema uses `version` and `created_at`; should be `archived_at`.
     const sql = readFileSync(MIGRATION_PATH, 'utf8')
     const db = new Database(':memory:')
     db.conn.exec(sql)
 
-    type ColumnRow = {
-      name: string
-      type: string
-      notnull: number
-      dflt_value: string | null
-      pk: number
-    }
-    const columns = db.conn
-      .query('PRAGMA table_info(resume_history)')
-      .all() as ColumnRow[]
+    const columns = db.conn.query('PRAGMA table_info(resume_history)').all() as ColumnRow[]
     const columnNames = columns.map((c) => c.name)
 
     // archived_at must exist with NOT NULL and a datetime default
@@ -101,10 +99,26 @@ describe('Database wrapper — bun:sqlite + WAL + FK pragmas', () => {
     const db = new Database(':memory:')
     db.conn.exec(sql)
 
-    const rows = db.conn
-      .query("SELECT name FROM sqlite_master WHERE type='table' AND name='profiles'")
-      .all() as Array<{ name: string }>
-    expect(rows).toHaveLength(1)
+    const columns = db.conn.query('PRAGMA table_info(profiles)').all() as ColumnRow[]
+    const columnNames = columns.map((c) => c.name)
+
+    const required = [
+      'id',
+      'name',
+      'resume_text',
+      'resume_path',
+      'target_role',
+      'jd',
+      'skills',
+      'target_companies',
+      'notes',
+      'avatar_path',
+      'created_at',
+      'updated_at',
+    ]
+    for (const col of required) {
+      expect(columnNames).toContain(col)
+    }
 
     db.close()
   })
