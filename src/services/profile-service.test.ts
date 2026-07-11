@@ -122,3 +122,37 @@ describe('ProfileService.create — input validation', () => {
     expect(count.n).toBe(1)
   })
 })
+
+describe('ProfileService.list', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('returns an empty array when no profiles exist', () => {
+    const { service } = makeService(db)
+    expect(service.list()).toEqual([])
+  })
+
+  it('returns profiles in created_at ASC order', () => {
+    const { service } = makeService(db)
+    service.create({ name: 'A' })
+    service.create({ name: 'B' })
+    service.create({ name: 'C' })
+    const profiles = service.list()
+    expect(profiles.map((p) => p.name)).toEqual(['A', 'B', 'C'])
+  })
+
+  it('hydrates JSON array columns into JS arrays', () => {
+    const { service } = makeService(db)
+    service.create({ name: 'A', skills: ['React', 'TypeScript'] })
+    const profiles = service.list()
+    expect(profiles[0]?.skills).toEqual(['React', 'TypeScript'])
+    expect(profiles[0]?.targetCompanies).toEqual([])
+  })
+})
