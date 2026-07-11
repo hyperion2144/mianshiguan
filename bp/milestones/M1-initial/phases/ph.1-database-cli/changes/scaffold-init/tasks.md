@@ -189,14 +189,14 @@
 
 **This is NOT a review step.** These checks confirm code is correct and tests pass. Once passing, run `bp continue` to advance review/archive workflow step.
 
-- [ ] `bun test` — all test suites pass (unit + e2e)
-- [ ] `bun run tsc --noEmit` — zero TypeScript errors
-- [ ] `bun run biome check src` — linter passes
-- [ ] Wave 1 acceptance: `bun run src/cli.ts --version` and `--help` work; error tests pass
-- [ ] Wave 2 acceptance: Database pragma tests pass; migration runner tests pass (sort, idempotency, rollback); ConfigService atomic write + enum validation tests pass
-- [ ] Wave 3 acceptance: `mi init`/`mi config` integration tests pass; e2e script verifies schema is at version 1 with all 3 tables
-- [ ] `coding-standards.md` updated to reflect cac + new dependencies
-- [ ] No new type errors or warnings introduced
+- [x] `bun test` — all test suites pass (unit + e2e)  <!-- commit: ff3e08f -->
+- [x] `bun run tsc --noEmit` — zero TypeScript errors  <!-- commit: ff3e08f -->
+- [x] `bun run biome check src` — linter passes  <!-- commit: ff3e08f -->
+- [x] Wave 1 acceptance: `bun run src/cli.ts --version` and `--help` work; error tests pass  <!-- commit: 4754b62 -->
+- [x] Wave 2 acceptance: Database pragma tests pass; migration runner tests pass (sort, idempotency, rollback); ConfigService atomic write + enum validation tests pass  <!-- commit: 9a57754 -->
+- [x] Wave 3 acceptance: `mi init`/`mi config` integration tests pass; e2e script verifies schema is at version 1 with all 3 tables  <!-- commit: eabda99 -->
+- [x] `coding-standards.md` updated to reflect cac + new dependencies  <!-- commit: 9ef219d -->
+- [x] No new type errors or warnings introduced  <!-- commit: ff3e08f -->
 
 ---
 
