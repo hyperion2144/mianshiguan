@@ -167,7 +167,6 @@ describe('MigrationRunner — 0002_add_interviews (per-contract coverage)', () =
     const sql0002 = readFileSync(join(srcMigrationsDir, '0002_add_interviews.sql'), 'utf8')
     writeFileSync(join(migrationsDir, '0001_initial.sql'), sql0001)
     writeFileSync(join(migrationsDir, '0002_add_interviews.sql'), sql0002)
-    srcMigrationsDir = join(import.meta.dirname, 'migrations')
     return new Database(':memory:')
   }
 
