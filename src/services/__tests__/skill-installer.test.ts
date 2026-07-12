@@ -1,17 +1,44 @@
 import { describe, expect, it } from 'vitest'
 import {
-  PLATFORM_PATHS,
+  MI_VERSION,
+  MiValidationError,
   type Platform,
+} from '../skill-templates/interview.ts'
+import {
+  PLATFORM_PATHS,
   type PlatformDirKind,
   type PlatformPathSpec,
   detectPlatform,
   type InstallContext,
+  renderSkillForPlatform,
   resolvePlatformDir,
 } from '../skill-installer.ts'
 
 /**
- * Skill installer module — frozen mapping (T-1) + pure path resolver (T-2).
+ * Skill installer module — frozen mapping (T-1) + pure path resolver (T-2)
+ * + platform auto-detection (T-3) + render delegation (T-4).
+ *
+ * Helper factories up top; describe blocks in T-N execution order.
  */
+
+function makeCtx(overrides: Partial<InstallContext> = {}): InstallContext {
+  return {
+    homedir: '/tmp/fakehome',
+    cwd: '/tmp/fakeproj',
+    existsSync: (() => false) as (p: string) => boolean,
+    mkdirSync: (() => undefined) as InstallContext['mkdirSync'],
+    writeFileSync: (() => undefined) as InstallContext['writeFileSync'],
+    chmodSync: (() => undefined) as InstallContext['chmodSync'],
+    ...overrides,
+  }
+}
+
+function makeExistsCtx(answers: ReadonlyArray<string>): InstallContext {
+  return makeCtx({
+    existsSync: ((p: string) => answers.includes(p)) as (p: string) => boolean,
+  })
+}
+
 describe('PLATFORM_PATHS (T-1)', () => {
   it('exposes exactly 3 entries: omp, claude-code, opencode', () => {
     expect(Object.keys(PLATFORM_PATHS).sort()).toEqual(['claude-code', 'omp', 'opencode'])
@@ -64,18 +91,6 @@ describe('PLATFORM_PATHS (T-1)', () => {
   })
 })
 
-function makeCtx(overrides: Partial<InstallContext> = {}): InstallContext {
-  return {
-    homedir: '/tmp/fakehome',
-    cwd: '/tmp/fakeproj',
-    existsSync: (() => false) as (p: string) => boolean,
-    mkdirSync: (() => undefined) as InstallContext['mkdirSync'],
-    writeFileSync: (() => undefined) as InstallContext['writeFileSync'],
-    chmodSync: (() => undefined) as InstallContext['chmodSync'],
-    ...overrides,
-  }
-}
-
 describe('resolvePlatformDir (T-2)', () => {
   it('resolves omp under {homedir}/.config/omp/skills/mianshiguan-interview.md', () => {
     expect(resolvePlatformDir('omp', makeCtx())).toBe(
@@ -115,12 +130,6 @@ describe('resolvePlatformDir (T-2)', () => {
     )
   })
 })
-
-function makeExistsCtx(answers: ReadonlyArray<string>): InstallContext {
-  return makeCtx({
-    existsSync: ((p: string) => answers.includes(p)) as (p: string) => boolean,
-  })
-}
 
 describe('detectPlatform (T-3)', () => {
   it('returns null when no probe path matches', () => {
@@ -172,5 +181,66 @@ describe('detectPlatform (T-3)', () => {
 
   it('never throws — absence of an agent is a valid state', () => {
     expect(() => detectPlatform(makeExistsCtx([]))).not.toThrow()
+  })
+})
+
+describe('renderSkillForPlatform (T-4)', () => {
+  it('renders the omp YAML-frontmatter marker + coaching-style block', () => {
+    const out = renderSkillForPlatform('omp', { interviewerStyle: 'coaching' })
+    expect(out).toContain('name: mianshiguan-interview')
+    expect(out).toContain('通过反问引导候选人思考')
+  })
+
+  it('renders the claude-code slash-command marker + strict style', () => {
+    const out = renderSkillForPlatform('claude-code', { interviewerStyle: 'strict' })
+    expect(out).toContain('/mianshi')
+    expect(out).toContain('你必须严厉指出错误')
+  })
+
+  it('renders the opencode agent-definition marker + friendly style', () => {
+    const out = renderSkillForPlatform('opencode', { interviewerStyle: 'friendly' })
+    expect(out).toContain('name: mianshiguan-interviewer')
+    expect(out).toContain('先肯定再建议')
+  })
+
+  it('embeds MI_VERSION from the skill-template module (consistency)', () => {
+    const out = renderSkillForPlatform('omp', { interviewerStyle: 'coaching' })
+    expect(out).toContain(MI_VERSION)
+  })
+
+  it('throws MiValidationError on unknown platform', () => {
+    expect(() =>
+      renderSkillForPlatform('unknown' as Platform, { interviewerStyle: 'coaching' }),
+    ).toThrow(MiValidationError)
+    expect(() =>
+      renderSkillForPlatform('unknown' as Platform, { interviewerStyle: 'coaching' }),
+    ).toThrow(/^无效的平台: unknown \(合法: omp, claude-code, opencode\)/)
+  })
+
+  it('throws MiValidationError on unknown interviewer style', () => {
+    expect(() =>
+      renderSkillForPlatform('omp', { interviewerStyle: 'rude' as unknown as 'coaching' }),
+    ).toThrow(/^无效的面试官风格: rude \(合法: strict, coaching, friendly\)/)
+  })
+
+  it('performs zero fs side effects (pure render delegation)', () => {
+    const calls: string[] = []
+    const ctx = makeCtx({
+      existsSync: ((p: string) => {
+        calls.push(`exists:${p}`)
+        return false
+      }) as (p: string) => boolean,
+      mkdirSync: ((p: string) => {
+        calls.push(`mkdir:${p}`)
+      }) as InstallContext['mkdirSync'],
+      writeFileSync: ((p: string) => {
+        calls.push(`write:${p}`)
+      }) as InstallContext['writeFileSync'],
+      chmodSync: ((p: string) => {
+        calls.push(`chmod:${p}`)
+      }) as InstallContext['chmodSync'],
+    })
+    renderSkillForPlatform('omp', { interviewerStyle: 'coaching' })
+    expect(calls).toEqual([])
   })
 })
