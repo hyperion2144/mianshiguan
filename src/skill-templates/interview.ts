@@ -67,7 +67,7 @@ export function validateConfig(
     typeof config.platform !== 'string'
   ) {
     throw new MiValidationError(
-      `无效的平台: 缺失 (合法: omp, claude-code, opencode)`,
+      '无效的平台: 缺失 (合法: omp, claude-code, opencode)',
     )
   }
   if (!VALID_PLATFORMS.includes(config.platform as Platform)) {
@@ -80,7 +80,7 @@ export function validateConfig(
     config.interviewerStyle === undefined
   ) {
     throw new MiValidationError(
-      `无效的面试官风格: 缺失 (合法: strict, coaching, friendly)`,
+      '无效的面试官风格: 缺失 (合法: strict, coaching, friendly)',
     )
   }
   if (!VALID_STYLES.includes(config.interviewerStyle as InterviewerStyle)) {
