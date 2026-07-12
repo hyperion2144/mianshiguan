@@ -361,4 +361,45 @@ describe('MigrationRunner — 0002_add_interviews (per-contract coverage)', () =
     expect(versions.map((v) => v.version)).toEqual([1, 2])
     db.close()
   })
+
+  // 8. DEFAULT clauses: interviews — status, interviewer_style backfill on partial INSERT
+  it("interviews table: status='created' and interviewer_style='coaching' defaults apply on partial INSERT", () => {
+    const db = stageMigrations()
+    new MigrationRunner(db, migrationsDir).run()
+
+    db.conn.query("INSERT INTO profiles (id, name) VALUES ('p1', 'Alice')").run()
+    db.conn
+      .query("INSERT INTO interviews (id, profile_id, target_role) VALUES ('i1', 'p1', 'SWE')")
+      .run()
+
+    const row = db.conn
+      .query("SELECT status, interviewer_style FROM interviews WHERE id = 'i1'")
+      .get() as { status: string; interviewer_style: string }
+    expect(row.status).toBe('created')
+    expect(row.interviewer_style).toBe('coaching')
+    db.close()
+  })
+
+  // 9. DEFAULT clauses: interview_answers — feedback, phase backfill on partial INSERT
+  it("interview_answers table: feedback='' and phase='general' defaults apply on partial INSERT", () => {
+    const db = stageMigrations()
+    new MigrationRunner(db, migrationsDir).run()
+
+    db.conn.query("INSERT INTO profiles (id, name) VALUES ('p1', 'Alice')").run()
+    db.conn
+      .query("INSERT INTO interviews (id, profile_id, target_role) VALUES ('i1', 'p1', 'SWE')")
+      .run()
+    db.conn
+      .query(
+        "INSERT INTO interview_answers (id, interview_id, question_text, answer_text) VALUES ('q1', 'i1', 'Q1', 'A1')",
+      )
+      .run()
+
+    const row = db.conn
+      .query("SELECT feedback, phase FROM interview_answers WHERE id = 'q1'")
+      .get() as { feedback: string; phase: string }
+    expect(row.feedback).toBe('')
+    expect(row.phase).toBe('general')
+    db.close()
+  })
 })
