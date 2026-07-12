@@ -7,11 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Database } from '../../db/Database.ts'
 import { ConfigService } from '../config-service.ts'
-import {
-  type InterviewService,
-  type ScoreMap,
-  createInterviewService,
-} from '../interview.ts'
+import { type InterviewService, type ScoreMap, createInterviewService } from '../interview.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -107,23 +103,19 @@ describe('InterviewService.create (T-2)', () => {
     // spec's `in_progress` / `paused` definition.
     service.start(first.id)
 
-    expect(() =>
-      service.create({ profileId: 'P1', targetRole: 'FE' }),
-    ).toThrow(/当前有进行中的面试/)
+    expect(() => service.create({ profileId: 'P1', targetRole: 'FE' })).toThrow(
+      /当前有进行中的面试/,
+    )
   })
 
   it('throws MiNotFoundError when the profile does not exist', () => {
     const { service } = makeService(db)
-    expect(() =>
-      service.create({ profileId: 'ghost', targetRole: 'FE' }),
-    ).toThrow(/Profile 不存在/)
+    expect(() => service.create({ profileId: 'ghost', targetRole: 'FE' })).toThrow(/Profile 不存在/)
   })
 
   it('throws MiValidationError when targetRole is empty', () => {
     const { service } = makeService(db)
-    expect(() => service.create({ profileId: 'P1', targetRole: '' })).toThrow(
-      /targetRole/,
-    )
+    expect(() => service.create({ profileId: 'P1', targetRole: '' })).toThrow(/targetRole/)
   })
 })
 
@@ -474,9 +466,9 @@ describe('InterviewService state machine — complete + archive (T-4)', () => {
       岗位匹配度: 7,
     })
 
-    const row = db.conn
-      .query('SELECT scores FROM interviews WHERE id = ?')
-      .get(a.id) as { scores: string | null }
+    const row = db.conn.query('SELECT scores FROM interviews WHERE id = ?').get(a.id) as {
+      scores: string | null
+    }
     expect(JSON.parse(row.scores!)).toEqual({
       技术深度: 7,
       沟通表达: 6,
@@ -537,9 +529,9 @@ describe('InterviewService state machine — complete + archive (T-4)', () => {
 
     expect(archived.status).toBe('archived')
 
-    const row = db.conn
-      .query('SELECT status FROM interviews WHERE id = ?')
-      .get(a.id) as { status: string }
+    const row = db.conn.query('SELECT status FROM interviews WHERE id = ?').get(a.id) as {
+      status: string
+    }
     expect(row.status).toBe('archived')
   })
 
@@ -589,11 +581,7 @@ describe('InterviewService score validation (T-5)', () => {
     岗位匹配度: 10,
   } as const
 
-  function withOne(
-    base: Record<string, number>,
-    key: string,
-    value: unknown,
-  ): ScoreMap {
+  function withOne(base: Record<string, number>, key: string, value: unknown): ScoreMap {
     return { ...base, [key]: value } as unknown as ScoreMap
   }
 
@@ -620,36 +608,36 @@ describe('InterviewService score validation (T-5)', () => {
     const a = service.create({ profileId: 'P1', targetRole: 'FE' })
     service.start(a.id)
     const { 系统思维: _omit, ...withoutOne } = VALID_SCORES
-    expect(() =>
-      service.complete(a.id, withoutOne as unknown as ScoreMap),
-    ).toThrow(/缺少评分维度: 系统思维/)
+    expect(() => service.complete(a.id, withoutOne as unknown as ScoreMap)).toThrow(
+      /缺少评分维度: 系统思维/,
+    )
   })
 
   it('throws MiValidationError when 技术深度 = 0 (below range)', () => {
     const { service } = makeService(db)
     const a = service.create({ profileId: 'P1', targetRole: 'FE' })
     service.start(a.id)
-    expect(() =>
-      service.complete(a.id, withOne({ ...VALID_SCORES }, '技术深度', 0)),
-    ).toThrow(/技术深度 评分必须是 1-10 之间的整数/)
+    expect(() => service.complete(a.id, withOne({ ...VALID_SCORES }, '技术深度', 0))).toThrow(
+      /技术深度 评分必须是 1-10 之间的整数/,
+    )
   })
 
   it('throws MiValidationError when 沟通表达 = 11 (above range)', () => {
     const { service } = makeService(db)
     const a = service.create({ profileId: 'P1', targetRole: 'FE' })
     service.start(a.id)
-    expect(() =>
-      service.complete(a.id, withOne({ ...VALID_SCORES }, '沟通表达', 11)),
-    ).toThrow(/沟通表达 评分必须是 1-10 之间的整数/)
+    expect(() => service.complete(a.id, withOne({ ...VALID_SCORES }, '沟通表达', 11))).toThrow(
+      /沟通表达 评分必须是 1-10 之间的整数/,
+    )
   })
 
   it('throws MiValidationError when 项目能力 = 7.5 (non-integer)', () => {
     const { service } = makeService(db)
     const a = service.create({ profileId: 'P1', targetRole: 'FE' })
     service.start(a.id)
-    expect(() =>
-      service.complete(a.id, withOne({ ...VALID_SCORES }, '项目能力', 7.5)),
-    ).toThrow(/项目能力 评分必须是 1-10 之间的整数/)
+    expect(() => service.complete(a.id, withOne({ ...VALID_SCORES }, '项目能力', 7.5))).toThrow(
+      /项目能力 评分必须是 1-10 之间的整数/,
+    )
   })
 
   it('throws MiValidationError when 岗位匹配度 is a string', () => {
@@ -665,9 +653,7 @@ describe('InterviewService score validation (T-5)', () => {
       系统思维: 5,
       岗位匹配度: '8',
     } as unknown as ScoreMap
-    expect(() => service.complete(a.id, scores)).toThrow(
-      /岗位匹配度 评分必须是 1-10 之间的整数/,
-    )
+    expect(() => service.complete(a.id, scores)).toThrow(/岗位匹配度 评分必须是 1-10 之间的整数/)
   })
 
   it('throws MiValidationError when the scores argument is null', () => {
@@ -676,11 +662,8 @@ describe('InterviewService score validation (T-5)', () => {
     service.start(a.id)
     // Cast around the typed signature so we can exercise the
     // runtime guard with a non-object input.
-    expect(() => service.complete(a.id, null as unknown as ScoreMap)).toThrow(
-      /评分必须是/,
-    )
+    expect(() => service.complete(a.id, null as unknown as ScoreMap)).toThrow(/评分必须是/)
   })
-
 })
 
 describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
@@ -732,7 +715,7 @@ describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
       .query(
         `SELECT scores, feedback, phase
          FROM interview_answers WHERE id = ?`,
- )
+      )
       .get(ans.id) as {
       scores: string | null
       feedback: string
@@ -752,9 +735,9 @@ describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
       answerText: 'A',
     })
     expect(ans.scores).toBeNull()
-    const row = db.conn
-      .query('SELECT scores FROM interview_answers WHERE id = ?')
-      .get(ans.id) as { scores: string | null }
+    const row = db.conn.query('SELECT scores FROM interview_answers WHERE id = ?').get(ans.id) as {
+      scores: string | null
+    }
     expect(row.scores).toBeNull()
   })
 
@@ -867,9 +850,9 @@ describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
   it('recordAnswer bumps interviews.updated_at', () => {
     const { service } = makeService(db)
     const a = startedInterview(service)
-    const beforeRow = db.conn
-      .query('SELECT updated_at FROM interviews WHERE id = ?')
-      .get(a.id) as { updated_at: string }
+    const beforeRow = db.conn.query('SELECT updated_at FROM interviews WHERE id = ?').get(a.id) as {
+      updated_at: string
+    }
     // Sleep >1s so SQLite's datetime('now') advances past the
     // stored second-granular timestamp.
     Bun.sleepSync(1100)
@@ -878,9 +861,9 @@ describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
       questionText: 'Q',
       answerText: 'A',
     })
-    const afterRow = db.conn
-      .query('SELECT updated_at FROM interviews WHERE id = ?')
-      .get(a.id) as { updated_at: string }
+    const afterRow = db.conn.query('SELECT updated_at FROM interviews WHERE id = ?').get(a.id) as {
+      updated_at: string
+    }
     expect(afterRow.updated_at > beforeRow.updated_at).toBe(true)
   })
 })

@@ -1,7 +1,7 @@
 import { ulid } from 'ulid'
-import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
+import type { Database } from '../db/Database.ts'
 import type { InterviewAnswerRow, InterviewRow, InterviewStatus } from '../db/schema.ts'
-import { Database } from '../db/Database.ts'
+import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
 import type { ConfigService } from './config-service.ts'
 
 // Re-export the upstream schema row types and the error classes so
@@ -57,12 +57,7 @@ function validateScores(scores: unknown): asserts scores is ScoreMap {
       throw new MiValidationError(`缺少评分维度: ${dim}`)
     }
     const value = map[dim]
-    if (
-      typeof value !== 'number' ||
-      !Number.isInteger(value) ||
-      value < 1 ||
-      value > 10
-    ) {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 10) {
       throw new MiValidationError(`${dim} 评分必须是 1-10 之间的整数`)
     }
   }
@@ -195,10 +190,7 @@ export const TRANSITIONS: Readonly<Record<InterviewStatus, readonly InterviewSta
  * Service factory — wires the database and config dependencies so
  * handlers can pass them in. Mirrors `createProfileService` shape.
  */
-export function createInterviewService(
-  db: Database,
-  config: ConfigService,
-): InterviewService {
+export function createInterviewService(db: Database, config: ConfigService): InterviewService {
   return new InterviewService(db, config)
 }
 
@@ -247,9 +239,7 @@ export class InterviewService {
       )
       .get(input.profileId) as { id: string } | null
     if (active) {
-      throw new MiValidationError(
-        `当前有进行中的面试 (${active.id})，请先完成或归档后再开始新面试`,
-      )
+      throw new MiValidationError(`当前有进行中的面试 (${active.id})，请先完成或归档后再开始新面试`)
     }
 
     const id = ulid()
@@ -463,9 +453,7 @@ export class InterviewService {
     }
     const id = ulid()
     const scoresJson =
-      input.scores !== undefined && input.scores !== null
-        ? JSON.stringify(input.scores)
-        : null
+      input.scores !== undefined && input.scores !== null ? JSON.stringify(input.scores) : null
     const feedback = input.feedback ?? ''
     const phase = input.phase ?? 'general'
     try {
