@@ -10,7 +10,6 @@
 
 ## Goal Checklist
 
-### Proposal deliverables (proposal.md "Deliverables" + "Verify")
 
 | # | Goal / Must-have | Status | Evidence |
 |---|-----------------|--------|----------|
@@ -21,7 +20,6 @@
 | G5 | PR-2: Define platform directory mappings — omp `~/.config/omp/skills/`, claude-code `~/.claude/skills/`, opencode `.opencode/` | ACHIEVED | `src/services/skill-installer.ts:50-69` defines `PLATFORM_PATHS` with exactly those three entries, all frozen. Tests pin each entry verbatim at `src/services/__tests__/skill-installer.test.ts:52-60,62-70,72-80`. |
 | G6 | PR-2: Detection uses `fs.existsSync()` on common paths with `--platform` flag fallback | ACHIEVED | `detectPlatform` uses `ctx.existsSync` over `probePaths` at `src/services/skill-installer.ts:143-155`. `installSkillOrSkip` falls through to `detectPlatform` only when no override is supplied at `src/commands/init.ts:142-152`. |
 
-### Design.md goals (≤3)
 
 | # | Goal | Status | Evidence |
 |---|------|--------|----------|
@@ -29,7 +27,6 @@
 | G8 | Goal 2: Extend `mi init` so `--platform <omp|claude-code|opencode>` and the existing `--dry-run` cover FR-15's three acceptance criteria (auto-install, manual override, preview), with Chinese output consistent with surrounding init output | ACHIEVED | Flag registered with Chinese description at `src/commands/init.ts:48`. Manual override branch: `:142-152` (override wins). Auto-install branch: `detectPlatform` invoked when override is `null`. Preview branch: `printDryRun` at `:160-183`. All Chinese strings match the ph.1 style (`成功` / `跳过` / `将…` prefixes; ✓ glyph preserved at `:115`). |
 | G9 | Goal 3: Keep the change strictly additive on ph.1's init semantics — `--force`, `--dry-run`, `--data-dir`, `$MIANSHIGUAN_HOME`, exit codes, file modes, and the success message all remain identical when no platform flag is passed | ACHIEVED | Order of operations in `runInitCommand` (`src/commands/init.ts:83-116`) is: validate platform → resolve data dir → dry-run short-circuit → `ensureDataDirWritable` → `ConfigService.save` → `runMigrations` → `chmodSync(dbPath, 0o600)` → `installSkillOrSkip` → ph.1 success line. The ph.1 success line `初始化完成 ✓ 数据目录: <path>` still prints verbatim at `:115`. All ph.1 tests at `src/commands/init.test.ts:47-146` still pass (verified by `bun test` → 330/0). |
 
-### Implementation Verification must-haves (tasks.md "Implementation Verification")
 
 | # | Must-have | Status | Evidence |
 |---|-----------|--------|----------|
@@ -43,14 +40,12 @@
 | G17 | Every DS referenced by at least one task | ACHIEVED | DS-1 → T-1, T-2, T-3, T-4, T-5. DS-2 → T-6, T-7, T-8, T-9, T-10, T-11. Both DSs have ≥ 1 task. |
 | G18 | Every `type:behavior` task has a RED test description | ACHIEVED | T-1..T-10 each carry a `***RED test***` GIVEN/WHEN/THEN block under `tasks.md:42-48, 61-67, 81-86, 100-106, 119-127, 150-159, 172-179, 190-198, 208-220, 230-238`. T-11 is `type:config` (flag registration) and is documented with an explicit "no separate RED" note at `tasks.md:250`. |
 
-### FR-15 acceptance criteria (`bp/requirements.md`)
 
 | # | Acceptance | Status | Evidence |
 |---|------------|--------|----------|
 | G19 | FR-15: "三种平台自动安装到位，用户无需手动复制 skill 文件" — system auto-installs skill to all three platforms | ACHIEVED | `installSkillTemplate` covers all three platforms: `omp` (test at `src/services/__tests__/skill-installer.test.ts:280-307`), `claude-code` (`:335-345`), `opencode` (`:347-357`). The CLI exposes the platform via `--platform <name>` (`:48`) or via `detectPlatform` (`:142-152`). Per-invocation single-platform semantics (documented at `design.md` Alternatives: "Install for every detected platform simultaneously" → Rejected for predictable dry-run preview). |
 | G20 | FR-15: "用户可以手动指定平台" — user can manually override platform | ACHIEVED | `--platform <omp\|claude-code\|opencode>` flag at `src/commands/init.ts:48`. T-6 verifies end-to-end install with explicit override at `src/commands/init.test.ts:181-202`. |
 
-### Strictly additive guarantee (decision inheritance from context.md)
 
 | # | Item | Status | Evidence |
 |---|------|--------|----------|

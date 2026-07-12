@@ -10,7 +10,6 @@
 
 ## Constraint Checklist
 
-### ADDED Requirement: Platform directory mapping
 
 | # | Constraint | Location | Status | Evidence |
 |---|-----------|----------|--------|----------|
@@ -19,7 +18,6 @@
 | R3 | `opencode` target directory SHALL be `<cwd>/.opencode/` (project-anchored, NOT home-anchored), filename `mianshiguan-interview.md` | `src/services/skill-installer.ts:63-68` | PASS | `PLATFORM_PATHS.opencode = { kind: 'project', targetDir: '.opencode', filename: 'mianshiguan-interview.md' }`. Resolver selects `ctx.cwd` for `kind: 'project'` at `:124`. Test asserts homedir is ignored at `:110-115`. |
 | R4 | Mapping SHALL be frozen at compile time (mutation SHALL throw) AND SHALL contain exactly three keys: `omp`, `claude-code`, `opencode` | `src/services/skill-installer.ts:50` (outer `Object.freeze`) + `:51,57,63` (inner `Object.freeze`) | PASS | Both outer and each per-platform entry use `Object.freeze`; tests at `:44-50` verify `Object.isFrozen` for both; key-set test at `:40-42`. |
 
-### ADDED Requirement: Platform auto-detection
 
 | # | Constraint | Location | Status | Evidence |
 |---|-----------|----------|--------|----------|
@@ -27,7 +25,6 @@
 | R6 | `detectPlatform()` SHALL return `null` when no probe matches AND MUST NOT throw | `src/services/skill-installer.ts:154` | PASS | `return null` after the loop completes without a hit. Test asserts no throw at `:185-187`; null-on-empty at `:138-139`. |
 | R7 | When `detectPlatform()` returns `null`, `mi init` SHALL continue without skill installation and print a Chinese skip hint | `src/commands/init.ts:142-147` | PASS | `installSkillOrSkip` logs `success('未检测到 coding agent，已跳过 skill 安装。请使用 --platform 指定。')` on the null branch and `return`s before `installSkillTemplate` is reached. Test at `src/commands/init.test.ts:220-227`. |
 
-### ADDED Requirement: `--platform <name>` flag override
 
 | # | Constraint | Location | Status | Evidence |
 |---|-----------|----------|--------|----------|
@@ -35,7 +32,6 @@
 | R9 | Unknown `--platform <value>` SHALL throw `MiValidationError('无效的平台: <value> (合法: omp, claude-code, opencode)')`, exit 1, NO filesystem mutation | `src/commands/init.ts:89-92` | PASS | `validateConfig({ platform: options.platform ?? 'omp', interviewerStyle: 'coaching' })` runs before `ConfigService.resolveDataDir` (`:94`), `ensureDataDirWritable` (`:102`), and `installSkillOrSkip` (`:114`). Test at `src/commands/init.test.ts:230-247` asserts `MiValidationError`, the canonical regex, AND `existsSync(dataDir) === false`. |
 | R10 | `--platform` flag description SHALL be Chinese: `指定 coding agent 平台 (omp, claude-code, opencode)` | `src/commands/init.ts:48` | PASS | The `cac` `.option('--platform <name>', '指定 coding agent 平台 (omp, claude-code, opencode)', { default: null })` registers the literal description verbatim. |
 
-### ADDED Requirement: Skill template auto-install
 
 | # | Constraint | Location | Status | Evidence |
 |---|-----------|----------|--------|----------|
@@ -45,14 +41,12 @@
 | R14 | Re-installing over an existing skill file SHALL NOT throw (idempotent overwrite) | `src/services/skill-installer.ts:216-218` | PASS | `writeFileSync(targetPath, content)` overwrites unconditionally; no pre-check on existence. Test asserts two consecutive installs do not throw at `src/services/__tests__/skill-installer.test.ts:325-333`. |
 | R15 | `mi init` SHALL exit code 0 after a successful install | `src/commands/init.ts:218-224` (`runCommandAction`) + success path | PASS | No error thrown in the happy path → `runCommandAction` falls through to process exit with the default code 0. |
 
-### ADDED Requirement: Skill install dry-run preview
 
 | # | Constraint | Location | Status | Evidence |
 |---|-----------|----------|--------|----------|
 | R16 | `mi init --dry-run --platform omp` SHALL print (in order): `将创建目录: <dataDir>`, `将写入 config.yml`, `将运行迁移: 0001_initial.sql`, `将安装 skill 模板 (platform: omp): <abs install path>`; exit 0; no filesystem mutation | `src/commands/init.ts:160-183` | PASS | `printDryRun` logs the three ph.1 lines then the install plan line `将安装 skill 模板 (platform: ${platformOverride}): ${targetPath}` at `:171`. `init.ts:97-100` short-circuits before any fs mutation. Test asserts all four lines + `existsSync(dataDir) === false` + `existsSync(skillPath) === false` at `src/commands/init.test.ts:249-278` (T-9). |
 | R17 | `mi init --dry-run` with no `--platform` and no detected platform SHALL print the three ph.1 lines PLUS `将跳过 skill 安装（未检测到 coding agent，使用 --platform 指定）` AND SHALL NOT print the install-plan line; exit 0 | `src/commands/init.ts:182` | PASS | `printDryRun` falls through to the skip-hint line when `platformOverride` is null AND `detectPlatform` returns null. Test at `src/commands/init.test.ts:280-292` (T-10) asserts both presence of the skip line AND absence of `将安装 skill 模板`. |
 
-### MODIFIED Requirement: `mi init` initialization (additive extensions)
 
 | # | Constraint | Location | Status | Evidence |
 |---|-----------|----------|--------|----------|
@@ -61,7 +55,6 @@
 | R20 | "`--dry-run` previews without filesystem changes" — extended plan SHALL include the skill-install line OR the skip-hint line depending on whether a platform resolves | `src/commands/init.ts:97-100,160-183` | PASS | `printDryRun` produces four plan lines (install case) or three plan lines + skip line (no-resolution case). T-9 and T-10 cover both branches. |
 | R21 | "`$MIANSHIGUAN_HOME` honored by init" — for `home`-kind platforms, install path is independent of `$MIANSHIGUAN_HOME`; for `opencode`, install path remains cwd-anchored | `src/services/skill-installer.ts:115-129` + `src/commands/init.ts:95` | PASS | `resolvePlatformDir` selects `ctx.homedir` for `kind: 'home'` and `ctx.cwd` for `kind: 'project'`; `ctx.homedir` is built from `os.homedir()` at `src/commands/init.ts:125` (which is independent of `MIANSHIGUAN_HOME`). |
 
-### Reference-chain completeness
 
 | # | Item | Linked from | Status | Evidence |
 |---|------|------------|--------|----------|
