@@ -305,17 +305,30 @@ describe('MigrationRunner — 0002_add_interviews (per-contract coverage)', () =
   })
 
   // 3. FK constraint: interview_answers rejects orphan interview_id
-  it('FK constraint: interview_answers rejects interview_id pointing to non-existent interview', () => {
+  it('FK constraint: interview_answers rejects interview_id pointing to non-existent interview with SQLITE_CONSTRAINT_FOREIGNKEY', () => {
     const db = stageMigrations()
     new MigrationRunner(db, migrationsDir).run()
 
-    expect(() => {
+    let thrown: unknown = null
+    try {
       db.conn
         .query(
           "INSERT INTO interview_answers (id, interview_id, question_text, answer_text) VALUES ('a1', 'no-such-interview', 'Q', 'A')",
         )
         .run()
-    }).toThrow(/FOREIGN KEY constraint failed/)
+    } catch (err) {
+      thrown = err
+    }
+
+    // Narrow safely via `instanceof` and `in` — no inline-cast member access.
+    expect(thrown).toBeInstanceOf(Error)
+    if (thrown instanceof Error) {
+      expect(thrown.message).toMatch(/FOREIGN KEY constraint failed/)
+    }
+    if (thrown && typeof thrown === 'object' && 'code' in thrown) {
+      // SQLite errors carry a typed .code; the property is `unknown` after `in`-narrowing
+      expect(thrown.code).toBe('SQLITE_CONSTRAINT_FOREIGNKEY')
+    }
 
     const count = db.conn.query('SELECT COUNT(*) AS n FROM interview_answers').get() as {
       n: number
