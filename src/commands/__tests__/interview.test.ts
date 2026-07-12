@@ -482,6 +482,120 @@ describe('mi interview resume command (T-12)', () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// T-13 — `mi interview list` enumerates interviews for a profile.
+// ---------------------------------------------------------------------------
+
+describe('mi interview list command (T-13)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+    insertProfile(harness.db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('--json mode prints an array of interviews filtered by profile', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    // One completed + one in-progress so both can coexist (the service
+    // forbids stacking two ACTIVE interviews on one profile).
+    const a = harness.service.create({ profileId: 'P1', targetRole: 'FE' })
+    harness.service.start(a.id)
+    harness.service.complete(a.id, {
+      技术深度: 7,
+      沟通表达: 8,
+      项目能力: 9,
+      系统思维: 7,
+      岗位匹配度: 8,
+    })
+    const b = harness.service.create({ profileId: 'P1', targetRole: 'BE' })
+    harness.service.start(b.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['list'],
+        { json: true },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    const parsed = JSON.parse(output.join('\n')) as Array<{
+      id: string
+      status: string
+      scores: unknown
+    }>
+    expect(parsed).toHaveLength(2)
+    const completed = parsed.find((row) => row.status === 'completed')
+    const inProgress = parsed.find((row) => row.status === 'in_progress')
+    expect(completed?.id).toBe(a.id)
+    expect(inProgress?.id).toBe(b.id)
+  })
+
+  it('human format prints the empty message when there are no interviews', () => {
+    expect(() =>
+      runInterviewCommand(
+        ['list'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).not.toThrow()
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['list'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    expect(stripAnsi(output.join('\n'))).toContain('暂无面试记录')
+  })
+
+  it('human format prints a cli-table3 with the documented column headers', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'Senior FE',
+      interviewerStyle: 'coaching',
+    })
+    harness.service.start(created.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['list'],
+        { profile: 'P1' },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('ID')
+    expect(text).toContain('PROFILE')
+    expect(text).toContain('ROLE')
+    expect(text).toContain('STATUS')
+    expect(text).toContain('STARTED')
+    expect(text).toContain('COMPLETED')
+    expect(text).toContain('SCORES')
+    expect(text).toContain(created.id)
+  })
+})
+
   it('defaults interviewerStyle to coaching from config when --style is absent', () => {
     harness.configService.save({
       dataDir: harness.dataDir,

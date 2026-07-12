@@ -2,7 +2,7 @@ import type { CAC } from 'cac'
 import Table from 'cli-table3'
 import { Database } from '../db/Database.ts'
 import { MiError, MiValidationError } from '../errors.ts'
-import { error as formatError, success, warning } from '../output/colors.ts'
+import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import {
   SCORE_DIMENSIONS,
@@ -64,15 +64,30 @@ export type CliInterviewService = InterviewService & {
   getReport(id: string): InterviewReport
   recordScore(id: string, scores: ScoreMap): Interview
 }
+
+// ---------------------------------------------------------------------------
+// Constants — Chinese strings and table headers. Each constant is named so
+// the matching spec scenario is traceable from CLI source back to spec.md.
+// ---------------------------------------------------------------------------
+
 const USAGE_START_MESSAGE = '用法错误: mi interview start --role <岗位> [--style <风格>]'
 const NO_ACTIVE_PROFILE_MESSAGE = '请先创建或切换 Profile'
 const NO_ACTIVE_INTERVIEW_MESSAGE = '当前无进行中的面试'
+const EMPTY_LIST_MESSAGE = '暂无面试记录'
 const COACHING_DEFAULT = 'coaching'
+
 const SHOW_HEADERS = ['字段', '值'] as const
+const LIST_HEADERS = ['ID', 'PROFILE', 'ROLE', 'STATUS', 'STARTED', 'COMPLETED', 'SCORES'] as const
 const MISSING_FIELD_PLACEHOLDER = '(空)'
 const MISSING_NUMBER_PLACEHOLDER = '(未评分)'
+
 const VALID_STYLES = ['strict', 'coaching', 'friendly'] as const
 type ValidStyle = (typeof VALID_STYLES)[number]
+
+// ---------------------------------------------------------------------------
+// runCommandAction — wraps the body of an action callback in a typed-error
+// trap and exit-code map. Mirrors the helper in profile.ts.
+// ---------------------------------------------------------------------------
 
 function runCommandAction(action: () => void): void {
   try {
@@ -89,6 +104,10 @@ function runCommandAction(action: () => void): void {
     process.exit(2)
   }
 }
+
+// ---------------------------------------------------------------------------
+// registerInterviewCommand — wires the `interview [...args]` command.
+// ---------------------------------------------------------------------------
 
 export function registerInterviewCommand(program: CAC): void {
   program
@@ -117,6 +136,11 @@ export function registerInterviewCommand(program: CAC): void {
       runCommandAction(() => runInterviewCommand(args ?? [], options))
     })
 }
+
+// ---------------------------------------------------------------------------
+// runInterviewCommand — public entry point used by tests and the action
+// callback. Resolves service + config wiring, then dispatches.
+// ---------------------------------------------------------------------------
 
 export function runInterviewCommand(
   args: string[],
@@ -152,6 +176,8 @@ export function runInterviewCommand(
         resumeInterview(service, configService)
         return
       case 'list':
+        listInterviews(service, configService, options)
+        return
       case 'score':
       case 'report':
         throw new MiValidationError(`未知 interview 子命令: ${subcommand}`)
@@ -164,7 +190,7 @@ export function runInterviewCommand(
 }
 
 // ---------------------------------------------------------------------------
-// Subcommand handlers.
+// Subcommand handlers — each is a thin adapter around the service.
 // ---------------------------------------------------------------------------
 
 function startInterview(
@@ -261,29 +287,53 @@ function resumeInterview(service: CliInterviewService, configService: ConfigServ
   console.log(success(`已恢复面试: ${resumed.id}`))
 }
 
-
-function requireActiveProfile(configService: ConfigService): string {
-  const id = resolveProfileId(configService, undefined)
-  if (!id) {
-    throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
-  }
-  return id
-}
-
-function findPausedInterview(
+function listInterviews(
   service: CliInterviewService,
-  profileId: string,
-): Interview | null {
-  const rows = service.list({ profileId })
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    const row = rows[index]
-    if (row && row.status === 'paused') return row
+  configService: ConfigService,
+  options: InterviewCommandOptions,
+): void {
+  const profileIdRaw = (options.profile ?? '').trim()
+  let profileId: string | undefined
+  if (profileIdRaw.length > 0) {
+    profileId = profileIdRaw
+  } else {
+    profileId = resolveProfileId(configService, undefined)
   }
-  return null
+
+  const interviews = profileId ? service.list({ profileId }) : service.list()
+
+  if (interviews.length === 0) {
+    if (options.json) {
+      console.log(JSON.stringify([], null, 2))
+      return
+    }
+    console.log(EMPTY_LIST_MESSAGE)
+    return
+  }
+
+  if (options.json) {
+    console.log(JSON.stringify(interviews, null, 2))
+    return
+  }
+
+  const table = new Table({ head: [...LIST_HEADERS] })
+  for (const interview of interviews) {
+    table.push([
+      interview.id,
+      interview.profileId,
+      interview.targetRole || MISSING_FIELD_PLACEHOLDER,
+      interview.status,
+      interview.startedAt ?? MISSING_FIELD_PLACEHOLDER,
+      interview.completedAt ?? MISSING_FIELD_PLACEHOLDER,
+      formatScoresInline(interview.scores),
+    ])
+  }
+  console.log(table.toString())
 }
 
 // ---------------------------------------------------------------------------
-// Helpers — small named utilities.
+// Helpers — small named utilities. Each is referenced from more than one
+// place or captures a domain concept worth naming.
 // ---------------------------------------------------------------------------
 
 function resolveProfileId(
@@ -297,6 +347,14 @@ function resolveProfileId(
   } catch {
     return undefined
   }
+}
+
+function requireActiveProfile(configService: ConfigService): string {
+  const id = resolveProfileId(configService, undefined)
+  if (!id) {
+    throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
+  }
+  return id
 }
 
 function resolveInterviewerStyle(
@@ -321,6 +379,18 @@ function resolveInterviewerStyle(
   return COACHING_DEFAULT
 }
 
+function findPausedInterview(
+  service: CliInterviewService,
+  profileId: string,
+): Interview | null {
+  const rows = service.list({ profileId })
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index]
+    if (row && row.status === 'paused') return row
+  }
+  return null
+}
+
 /**
  * Format a 5-dimension score map as a single row of `dim:N/10, …`. Used
  * in list rows, status rows, and report table cells — three call sites
@@ -333,4 +403,3 @@ function formatScoresInline(scores: ScoreMap | null | undefined): string {
 
 export const __interview_table = Table
 export const __interview_success = success
-export const __interview_warning = warning
