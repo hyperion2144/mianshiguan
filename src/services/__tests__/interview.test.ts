@@ -884,3 +884,140 @@ describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
     expect(afterRow.updated_at > beforeRow.updated_at).toBe(true)
   })
 })
+
+describe('InterviewService getReport (T-7)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  const VALID_SCORES: ScoreMap = {
+    技术深度: 8,
+    沟通表达: 7,
+    项目能力: 6,
+    系统思维: 5,
+    岗位匹配度: 10,
+  }
+
+  it('throws MiNotFoundError when the interview id does not exist', () => {
+    const { service } = makeService(db)
+    expect(() => service.getReport('ghost')).toThrow(/面试不存在: ghost/)
+  })
+
+  it('report on in_progress: isComplete=false, durationSeconds=null', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    const r = service.getReport(a.id)
+    expect(r.session.id).toBe(a.id)
+    expect(r.session.status).toBe('in_progress')
+    expect(r.isComplete).toBe(false)
+    expect(r.durationSeconds).toBeNull()
+    expect(r.aggregateScores).toBeNull()
+    expect(r.perDimensionAverages).toBeNull()
+    expect(r.answers).toEqual([])
+  })
+
+  it('report on completed: aggregateScores, answers, duration, isComplete=true', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    // Force a deterministic duration by overwriting started_at
+    // directly — SQLite's datetime('now') is second-granular and
+    // a real <1s pause cannot be observed reliably here.
+    db.conn
+      .query(
+        `UPDATE interviews
+         SET started_at = '2026-01-01 10:00:00'
+         WHERE id = ?`,
+      )
+      .run(a.id)
+    service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q1',
+      answerText: 'A1',
+      scores: VALID_SCORES,
+    })
+    service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q2',
+      answerText: 'A2',
+      scores: VALID_SCORES,
+    })
+    // Pin completed_at to 1h after started_at so duration is exact.
+    db.conn
+      .query(
+        `UPDATE interviews
+         SET completed_at = '2026-01-01 11:00:00'
+         WHERE id = ?`,
+      )
+      .run(a.id)
+    const r = service.getReport(a.id)
+    expect(r.session.status).toBe('completed')
+    expect(r.isComplete).toBe(true)
+    expect(r.answers).toHaveLength(2)
+    expect(r.aggregateScores).toEqual(VALID_SCORES)
+    expect(r.perDimensionAverages).toBe(VALID_SCORES)
+    expect(r.durationSeconds).toBe(3600)
+  })
+
+  it('report on archived: isComplete=true', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, VALID_SCORES)
+    service.archive(a.id)
+    const r = service.getReport(a.id)
+    expect(r.session.status).toBe('archived')
+    expect(r.isComplete).toBe(true)
+    expect(r.aggregateScores).toEqual(VALID_SCORES)
+  })
+
+  it('report on completed-with-zero-answers: aggregateScores=null, perDimensionAverages=null', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, VALID_SCORES)
+    const r = service.getReport(a.id)
+    expect(r.session.status).toBe('completed')
+    expect(r.isComplete).toBe(true)
+    // scores JSON was persisted on complete(); not 'null'.
+    expect(r.aggregateScores).toEqual(VALID_SCORES)
+    expect(r.answers).toEqual([])
+  })
+
+  it('durationSeconds is null when started_at is missing', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    // Don't start — started_at stays null.
+    const r = service.getReport(a.id)
+    expect(r.session.startedAt).toBeNull()
+    expect(r.durationSeconds).toBeNull()
+  })
+
+  it('durationSeconds is null when completed_at is missing', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    // Not completed.
+    const r = service.getReport(a.id)
+    expect(r.session.completedAt).toBeNull()
+    expect(r.durationSeconds).toBeNull()
+  })
+
+  it('perDimensionAverages is a reference-alias of aggregateScores', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, VALID_SCORES)
+    const r = service.getReport(a.id)
+    // Same reference, same null-ness — both fields are aliases.
+    expect(r.perDimensionAverages).toBe(r.aggregateScores)
+  })
+})
