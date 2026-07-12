@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Database } from '../../db/Database.ts'
 import { ConfigService } from '../config-service.ts'
 import { type InterviewService, type ScoreMap, createInterviewService } from '../interview.ts'
+import { MiValidationError } from '../../errors.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -865,6 +866,68 @@ describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
       updated_at: string
     }
     expect(afterRow.updated_at > beforeRow.updated_at).toBe(true)
+  })
+
+  it('recordAnswer rejects empty questionText with MiValidationError', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: '',
+        answerText: 'A',
+      }),
+    ).toThrow(MiValidationError)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: '',
+        answerText: 'A',
+      }),
+    ).toThrow(/questionText/)
+  })
+
+  it('recordAnswer rejects whitespace-only questionText with MiValidationError', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: '   ',
+        answerText: 'A',
+      }),
+    ).toThrow(MiValidationError)
+  })
+
+  it('recordAnswer rejects empty answerText with MiValidationError', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: 'Q',
+        answerText: '',
+      }),
+    ).toThrow(MiValidationError)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: 'Q',
+        answerText: '',
+      }),
+    ).toThrow(/answerText/)
+  })
+
+  it('recordAnswer rejects whitespace-only answerText with MiValidationError', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: 'Q',
+        answerText: '\t\n',
+      }),
+    ).toThrow(MiValidationError)
   })
 })
 
