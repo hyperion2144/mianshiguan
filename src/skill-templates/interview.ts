@@ -80,13 +80,38 @@ export function validateConfig(
  *   6. Skill version footer pinned to `MI_VERSION`
  *
  * Pure string transformation — no I/O, deterministic, byte-identical
- * for identical input. Style-specific branches live in T-4 and are
- * applied as a separate block here once the style subsystem lands.
+ * for identical input. The style-specific block (T-4) selects one of
+ * three branches keyed off `InterviewerStyle`.
  */
+
+/**
+ * Per-`InterviewerStyle` guidance blocks. Each branch is mutually
+ * exclusive — switching the style on an otherwise-identical config
+ * swaps the entire block but keeps the role / profile / flow /
+ * scoring / CLI shell intact.
+ */
+const STYLE_GUIDANCE: Record<InterviewerStyle, string> = {
+  strict: `## 面试官风格：严格
+- 你必须严厉指出错误，不放过候选人的任何技术失误或逻辑漏洞
+- 不能放过模糊表述，遇到含糊答案时要立刻追问底层细节
+- 在每道题上施压，深挖原理与边界条件，必要时给出反例
+- 整体氛围冷峻、要求精确，避免任何温情化的评价`,
+  coaching: `## 面试官风格：引导
+- 通过反问引导候选人思考，让其自行推导而非直接给答案
+- 在候选人卡顿时给予一两个递进式提示，帮其重回正轨
+- 鼓励候选人展示完整的思考过程与权衡判断能力
+- 整体氛围是教练对学员，重点在于协助候选人展现最佳状态`,
+  friendly: `## 面试官风格：友好
+- 先肯定再建议，营造轻松开放的交流氛围，让候选人敢于表达
+- 多鼓励候选人畅所欲言，避免一上来就给负面反馈
+- 即使候选人答错也以建设性的方式给出建议
+- 整体氛围是同事间的技术交流，重点在于发掘候选人的潜力`,
+}
 export function buildPromptBody(config: InterviewSkillConfig): string {
   const profile = config.defaultProfile ?? '未指定 profile'
   const role = config.targetRole ?? '未指定 目标岗位'
   const dimensions = config.dimensions ?? DEFAULT_DIMENSIONS
+  const styleBlock = STYLE_GUIDANCE[config.interviewerStyle]
 
   const rubric = dimensions.map((d) => `- ${d}`).join('\n')
 
@@ -99,6 +124,8 @@ export function buildPromptBody(config: InterviewSkillConfig): string {
 ## 面试流程
 你需要自然地推进面试，不要生硬切换话题；每题后给出简要反馈，引导候选人进入下一环节。
 建议流程：开场 → 项目深挖 → 技术考察 → 综合评估 → 总结反馈。
+
+${styleBlock}
 
 ## 评分维度（每题 1-10 整数评分）
 ${rubric}

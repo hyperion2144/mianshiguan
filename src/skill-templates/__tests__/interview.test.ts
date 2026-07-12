@@ -192,3 +192,70 @@ describe('buildPromptBody (T-3)', () => {
     expect(body).not.toContain('技术深度')
   })
 })
+
+// ─── T-4: style-specific guidance branches ─────────────────────────────────
+
+describe('buildPromptBody style guidance (T-4)', () => {
+  const base = {
+    platform: 'omp' as Platform,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('strict style injects 严格 + 严厉指出错误 + 不能放过模糊表述', () => {
+    const body = buildPromptBody({ ...base, interviewerStyle: 'strict' as InterviewerStyle })
+    expect(body).toContain('严格')
+    expect(body).toContain('严厉指出错误')
+    expect(body).toContain('不能放过模糊表述')
+  })
+
+  it('coaching style injects 引导 + 通过反问引导候选人思考', () => {
+    const body = buildPromptBody({ ...base, interviewerStyle: 'coaching' as InterviewerStyle })
+    expect(body).toContain('引导')
+    expect(body).toContain('通过反问引导候选人思考')
+  })
+
+  it('friendly style injects 友好 + 先肯定再建议 + 鼓励候选人', () => {
+    const body = buildPromptBody({ ...base, interviewerStyle: 'friendly' as InterviewerStyle })
+    expect(body).toContain('友好')
+    expect(body).toContain('先肯定再建议')
+    expect(body).toContain('鼓励候选人')
+  })
+
+  it('switches between styles change ONLY the style block (mutually exclusive)', () => {
+    const strict = buildPromptBody({ ...base, interviewerStyle: 'strict' as InterviewerStyle })
+    const coaching = buildPromptBody({ ...base, interviewerStyle: 'coaching' as InterviewerStyle })
+    const friendly = buildPromptBody({ ...base, interviewerStyle: 'friendly' as InterviewerStyle })
+
+    // role / CLI / scoring rubric shared across styles
+    for (const body of [strict, coaching, friendly]) {
+      expect(body).toContain('你是一位专业的技术面试官')
+      expect(body).toContain('评分维度')
+      expect(body).toContain('mi interview start')
+    }
+
+    // each style's signature phrase is absent in the other two
+    expect(strict).toContain('严厉指出错误')
+    expect(coaching).not.toContain('严厉指出错误')
+    expect(friendly).not.toContain('严厉指出错误')
+
+    expect(coaching).toContain('通过反问引导候选人思考')
+    expect(strict).not.toContain('通过反问引导候选人思考')
+    expect(friendly).not.toContain('通过反问引导候选人思考')
+
+    expect(friendly).toContain('先肯定再建议')
+    expect(strict).not.toContain('先肯定再建议')
+    expect(coaching).not.toContain('先肯定再建议')
+  })
+
+  it('style choice does not depend on platform — same guidance across hosts', () => {
+    const platforms: Platform[] = ['omp', 'claude-code', 'opencode']
+    for (const platform of platforms) {
+      const body = buildPromptBody({
+        platform,
+        interviewerStyle: 'coaching',
+      })
+      expect(body).toContain('通过反问引导候选人思考')
+    }
+  })
+})
