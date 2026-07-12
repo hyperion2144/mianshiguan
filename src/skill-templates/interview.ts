@@ -45,21 +45,43 @@ export interface InterviewSkillConfig {
 
 /**
  * Runtime guard for `InterviewSkillConfig.platform` and
- * `interviewerStyle`. Accepts the config-level pick so callers can
- * pass a wider object (e.g. unvalidated `unknown`) and a single
- * `as unknown as Platform` cast — the field types in
- * `InterviewSkillConfig` stay narrow while the validator remains
- * callable from tests that exercise the rejection paths.
+ * `interviewerStyle`. Accepts a wider input shape than the typed
+ * config so callers can pass `unknown`, `null`, or `{}` and still
+ * exercise the rejection paths in tests.
+ *
+ * Performs explicit `typeof` checks before the `includes()` lookup
+ * so `undefined` / `null` / `{}` / omitted fields produce a
+ * canonical Chinese "missing field" message rather than leaking
+ * the raw `undefined` value into the rendered error string.
  *
  * @throws {MiValidationError} when platform or interviewerStyle is
- *   outside the canonical tuple. The Chinese message lists the legal
- *   values verbatim.
+ *   outside the canonical tuple (or is not a string at all). The
+ *   Chinese message lists the legal values verbatim.
  */
 export function validateConfig(
-  config: Pick<InterviewSkillConfig, 'platform' | 'interviewerStyle'>,
+  config: { platform?: unknown; interviewerStyle?: unknown } | null | undefined,
 ): void {
+  if (
+    typeof config !== 'object' ||
+    config === null ||
+    typeof config.platform !== 'string'
+  ) {
+    throw new MiValidationError(
+      `无效的平台: 缺失 (合法: omp, claude-code, opencode)`,
+    )
+  }
   if (!VALID_PLATFORMS.includes(config.platform as Platform)) {
-    throw new MiValidationError(`无效的平台: ${config.platform} (合法: omp, claude-code, opencode)`)
+    throw new MiValidationError(
+      `无效的平台: ${config.platform} (合法: omp, claude-code, opencode)`,
+    )
+  }
+  if (
+    typeof config.interviewerStyle !== 'string' ||
+    config.interviewerStyle === undefined
+  ) {
+    throw new MiValidationError(
+      `无效的面试官风格: 缺失 (合法: strict, coaching, friendly)`,
+    )
   }
   if (!VALID_STYLES.includes(config.interviewerStyle as InterviewerStyle)) {
     throw new MiValidationError(
