@@ -2,14 +2,16 @@ import type { CAC } from 'cac'
 import Table from 'cli-table3'
 import { Database } from '../db/Database.ts'
 import { MiError, MiValidationError } from '../errors.ts'
-import { error as formatError, success } from '../output/colors.ts'
+import { error as formatError, success, warning } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import {
+  SCORE_DIMENSIONS,
   type CreateInterviewInput,
   type Interview,
   type InterviewAnswer,
   type InterviewReport,
   type InterviewService,
+  type ScoreDimension,
   type ScoreMap,
   createInterviewService,
 } from '../services/interview.ts'
@@ -62,10 +64,13 @@ export type CliInterviewService = InterviewService & {
   getReport(id: string): InterviewReport
   recordScore(id: string, scores: ScoreMap): Interview
 }
-
 const USAGE_START_MESSAGE = '用法错误: mi interview start --role <岗位> [--style <风格>]'
 const NO_ACTIVE_PROFILE_MESSAGE = '请先创建或切换 Profile'
+const NO_ACTIVE_INTERVIEW_MESSAGE = '当前无进行中的面试'
 const COACHING_DEFAULT = 'coaching'
+const SHOW_HEADERS = ['字段', '值'] as const
+const MISSING_FIELD_PLACEHOLDER = '(空)'
+const MISSING_NUMBER_PLACEHOLDER = '(未评分)'
 const VALID_STYLES = ['strict', 'coaching', 'friendly'] as const
 type ValidStyle = (typeof VALID_STYLES)[number]
 
@@ -138,6 +143,8 @@ export function runInterviewCommand(
         startInterview(service, configService, options)
         return
       case 'status':
+        showStatus(service, configService, options)
+        return
       case 'pause':
       case 'resume':
       case 'list':
@@ -151,6 +158,10 @@ export function runInterviewCommand(
     if (ownedDb) ownedDb.close()
   }
 }
+
+// ---------------------------------------------------------------------------
+// Subcommand handlers.
+// ---------------------------------------------------------------------------
 
 function startInterview(
   service: CliInterviewService,
@@ -181,6 +192,52 @@ function startInterview(
     ),
   )
 }
+
+function showStatus(
+  service: CliInterviewService,
+  configService: ConfigService,
+  options: InterviewCommandOptions,
+): void {
+  const profileId = resolveProfileId(configService, options.profile)
+  if (!profileId) {
+    throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
+  }
+  const interview = service.getActive(profileId)
+  if (!interview) {
+    if (options.json) {
+      console.log(JSON.stringify({ active: false }, null, 2))
+      return
+    }
+    console.log(NO_ACTIVE_INTERVIEW_MESSAGE)
+    return
+  }
+
+  if (options.json) {
+    console.log(JSON.stringify(interview, null, 2))
+    return
+  }
+
+  const answerCount = service.listAnswers(interview.id).length
+  const rows: [string, string][] = [
+    ['ID', interview.id],
+    ['PROFILE_ID', interview.profileId],
+    ['STATUS', interview.status],
+    ['TARGET_ROLE', interview.targetRole],
+    ['STYLE', interview.interviewerStyle],
+    ['STARTED_AT', interview.startedAt ?? MISSING_FIELD_PLACEHOLDER],
+    ['ANSWERS_COUNT', String(answerCount)],
+    ['SCORES_SUMMARY', formatScoresInline(interview.scores)],
+  ]
+  const table = new Table({ head: [...SHOW_HEADERS] })
+  for (const [field, value] of rows) {
+    table.push([field, value])
+  }
+  console.log(table.toString())
+}
+
+// ---------------------------------------------------------------------------
+// Helpers — small named utilities.
+// ---------------------------------------------------------------------------
 
 function resolveProfileId(
   configService: ConfigService,
@@ -217,5 +274,16 @@ function resolveInterviewerStyle(
   return COACHING_DEFAULT
 }
 
+/**
+ * Format a 5-dimension score map as a single row of `dim:N/10, …`. Used
+ * in list rows, status rows, and report table cells — three call sites
+ * need the same rendering.
+ */
+function formatScoresInline(scores: ScoreMap | null | undefined): string {
+  if (!scores) return MISSING_NUMBER_PLACEHOLDER
+  return SCORE_DIMENSIONS.map((dim: ScoreDimension) => `${dim}:${scores[dim]}/10`).join(', ')
+}
+
 export const __interview_table = Table
 export const __interview_success = success
+export const __interview_warning = warning

@@ -226,6 +226,105 @@ describe('mi interview start command (T-9)', () => {
     ).toThrow(/请先创建或切换 Profile/)
   })
 
+// ---------------------------------------------------------------------------
+// T-10 — `mi interview status` shows the active interview for the profile.
+// ---------------------------------------------------------------------------
+
+describe('mi interview status command (T-10)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+    insertProfile(harness.db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('--json mode prints parseable JSON with the active interview', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'Senior FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['status'],
+        { json: true },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    const joined = output.join('\n')
+    const parsed = JSON.parse(joined) as { id: string; status: string }
+    expect(parsed.id).toBe(started.id)
+    expect(parsed.status).toBe('in_progress')
+  })
+
+  it('--json on no active interview prints {"active": false} (NOT throwing)', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['status'],
+        { json: true },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    expect(JSON.parse(output.join('\n'))).toEqual({ active: false })
+  })
+
+  it('human format prints a cli-table3 with the active interview fields', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'Senior FE',
+      interviewerStyle: 'coaching',
+    })
+    harness.service.start(created.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['status'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('字段')
+    expect(text).toContain('值')
+    expect(text).toContain('ID')
+    expect(text).toContain('STATUS')
+    expect(text).toContain(created.id)
+    expect(text).toContain('in_progress')
+  })
+})
+
   it('defaults interviewerStyle to coaching from config when --style is absent', () => {
     harness.configService.save({
       dataDir: harness.dataDir,
