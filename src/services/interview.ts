@@ -447,14 +447,25 @@ export class InterviewService {
 
   /**
    * Insert a Q&A row and bump the parent interview's `updated_at`.
-   * Used by T-4's `complete` to recompute per-dimension averages
-   * when at least one answer exists. Full per-question validation
-   * (status check, 1-10 score range, post-completion rejection)
-   * lands in T-6.
+   * The parent interview must be actively answerable — that is,
+   * `in_progress` OR `paused`. Created/completed/archived states
+   * all throw with the post-completion message. `scores` is
+   * validated against the 5-dimension 1-10 integer contract via
+   * the module-local `validateScores`.
    */
   recordAnswer(input: RecordAnswerInput): InterviewAnswer {
+    const parent = this.get(input.interviewId)
+    if (parent.status !== 'in_progress' && parent.status !== 'paused') {
+      throw new MiValidationError('无法记录回答 — 面试未开始或已结束')
+    }
+    if (input.scores !== undefined && input.scores !== null) {
+      validateScores(input.scores)
+    }
     const id = ulid()
-    const scoresJson = input.scores ? JSON.stringify(input.scores) : null
+    const scoresJson =
+      input.scores !== undefined && input.scores !== null
+        ? JSON.stringify(input.scores)
+        : null
     const feedback = input.feedback ?? ''
     const phase = input.phase ?? 'general'
     try {
@@ -487,6 +498,28 @@ export class InterviewService {
       throw new MiDatabaseError('record answer: row missing after insert')
     }
     return rowToAnswer(row)
+  }
+
+  /**
+   * Return all answers for an interview ordered by insertion
+   * (`created_at ASC, id ASC`). Throws `MiNotFoundError` when the
+   * interview id doesn't exist; returns `[]` when none recorded.
+   */
+  listAnswers(interviewId: string): InterviewAnswer[] {
+    if (typeof interviewId !== 'string' || interviewId.length === 0) {
+      throw new MiValidationError('interviewId 不能为空')
+    }
+    // Existence check — distinguishes "no answers yet" from
+    // "interview never existed" so callers see the right error.
+    this.get(interviewId)
+    const rows = this.db.conn
+      .query(
+        `SELECT * FROM interview_answers
+         WHERE interview_id = ?
+         ORDER BY created_at ASC, id ASC`,
+      )
+      .all(interviewId) as InterviewAnswerRowRaw[]
+    return rows.map(rowToAnswer)
   }
 
   /**
