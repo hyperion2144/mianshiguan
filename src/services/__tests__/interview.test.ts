@@ -682,3 +682,205 @@ describe('InterviewService score validation (T-5)', () => {
   })
 
 })
+
+describe('InterviewService recordAnswer + listAnswers (T-6)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  // A baseline valid score map reused by the recordAnswer tests.
+  const VALID_SCORES: ScoreMap = {
+    技术深度: 8,
+    沟通表达: 7,
+    项目能力: 6,
+    系统思维: 5,
+    岗位匹配度: 10,
+  }
+
+  function startedInterview(service: InterviewService) {
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    return a
+  }
+
+  it('recordAnswer on in_progress inserts a row with scores, defaults feedback/phase', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    const ans = service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q1',
+      answerText: 'A1',
+      scores: VALID_SCORES,
+    })
+
+    expect(ans.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/)
+    expect(ans.interviewId).toBe(a.id)
+    expect(ans.questionText).toBe('Q1')
+    expect(ans.answerText).toBe('A1')
+    expect(ans.scores).toEqual(VALID_SCORES)
+    expect(ans.feedback).toBe('')
+    expect(ans.phase).toBe('general')
+
+    const row = db.conn
+      .query(
+        `SELECT scores, feedback, phase
+         FROM interview_answers WHERE id = ?`,
+ )
+      .get(ans.id) as {
+      scores: string | null
+      feedback: string
+      phase: string
+    }
+    expect(JSON.parse(row.scores!)).toEqual(VALID_SCORES)
+    expect(row.feedback).toBe('')
+    expect(row.phase).toBe('general')
+  })
+
+  it('recordAnswer without scores stores null scores JSON', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    const ans = service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q',
+      answerText: 'A',
+    })
+    expect(ans.scores).toBeNull()
+    const row = db.conn
+      .query('SELECT scores FROM interview_answers WHERE id = ?')
+      .get(ans.id) as { scores: string | null }
+    expect(row.scores).toBeNull()
+  })
+
+  it('recordAnswer honours an explicit feedback and phase', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    const ans = service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q',
+      answerText: 'A',
+      feedback: 'good answer',
+      phase: 'technical',
+    })
+    expect(ans.feedback).toBe('good answer')
+    expect(ans.phase).toBe('technical')
+  })
+
+  it('listAnswers returns answers in insertion order', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    const qa = [
+      { q: 'Q1', t: 'A1' },
+      { q: 'Q2', t: 'A2' },
+      { q: 'Q3', t: 'A3' },
+    ]
+    const inserted = qa.map((p) =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: p.q,
+        answerText: p.t,
+      }),
+    )
+    const list = service.listAnswers(a.id)
+    expect(list).toHaveLength(3)
+    expect(list.map((x) => x.id)).toEqual(inserted.map((x) => x.id))
+    expect(list.map((x) => x.questionText)).toEqual(['Q1', 'Q2', 'Q3'])
+  })
+
+  it('listAnswers returns [] when no answers recorded', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    expect(service.listAnswers(a.id)).toEqual([])
+  })
+
+  it('recordAnswer on a paused interview is allowed', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    service.pause(a.id)
+    const ans = service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q',
+      answerText: 'A',
+    })
+    expect(ans.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/)
+  })
+
+  it('recordAnswer on a created interview throws MiValidationError', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: 'Q',
+        answerText: 'A',
+      }),
+    ).toThrow(/无法记录回答 — 面试未开始或已结束/)
+  })
+
+  it('recordAnswer on a completed interview throws MiValidationError', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    service.complete(a.id, VALID_SCORES)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: 'Q',
+        answerText: 'A',
+      }),
+    ).toThrow(/无法记录回答 — 面试未开始或已结束/)
+  })
+
+  it('recordAnswer on an archived interview throws MiValidationError', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    service.complete(a.id, VALID_SCORES)
+    service.archive(a.id)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: 'Q',
+        answerText: 'A',
+      }),
+    ).toThrow(/无法记录回答 — 面试未开始或已结束/)
+  })
+
+  it('recordAnswer with invalid scores throws MiValidationError and does not insert', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    expect(() =>
+      service.recordAnswer({
+        interviewId: a.id,
+        questionText: 'Q',
+        answerText: 'A',
+        scores: { ...VALID_SCORES, 技术深度: 11 } as ScoreMap,
+      }),
+    ).toThrow(/技术深度 评分必须是 1-10 之间的整数/)
+    expect(service.listAnswers(a.id)).toEqual([])
+  })
+
+  it('recordAnswer bumps interviews.updated_at', () => {
+    const { service } = makeService(db)
+    const a = startedInterview(service)
+    const beforeRow = db.conn
+      .query('SELECT updated_at FROM interviews WHERE id = ?')
+      .get(a.id) as { updated_at: string }
+    // Sleep >1s so SQLite's datetime('now') advances past the
+    // stored second-granular timestamp.
+    Bun.sleepSync(1100)
+    service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q',
+      answerText: 'A',
+    })
+    const afterRow = db.conn
+      .query('SELECT updated_at FROM interviews WHERE id = ?')
+      .get(a.id) as { updated_at: string }
+    expect(afterRow.updated_at > beforeRow.updated_at).toBe(true)
+  })
+})
