@@ -174,7 +174,7 @@ Goal: All 7 `mi interview` subcommands wire to the service, emit correct Chinese
     AND process.exit was called with 1
     ```
 
-- [ ] T-12: [type:behavior] `mi interview resume`
+- [x] T-12: [type:behavior] `mi interview resume` <!-- commit: 09455b6 -->
   - **refs**: DS-2
   - **files**: src/commands/interview.ts, src/commands/__tests__/interview.test.ts
   - **spec_ref**: specs/interview/spec.md
@@ -186,7 +186,7 @@ Goal: All 7 `mi interview` subcommands wire to the service, emit correct Chinese
     AND DB row has status='in_progress' AND pausedAt is null
     ```
 
-- [ ] T-13: [type:behavior] `mi interview list [--profile <id>] [--json]`
+- [x] T-13: [type:behavior] `mi interview list [--profile <id>] [--json]` <!-- commit: a8cc42b -->
   - **refs**: DS-2
   - **files**: src/commands/interview.ts, src/commands/__tests__/interview.test.ts
   - **spec_ref**: specs/interview/spec.md
@@ -199,7 +199,7 @@ Goal: All 7 `mi interview` subcommands wire to the service, emit correct Chinese
     AND the second element has status='completed' AND scores is non-null
     ```
 
-- [ ] T-14: [type:behavior] `mi interview score [--id <id>] [--scores <json>] [--depth N --expression N --project N --system N --match N]`
+- [x] T-14: [type:behavior] `mi interview score [--id <id>] [--scores <json>] [--depth N --expression N --project N --system N --match N]` <!-- commit: 5a82a25 -->
   - **refs**: DS-2
   - **files**: src/commands/interview.ts, src/commands/__tests__/interview.test.ts
   - **spec_ref**: specs/interview/spec.md
@@ -219,7 +219,7 @@ Goal: All 7 `mi interview` subcommands wire to the service, emit correct Chinese
     THEN MiValidationError is thrown (validation rejects missing dims and out-of-range)
     ```
 
-- [ ] T-15: [type:behavior] `mi interview report <id> [--json]`
+- [x] T-15: [type:behavior] `mi interview report <id> [--json]` <!-- commit: 5e95c31 -->
   - **refs**: DS-2
   - **files**: src/commands/interview.ts, src/commands/__tests__/interview.test.ts
   - **spec_ref**: specs/interview/spec.md
