@@ -5,6 +5,7 @@ import { MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import {
+  type CreateInterviewInput,
   type Interview,
   type InterviewAnswer,
   type InterviewReport,
@@ -62,6 +63,12 @@ export type CliInterviewService = InterviewService & {
   recordScore(id: string, scores: ScoreMap): Interview
 }
 
+const USAGE_START_MESSAGE = '用法错误: mi interview start --role <岗位> [--style <风格>]'
+const NO_ACTIVE_PROFILE_MESSAGE = '请先创建或切换 Profile'
+const COACHING_DEFAULT = 'coaching'
+const VALID_STYLES = ['strict', 'coaching', 'friendly'] as const
+type ValidStyle = (typeof VALID_STYLES)[number]
+
 function runCommandAction(action: () => void): void {
   try {
     action()
@@ -78,11 +85,6 @@ function runCommandAction(action: () => void): void {
   }
 }
 
-/**
- * Register the `interview [...args]` command on a cac program. Uses the
- * same flat-with-args pattern as `src/commands/profile.ts` so cac
- * doesn't choke on the multi-subcommand surface.
- */
 export function registerInterviewCommand(program: CAC): void {
   program
     .command('interview [...args]', '面试管理')
@@ -111,11 +113,6 @@ export function registerInterviewCommand(program: CAC): void {
     })
 }
 
-/**
- * Public entry point used by tests and by the action callback above.
- * Resolves service + config wiring, then dispatches to the matching
- * subcommand handler. T-9..T-15 fill in each branch.
- */
 export function runInterviewCommand(
   args: string[],
   options: InterviewCommandOptions = {},
@@ -133,11 +130,13 @@ export function runInterviewCommand(
       const built = createInterviewService(db, configService)
       return built as unknown as CliInterviewService
     })()
-  void service
+
   try {
     const [subcommand = 'status'] = args
     switch (subcommand) {
       case 'start':
+        startInterview(service, configService, options)
+        return
       case 'status':
       case 'pause':
       case 'resume':
@@ -153,8 +152,70 @@ export function runInterviewCommand(
   }
 }
 
-// Re-exports keep the typed boundary consistent even when the dispatch
-// body is a placeholder. The helpers (table, success) will move into
-// per-subcommand files in later commits; kept here for the T-8 shape.
+function startInterview(
+  service: CliInterviewService,
+  configService: ConfigService,
+  options: InterviewCommandOptions,
+): void {
+  const profileId = resolveProfileId(configService, options.profile)
+  if (!profileId) {
+    throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
+  }
+
+  const roleRaw = (options.role ?? '').trim()
+  if (roleRaw.length === 0) {
+    throw new MiValidationError(USAGE_START_MESSAGE)
+  }
+
+  const style = resolveInterviewerStyle(configService, options.style)
+  const createInput: CreateInterviewInput = {
+    profileId,
+    targetRole: roleRaw,
+    interviewerStyle: style,
+  }
+  const created = service.create(createInput)
+  const started = service.start(created.id)
+  console.log(
+    success(
+      `已创建并开始面试: ${started.id}\n目标岗位: ${started.targetRole}\n风格: ${started.interviewerStyle}\n查看状态: mi interview status`,
+    ),
+  )
+}
+
+function resolveProfileId(
+  configService: ConfigService,
+  explicit: string | undefined,
+): string | undefined {
+  const trimmed = (explicit ?? '').trim()
+  if (trimmed.length > 0) return trimmed
+  try {
+    return configService.load().defaultProfile
+  } catch {
+    return undefined
+  }
+}
+
+function resolveInterviewerStyle(
+  configService: ConfigService,
+  flagValue: string | undefined,
+): ValidStyle {
+  if (flagValue !== undefined) {
+    const trimmed = flagValue.trim()
+    if ((VALID_STYLES as readonly string[]).includes(trimmed)) {
+      return trimmed as ValidStyle
+    }
+    return COACHING_DEFAULT
+  }
+  try {
+    const stored = configService.load().interviewerStyle
+    if ((VALID_STYLES as readonly string[]).includes(stored)) {
+      return stored as ValidStyle
+    }
+  } catch {
+    // missing config — fall through to coaching
+  }
+  return COACHING_DEFAULT
+}
+
 export const __interview_table = Table
 export const __interview_success = success
