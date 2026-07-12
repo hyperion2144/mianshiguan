@@ -196,14 +196,44 @@ export function wrapForClaudeCode(body: string, _config: InterviewSkillConfig): 
 
   return `${header}\n\n/mianshi\n\n${body}\n\n<!-- mianshiguan:claude-code v${MI_VERSION} -->`
 }
+
+/**
+ * Wrap the shared body in opencode's agent-definition shape. Output
+ * is a YAML-ish block that names the agent, declares tool
+ * permissions, embeds the prompt under `prompt: |`, and ends with
+ * the opencode version marker.
+ */
+export function wrapForOpencode(body: string, _config: InterviewSkillConfig): string {
+  const promptLines = body
+    .split('\n')
+    .map((line) => `  ${line}`)
+    .join('\n')
+
+  const header = [
+    'name: mianshiguan-interviewer',
+    `description: mianshiguan AI 面试教练 (v${MI_VERSION})`,
+    'tools:',
+    '  - bash',
+    '  - mi',
+    'allowed_commands:',
+    '  - "mi interview *"',
+    '  - "mi question list"',
+    `version: ${MI_VERSION}`,
+    'prompt: |',
+    promptLines,
+  ].join('\n')
+
+  return `${header}\n\n<!-- mianshiguan:opencode v${MI_VERSION} -->`
+}
+
 /**
  * Public entry point — validates the config, builds the shared body,
  * then dispatches to the per-platform wrapper. The `config.platform`
  * discriminator is exhaustively handled; the compiler enforces it
  * via the default-branch throw that becomes unreachable as each
  * platform case lands.
- *
- * T-6 wires the `omp` and `claude-code` branches; T-7 adds `opencode`.
+ * T-7 wires all three platforms — the default branch is removed
+ * so the compiler enforces exhaustiveness on `Platform`.
  */
 export function renderInterviewSkill(config: InterviewSkillConfig): string {
   validateConfig(config)
@@ -215,8 +245,8 @@ export function renderInterviewSkill(config: InterviewSkillConfig): string {
       return wrapForOmp(body, config)
     case 'claude-code':
       return wrapForClaudeCode(body, config)
-    default:
-      throw new Error(`Unsupported platform (T-6 stub): ${config.platform}`)
+    case 'opencode':
+      return wrapForOpencode(body, config)
   }
 }
 

@@ -13,6 +13,7 @@ import {
   validateConfig,
   wrapForClaudeCode,
   wrapForOmp,
+  wrapForOpencode,
 } from '../interview.ts'
 
 /**
@@ -358,5 +359,52 @@ describe('wrapForClaudeCode + renderInterviewSkill claude-code dispatch (T-6)', 
     expect(out).toContain('通过反问引导候选人思考')
     expect(out).toContain('argument-hint:')
     expect(out).toContain('/mianshi')
+  })
+})
+
+// ─── T-7: wrapForOpencode + opencode dispatch ───────────────────────────────
+
+describe('wrapForOpencode + renderInterviewSkill opencode dispatch (T-7)', () => {
+  const base = {
+    platform: 'opencode' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('renderInterviewSkill(opencode) contains "name: mianshiguan-interviewer" and "tools:"', () => {
+    const out = renderInterviewSkill(base)
+    expect(out).toContain('name: mianshiguan-interviewer')
+    expect(out).toContain('tools:')
+  })
+
+  it('wrapForOpencode produces an agent definition with name / description / tools / allowed_commands', () => {
+    const out = wrapForOpencode('shared-body', base)
+    expect(out).toContain('name: mianshiguan-interviewer')
+    expect(out).toContain('description:')
+    expect(out).toContain('tools:')
+    expect(out).toContain('allowed_commands:')
+  })
+
+  it('ends with the opencode version marker', () => {
+    const out = wrapForOpencode('shared-body', base)
+    expect(out.endsWith(`<!-- mianshiguan:opencode v${MI_VERSION} -->`)).toBe(true)
+  })
+
+  it('embeds the shared body verbatim under a "prompt:" field', () => {
+    const out = wrapForOpencode('shared-body-XYZ', base)
+    expect(out).toContain('prompt:')
+    expect(out).toContain('shared-body-XYZ')
+    const promptIdx = out.indexOf('prompt:')
+    const bodyIdx = out.indexOf('shared-body-XYZ')
+    expect(bodyIdx).toBeGreaterThan(promptIdx)
+  })
+
+  it('dispatch path: renderInterviewSkill(opencode) shape === wrapForOpencode(...)', () => {
+    const out = renderInterviewSkill(base)
+    expect(out).toContain('你是一位专业的技术面试官')
+    expect(out).toContain('通过反问引导候选人思考')
+    expect(out).toContain('name: mianshiguan-interviewer')
+    expect(out).toContain('tools:')
   })
 })
