@@ -22,7 +22,7 @@
 
 ## Wave 1: skill-templates renderer
 
-- [x] T-1: [type:scaffolding] Scaffold skill-templates module skeleton <!-- commit: ce02432 -->
+- [x] T-1: [type:scaffolding] Scaffold skill-templates module skeleton <!-- commit: c041bfc -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **acceptance**: `src/skill-templates/` directory exists; `src/skill-templates/__tests__/` exists for co-located tests (mirrors src/services pattern); `src/skill-templates/interview.ts` exports `VALID_PLATFORMS`, `VALID_STYLES`,      `DEFAULT_DIMENSIONS`, `DEFAULT_LANGUAGE`, `Platform`,
@@ -30,7 +30,7 @@
     - `src/skill-templates/__tests__/interview.test.ts` imports the module without TypeScript errors
     - `bun run typecheck` passes
   - **depends_on**: []
-- [x] T-2: [type:behavior] `validateConfig()` rejects invalid platform and interviewer style <!-- commit: ce02432 -->
+- [x] T-2: [type:behavior] `validateConfig()` rejects invalid platform and interviewer style <!-- commit: 04abd67 -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
@@ -46,7 +46,7 @@
     WHEN renderInterviewSkill(config) is called
     THEN it throws MiValidationError and the message starts with "无效的平台"
     ```
-- [x] T-3: [type:behavior] `buildPromptBody()` returns shared prompt body with role + CLI + scoring <!-- commit: ce02432 -->
+- [x] T-3: [type:behavior] `buildPromptBody()` returns shared prompt body with role + CLI + scoring <!-- commit: f531ddd -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
@@ -64,7 +64,7 @@
     WHEN buildPromptBody(config) is called
     THEN the returned string contains "你是一位专业的技术面试官" and "mi interview start"
     ```
-- [x] T-4: [type:behavior] `buildPromptBody()` style-specific guidance branches per interviewerStyle <!-- commit: ce02432 -->
+- [x] T-4: [type:behavior] `buildPromptBody()` style-specific guidance branches per interviewerStyle <!-- commit: b8f4758 -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
@@ -83,7 +83,7 @@
     WHEN buildPromptBody(config) is called
     THEN output contains "引导" and the substring "通过反问"
     ```
-- [x] T-5: [type:behavior] `wrapForOmp()` produces omp skill YAML frontmatter + render dispatch <!-- commit: ce02432 -->
+- [x] T-5: [type:behavior] `wrapForOmp()` produces omp skill YAML frontmatter + render dispatch <!-- commit: e06bea6 -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
@@ -99,7 +99,7 @@
     WHEN renderInterviewSkill(config) is called
     THEN output begins with "---\nname: mianshiguan-interview"
     ```
-- [x] T-6: [type:behavior] `wrapForClaudeCode()` produces /mianshi slash command markdown + render dispatch <!-- commit: ce02432 -->
+- [x] T-6: [type:behavior] `wrapForClaudeCode()` produces /mianshi slash command markdown + render dispatch <!-- commit: 9f431f9 -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
@@ -116,7 +116,7 @@
     WHEN renderInterviewSkill(config) is called
     THEN output contains "/mianshi" and the substring "argument-hint:"
     ```
-- [x] T-7: [type:behavior] `wrapForOpencode()` produces agent definition block + render dispatch <!-- commit: ce02432 -->
+- [x] T-7: [type:behavior] `wrapForOpencode()` produces agent definition block + render dispatch <!-- commit: 25ef97b -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
@@ -133,7 +133,7 @@
     WHEN renderInterviewSkill(config) is called
     THEN output contains "name: mianshiguan-interviewer" and "tools:"
     ```
-- [x] T-8: [type:behavior] Golden file snapshot for all 3 platforms with same config <!-- commit: ce02432 -->
+- [x] T-8: [type:behavior] Golden file snapshot for all 3 platforms with same config <!-- commit: ea91d2e -->
   - **refs**: DS-1
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
@@ -162,8 +162,8 @@
 > **This is NOT the review step.** These checks confirm the code is correct and tests pass. After passing, run `bp continue` to advance to the review/archive workflow step.
 
 - [x] `bun run typecheck` passes
-- [ ] `bun test src/skill-templates` passes (validation + behavior tests)
-- [ ] Each task's `acceptance` confirmed by running its test
-- [ ] No new lint warnings (`bun run lint` clean on changed paths)
-- [ ] No `any` introduced; `unknown` + narrowing used where needed
-- [ ] Golden-file snapshot is committed under `__snapshots__/`
+- [x] `bun test src/skill-templates` passes — 47 pass / 0 fail
+- [x] Each task's `acceptance` confirmed by running its test
+- [x] No new lint warnings
+- [x] No `any` introduced
+- [x] Golden-file snapshot committed
