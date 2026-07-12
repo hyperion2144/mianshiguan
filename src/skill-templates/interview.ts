@@ -180,12 +180,30 @@ export function wrapForOmp(body: string, _config: InterviewSkillConfig): string 
 }
 
 /**
+ * Wrap the shared body in Claude Code's slash-command shape —
+ * `/mianshi` invocation plus a frontmatter block carrying
+ * `description:` and `argument-hint:`. Body is preserved verbatim
+ * after the frontmatter.
+ */
+export function wrapForClaudeCode(body: string, _config: InterviewSkillConfig): string {
+  const header = [
+    '---',
+    `description: mianshiguan AI 面试教练 (v${MI_VERSION})`,
+    'argument-hint: [--role <岗位>] [--profile <id>] [--style <风格>]',
+    `version: ${MI_VERSION}`,
+    '---',
+  ].join('\n')
+
+  return `${header}\n\n/mianshi\n\n${body}\n\n<!-- mianshiguan:claude-code v${MI_VERSION} -->`
+}
+/**
  * Public entry point — validates the config, builds the shared body,
  * then dispatches to the per-platform wrapper. The `config.platform`
- * discriminator is exhaustively handled; the compiler enforces it.
+ * discriminator is exhaustively handled; the compiler enforces it
+ * via the default-branch throw that becomes unreachable as each
+ * platform case lands.
  *
- * T-5 only wires the `omp` branch; T-6 and T-7 add the remaining
- * platforms so each commit lands atomically.
+ * T-6 wires the `omp` and `claude-code` branches; T-7 adds `opencode`.
  */
 export function renderInterviewSkill(config: InterviewSkillConfig): string {
   validateConfig(config)
@@ -195,8 +213,10 @@ export function renderInterviewSkill(config: InterviewSkillConfig): string {
   switch (config.platform) {
     case 'omp':
       return wrapForOmp(body, config)
+    case 'claude-code':
+      return wrapForClaudeCode(body, config)
     default:
-      throw new Error(`Unsupported platform (T-5 stub): ${config.platform}`)
+      throw new Error(`Unsupported platform (T-6 stub): ${config.platform}`)
   }
 }
 

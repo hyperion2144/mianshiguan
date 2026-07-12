@@ -11,6 +11,7 @@ import {
   buildPromptBody,
   renderInterviewSkill,
   validateConfig,
+  wrapForClaudeCode,
   wrapForOmp,
 } from '../interview.ts'
 
@@ -312,5 +313,50 @@ describe('wrapForOmp + renderInterviewSkill omp dispatch (T-5)', () => {
     expect(out).toContain('你是一位专业的技术面试官')
     expect(out).toContain('通过反问引导候选人思考')
     expect(out).toContain('name: mianshiguan-interview')
+  })
+})
+
+// ─── T-6: wrapForClaudeCode + claude-code dispatch ──────────────────────────
+
+describe('wrapForClaudeCode + renderInterviewSkill claude-code dispatch (T-6)', () => {
+  const base = {
+    platform: 'claude-code' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('renderInterviewSkill(claude-code) contains "/mianshi" and "argument-hint:"', () => {
+    const out = renderInterviewSkill(base)
+    expect(out).toContain('/mianshi')
+    expect(out).toContain('argument-hint:')
+  })
+
+  it('wrapForClaudeCode begins with --- frontmatter carrying description: and argument-hint:', () => {
+    const out = wrapForClaudeCode('shared-body', base)
+    expect(out.startsWith('---\n')).toBe(true)
+    expect(out).toContain('description:')
+    expect(out).toContain('argument-hint:')
+  })
+
+  it('ends with the claude-code version marker', () => {
+    const out = wrapForClaudeCode('shared-body', base)
+    expect(out.endsWith(`<!-- mianshiguan:claude-code v${MI_VERSION} -->`)).toBe(true)
+  })
+
+  it('shared body is preserved verbatim after the frontmatter', () => {
+    const out = wrapForClaudeCode('shared-body-XYZ', base)
+    expect(out).toContain('shared-body-XYZ')
+    const secondDash = out.indexOf('---\n', 4)
+    const bodyIdx = out.indexOf('shared-body-XYZ')
+    expect(bodyIdx).toBeGreaterThan(secondDash)
+  })
+
+  it('dispatch path: renderInterviewSkill(claude-code) shape === wrapForClaudeCode(...)', () => {
+    const out = renderInterviewSkill(base)
+    expect(out).toContain('你是一位专业的技术面试官')
+    expect(out).toContain('通过反问引导候选人思考')
+    expect(out).toContain('argument-hint:')
+    expect(out).toContain('/mianshi')
   })
 })
