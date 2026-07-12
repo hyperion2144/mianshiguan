@@ -63,6 +63,7 @@ export type CliInterviewService = InterviewService & {
   listAnswers(interviewId: string): InterviewAnswer[]
   getReport(id: string): InterviewReport
   recordScore(id: string, scores: ScoreMap): Interview
+  findPaused(profileId: string): Interview | null
 }
 
 const USAGE_START_MESSAGE = '用法错误: mi interview start --role <岗位> [--style <风格>]'
@@ -479,12 +480,9 @@ function resolveInterviewerStyle(
 }
 
 function findPausedInterview(service: CliInterviewService, profileId: string): Interview | null {
-  const rows = service.list({ profileId })
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    const row = rows[index]
-    if (row && row.status === 'paused') return row
-  }
-  return null
+  // Delegate to the service so the DB query targets `status = 'paused'`
+  // directly — avoids loading every interview for the profile.
+  return service.findPaused(profileId)
 }
 
 function truncate(value: string, max: number): string {

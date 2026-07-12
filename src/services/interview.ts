@@ -317,6 +317,27 @@ export class InterviewService {
       .get(profileId) as InterviewRowRaw | null
     return row ? rowToInterview(row) : null
   }
+  /**
+   * Return the most recently updated `paused` interview for
+   * `profileId`, or `null` when none. Backs the `mi interview resume`
+   * CLI command — callers need to find a paused row WITHOUT
+   * loading every interview for the profile.
+   */
+  findPaused(profileId: string): Interview | null {
+    if (typeof profileId !== 'string' || profileId.length === 0) {
+      throw new MiValidationError('profileId 不能为空')
+    }
+    const row = this.db.conn
+      .query(
+        `SELECT * FROM interviews
+         WHERE profile_id = ?
+           AND status = 'paused'
+         ORDER BY updated_at DESC, id DESC
+         LIMIT 1`,
+      )
+      .get(profileId) as InterviewRowRaw | null
+    return row ? rowToInterview(row) : null
+}
 
   /**
    * Transition an interview from `created` to `in_progress`. Sets
