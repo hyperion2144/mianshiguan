@@ -1,4 +1,4 @@
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import {
   type InterviewerStyle,
   type Platform,
@@ -175,4 +175,41 @@ export function renderSkillForPlatform(
     ...(options.defaultProfile !== undefined && { defaultProfile: options.defaultProfile }),
     ...(options.targetRole !== undefined && { targetRole: options.targetRole }),
   })
+}
+
+/**
+ * End-to-end install: resolve path → mkdir parent dir → render template →
+ * write file → chmod 0o644.
+ *
+ * When `options.dryRun === true`, the function performs zero filesystem
+ * mutations and returns an `InstallResult` with `written: false`.
+ * `options.targetPathOverride` (test affordance) bypasses path resolution
+ * entirely — production callers do not pass it.
+ *
+ * The install is idempotent — re-invoking on an existing target file
+ * overwrites silently. This matches ph.1's `--force` re-init semantics
+ * for `config.yml`.
+ */
+export function installSkillTemplate(
+  platform: Platform,
+  ctx: InstallContext,
+  options?: InstallOptions,
+): InstallResult {
+  const interviewerStyle = options?.interviewerStyle ?? 'coaching'
+  const content = renderSkillForPlatform(platform, {
+    interviewerStyle,
+    ...(options?.defaultProfile !== undefined && { defaultProfile: options.defaultProfile }),
+    ...(options?.targetRole !== undefined && { targetRole: options.targetRole }),
+  })
+  const targetPath = resolvePlatformDir(platform, ctx, {
+    ...(options?.targetPathOverride !== undefined && { targetPathOverride: options.targetPathOverride }),
+  })
+  if (options?.dryRun) {
+    return { platform, targetPath, content, written: false }
+  }
+  const targetDir = dirname(targetPath)
+  ctx.mkdirSync(targetDir, { recursive: true, mode: 0o700 })
+  ctx.writeFileSync(targetPath, content)
+  ctx.chmodSync(targetPath, 0o644)
+  return { platform, targetPath, content, written: true }
 }
