@@ -181,7 +181,7 @@ interface InterviewAnswerRowRaw {
 export const TRANSITIONS: Readonly<Record<InterviewStatus, readonly InterviewStatus[]>> = {
   created: ['in_progress'],
   in_progress: ['paused', 'completed'],
-  paused: ['in_progress', 'completed'],
+  paused: ['in_progress'],
   completed: ['archived'],
   archived: [],
 }
