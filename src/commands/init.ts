@@ -15,7 +15,7 @@ import {
   installSkillTemplate,
   resolvePlatformDir,
 } from '../services/skill-installer.ts'
-import { renderInterviewSkill, validateConfig } from '../skill-templates/interview.ts'
+import { MI_VERSION, validateConfig } from '../skill-templates/interview.ts'
 
 export interface InitCommandOptions {
   dataDir?: string
@@ -147,7 +147,7 @@ function installSkillOrSkip(platformOverride: Platform | null, installCtx: Insta
   }
   const result = installSkillTemplate(platform, installCtx)
   console.log(
-    success(`技能文件已安装: ${result.targetPath} (platform: ${platform}, v${resultVersion()})`),
+    success(`技能文件已安装: ${result.targetPath} (platform: ${platform}, v${MI_VERSION})`),
   )
 }
 
@@ -181,19 +181,6 @@ function printDryRun(
 
   console.log('将跳过 skill 安装（未检测到 coding agent，使用 --platform 指定）')
 }
-
-/**
- * Read MI_VERSION from the skill-templates module so the success line
- * stays in lockstep with `<!-- mianshiguan:<platform> v<MI_VERSION> -->`
- * footers emitted by the renderer. The probe call validates the
- * `'omp' + 'coaching'` config as a side effect — harmless.
- */
-function resultVersion(): string {
-  const probe = renderInterviewSkill({ platform: 'omp', interviewerStyle: 'coaching' })
-  const match = probe.match(/v(\d+\.\d+\.\d+)/)
-  return match?.[1] ?? '0.0.0'
-}
-
 function ensureDataDirWritable(dataDir: string, force: boolean): void {
   if (existsSync(dataDir)) {
     const stat = statSync(dataDir)
