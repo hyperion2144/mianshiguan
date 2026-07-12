@@ -45,11 +45,11 @@
 | File permissions on data dir (0o700) | N/A | Not in scope for this change (owned by `mi-init-install` sibling). |
 
 ## Issues
-- [ ] Q1 — `bp/specs/interview/spec.md` missing (BLOCKER, design.md:307 declared Create)
-- [ ] Q2 — `--style` invalid flag silently falls back to `coaching` (MAJOR UX, `commands/interview.ts:463-468`)
-- [ ] Q3 — `findPausedInterview` loads all interviews to find one paused row (MINOR perf, `commands/interview.ts:481-488`)
-- [ ] Q4 — `TRANSITIONS.paused` includes stale `'completed'` entry (MINOR data consistency, `services/interview.ts:184`)
-- [ ] Q5 — `computeAggregateScores` does not re-validate parsed scores (INFO, `services/interview.ts:600-617`)
-- [ ] Q6 — `recordAnswer` does not validate non-empty questionText/answerText (INFO, `services/interview.ts:446-489`)
-- [ ] Q7 — `runCommandAction` calls `process.exit()` so wrapper not directly testable (INFO, `commands/interview.ts:89-103`)
-- [ ] Q8 — `validateScores` redundant assertion when input type is already `ScoreMap` (INFO, `services/interview.ts:451-452`)
+- [x] Q1 — `bp/specs/interview/spec.md` missing (BLOCKER, design.md:307 declared Create) <!-- fix: T-1 -->
+- [x] Q2 — `--style` invalid flag silently falls back to `coaching` (MAJOR UX, `commands/interview.ts:463-468`) <!-- fix: T-2 -->
+- [x] Q3 — `findPausedInterview` loads all interviews to find one paused row (MINOR perf, `commands/interview.ts:481-488`) <!-- fix: T-4 -->
+- [x] Q4 — `TRANSITIONS.paused` includes stale `'completed'` entry (MINOR data consistency, `services/interview.ts:184`) <!-- fix: T-3 -->
+- [x] Q5 — `computeAggregateScores` does not re-validate parsed scores (INFO, `services/interview.ts:600-617`) <!-- fix: T-5 -->
+- [x] Q6 — `recordAnswer` does not validate non-empty questionText/answerText (INFO, `services/interview.ts:446-489`) <!-- fix: T-6 -->
+- [x] Q7 — `runCommandAction` calls `process.exit()` so wrapper not directly testable (INFO, `commands/interview.ts:89-103`)
+- [x] Q8 — `validateScores` redundant assertion when input type is already `ScoreMap` (INFO, `services/interview.ts:451-452`)

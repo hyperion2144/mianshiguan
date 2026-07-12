@@ -34,5 +34,5 @@ All 3 stated design goals from `design.md:23-29` and all 6 must-haves are ACHIEV
 - **Out of scope correctly excluded**: dashboard (ph.3), question bank (ph.4), skill-templates (sibling change), mi-init-install (sibling change), LeetCode (ph.4).
 
 ## Issues
-- [ ] G3 — `--style` invalid flag silently falls back to `coaching`; minor UX gap that contradicts the design goal of "ph.1 conventions" (xref G3)
-- [ ] D1 — `bp/specs/interview/spec.md` was declared in `design.md:307` as a Create deliverable but never created; violates the global-spec-per-domain convention (replan recommended for process compliance)
+- [x] G3 — `--style` invalid flag silently falls back to `coaching`; minor UX gap that contradicts the design goal of "ph.1 conventions" (xref G3) <!-- fix: T-2 -->
+- [x] D1 — `bp/specs/interview/spec.md` was declared in `design.md:307` as a Create deliverable but never created; violates the global-spec-per-domain convention (replan recommended for process compliance) <!-- fix: T-1 -->

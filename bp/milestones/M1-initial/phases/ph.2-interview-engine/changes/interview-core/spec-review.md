@@ -67,6 +67,6 @@ Two FAILs and one MINOR under spec rules (see R19, R20, R21). All other 18 SHALL
 | `mi interview status` human format → cli-table3 | YES | `:284-326` |
 
 ## Issues
-- [ ] R19 — `--style` invalid value silently defaults to `coaching` instead of rejecting with `MiValidationError` (xref R19)
-- [ ] R20 — `bp/specs/interview/spec.md` was declared in `design.md:307` file manifest but never created (xref R20)
-- [ ] R21 — `TRANSITIONS.paused` includes `'completed'` as a valid transition target, but `complete()` requires `from: 'in_progress'`; stale data map entry (xref R21)
+- [x] R19 — `--style` invalid value silently defaults to `coaching` instead of rejecting with `MiValidationError` (xref R19) <!-- fix: T-2 -->
+- [x] R20 — `bp/specs/interview/spec.md` was declared in `design.md:307` file manifest but never created (xref R20) <!-- fix: T-1 -->
+- [x] R21 — `TRANSITIONS.paused` includes `'completed'` as a valid transition target, but `complete()` requires `from: 'in_progress'`; stale data map entry (xref R21) <!-- fix: T-3 -->
