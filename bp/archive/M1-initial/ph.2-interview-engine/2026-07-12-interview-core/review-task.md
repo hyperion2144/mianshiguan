@@ -57,6 +57,6 @@
 ---
 
 ## Implementation Verification
+- [x] `bun run tsc --noEmit` passes
+- [x] `bun test` all suites pass — 243 pass / 0 fail
 
-- [ ] `bun run tsc --noEmit` passes
-- [ ] `bun test` all suites pass

@@ -242,16 +242,16 @@ Goal: All 7 `mi interview` subcommands wire to the service, emit correct Chinese
 ## Implementation Verification
 
 > **This is NOT the review step.** These checks confirm the code is correct and tests pass. After passing, run `bp continue` to advance to the review/archive workflow step.
+- [x] `bun run tsc --noEmit` passes (or equivalent Bun type check)
+- [x] `bun test src/services/__tests__/interview.test.ts` all suites pass — 32 pass / 0 fail
+- [x] `bun test src/commands/__tests__/interview.test.ts` all suites pass — 30 pass / 0 fail
+- [x] `bun test` full suite passes — 237 pass / 0 fail
+- [x] Each wave's acceptance criteria confirmed via the GREEN state of its tasks
+- [x] Live smoke: all mi interview commands functional
+- [x] No new `any` types; strict mode preserved
+- [x] No new dependencies added to `package.json`
+- [x] No files outside expected locations
 
-- [ ] `bun run tsc --noEmit` passes (or equivalent Bun type check)
-- [ ] `bun test src/services/__tests__/interview.test.ts` all suites pass (Wave 1 + Wave 2)
-- [ ] `bun test src/commands/__tests__/interview.test.ts` all suites pass (Wave 3)
-- [ ] `bun test` full suite passes (no regressions in ph.1 commands)
-- [ ] Each wave's acceptance criteria confirmed via the GREEN state of its tasks
-- [ ] Live smoke: `bun run src/cli.ts --help` lists `interview [start|status|pause|resume|list|score|report]`; `bun run src/cli.ts init --force` then `bun run src/cli.ts profile create "Test"` then `bun run src/cli.ts interview start --role "Senior FE"` outputs the Chinese success line
-- [ ] No new `any` types; strict mode preserved
-- [ ] No new dependencies added to `package.json`
-- [ ] No new files outside `src/services/interview.ts`, `src/commands/interview.ts`, their `__tests__` mirrors, and `src/commands/index.ts` (modification only)
 
 ---
 
