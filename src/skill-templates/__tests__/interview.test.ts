@@ -8,6 +8,7 @@ import {
   type Platform,
   VALID_PLATFORMS,
   VALID_STYLES,
+  buildPromptBody,
   validateConfig,
 } from '../interview.ts'
 
@@ -104,5 +105,90 @@ describe('validateConfig (T-2)', () => {
         interviewerStyle: 'casual' as unknown as InterviewerStyle,
       }),
     ).toThrow(/^无效的平台/)
+  })
+})
+
+// ─── T-3: buildPromptBody — shared prompt body ──────────────────────────────
+
+describe('buildPromptBody (T-3)', () => {
+  const baseConfig: Parameters<typeof buildPromptBody>[0] = {
+    platform: 'omp',
+    interviewerStyle: 'coaching',
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('starts with the canonical role definition 你是一位专业的技术面试官', () => {
+    const body = buildPromptBody(baseConfig)
+    expect(body).toContain('你是一位专业的技术面试官')
+  })
+
+  it('contains every CLI command reference from the proposal', () => {
+    const body = buildPromptBody(baseConfig)
+    expect(body).toContain('mi interview start')
+    expect(body).toContain('mi interview status')
+    expect(body).toContain('mi interview pause')
+    expect(body).toContain('mi interview resume')
+    expect(body).toContain('mi interview list')
+    expect(body).toContain('mi interview score')
+    expect(body).toContain('mi interview report')
+  })
+
+  it('renders the 5-dimension scoring rubric header', () => {
+    const body = buildPromptBody(baseConfig)
+    expect(body).toContain('评分维度')
+    for (const dim of DEFAULT_DIMENSIONS) {
+      expect(body).toContain(dim)
+    }
+  })
+
+  it('propagates defaultProfile and targetRole into the context block', () => {
+    const body = buildPromptBody(baseConfig)
+    expect(body).toContain('P-frontend')
+    expect(body).toContain('Senior FE')
+  })
+
+  it('uses the 未指定 placeholder when defaultProfile / targetRole are omitted', () => {
+    const body = buildPromptBody({
+      platform: 'omp',
+      interviewerStyle: 'coaching',
+    })
+    expect(body).toContain('未指定')
+    expect(body).not.toContain('undefined')
+  })
+
+  it('mentions the semi-free conversation flow anchors 自然地推进面试 and 每题后给出简要反馈', () => {
+    const body = buildPromptBody(baseConfig)
+    expect(body).toContain('自然地推进面试')
+    expect(body).toContain('每题后给出简要反馈')
+  })
+
+  it('embeds MI_VERSION in the skill footer', () => {
+    const body = buildPromptBody(baseConfig)
+    expect(body).toContain(MI_VERSION)
+  })
+
+  it('stays under the 8 KB ceiling and is non-empty UTF-8', () => {
+    const body = buildPromptBody(baseConfig)
+    expect(body.length).toBeGreaterThan(0)
+    expect(body.length).toBeLessThanOrEqual(8 * 1024)
+    expect(Buffer.from(body, 'utf8').toString('utf8')).toBe(body)
+  })
+
+  it('is deterministic — same config → byte-identical output', () => {
+    const a = buildPromptBody(baseConfig)
+    const b = buildPromptBody(baseConfig)
+    expect(a).toBe(b)
+  })
+
+  it('honors custom dimensions when supplied', () => {
+    const body = buildPromptBody({
+      ...baseConfig,
+      dimensions: ['基础算法', '编码实现', '调试排错'],
+    })
+    expect(body).toContain('基础算法')
+    expect(body).toContain('编码实现')
+    expect(body).toContain('调试排错')
+    expect(body).not.toContain('技术深度')
   })
 })

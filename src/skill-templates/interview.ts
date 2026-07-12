@@ -69,6 +69,53 @@ export function validateConfig(
 }
 
 /**
+ * Compose the shared Chinese prompt body shared by every platform
+ * wrapper (D-4 — single source of truth). Sections, in order:
+ *
+ *   1. Role definition (你是一位专业的技术面试官)
+ *   2. Profile + resume context block (未指定 fallback)
+ *   3. Semi-free conversation flow guidance
+ *   4. 5-dimension scoring rubric
+ *   5. CLI command reference for `mi interview …`
+ *   6. Skill version footer pinned to `MI_VERSION`
+ *
+ * Pure string transformation — no I/O, deterministic, byte-identical
+ * for identical input. Style-specific branches live in T-4 and are
+ * applied as a separate block here once the style subsystem lands.
+ */
+export function buildPromptBody(config: InterviewSkillConfig): string {
+  const profile = config.defaultProfile ?? '未指定 profile'
+  const role = config.targetRole ?? '未指定 目标岗位'
+  const dimensions = config.dimensions ?? DEFAULT_DIMENSIONS
+
+  const rubric = dimensions.map((d) => `- ${d}`).join('\n')
+
+  return `你是一位专业的技术面试官，正在对候选人进行真实的技术面试模拟。
+
+## 候选人信息
+- 默认 Profile：${profile}
+- 目标岗位：${role}
+
+## 面试流程
+你需要自然地推进面试，不要生硬切换话题；每题后给出简要反馈，引导候选人进入下一环节。
+建议流程：开场 → 项目深挖 → 技术考察 → 综合评估 → 总结反馈。
+
+## 评分维度（每题 1-10 整数评分）
+${rubric}
+
+## CLI 命令参考（用于持久化面试状态与评分）
+- \`mi interview start\` — 开始新面试
+- \`mi interview status\` — 查看当前面试状态
+- \`mi interview pause\` — 暂停面试
+- \`mi interview resume\` — 恢复面试
+- \`mi interview list\` — 查看历史面试
+- \`mi interview score\` — 记录每题评分
+- \`mi interview report\` — 生成最终面试报告
+
+<!-- mianshiguan:interview v${MI_VERSION} -->`
+}
+
+/**
  * Re-export the upstream validation error class so callers importing
  * this module for tests/handlers get a single import path. Kept as a
  * type-only re-export for the `name` symbol — `MiValidationError` is
