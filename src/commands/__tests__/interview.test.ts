@@ -12,10 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Database } from '../../db/Database.ts'
 import { MiNotFoundError, MiValidationError } from '../../errors.ts'
 import { ConfigService } from '../../services/config-service.ts'
-import {
-  type InterviewService,
-  createInterviewService,
-} from '../../services/interview.ts'
+import { type InterviewService, createInterviewService } from '../../services/interview.ts'
 import {
   type CliInterviewService,
   registerInterviewCommand,
@@ -54,9 +51,7 @@ function captureStdout(run: () => void): string[] {
 
 function insertProfile(db: Database, id: string, name: string): void {
   db.conn
-    .query(
-      `INSERT INTO profiles (id, name, resume_text, resume_path) VALUES (?, ?, '', NULL)`,
-    )
+    .query(`INSERT INTO profiles (id, name, resume_text, resume_path) VALUES (?, ?, '', NULL)`)
     .run(id, name)
 }
 
@@ -67,11 +62,7 @@ function makeDb(): Database {
   return db
 }
 
-function seedConfig(
-  dataDir: string,
-  defaultProfile?: string,
-  style: string = 'coaching',
-): void {
+function seedConfig(dataDir: string, defaultProfile?: string, style = 'coaching'): void {
   const configService = new ConfigService(dataDir)
   configService.save({
     dataDir,
@@ -89,10 +80,7 @@ interface Harness {
   dataDir: string
 }
 
-function setupHarness(
-  defaultProfile?: string,
-  style: string = 'coaching',
-): Harness {
+function setupHarness(defaultProfile?: string, style = 'coaching'): Harness {
   const dataDir = mkdtempSync(join(tmpdir(), 'mi-interview-cmd-test-'))
   const db = makeDb()
   seedConfig(dataDir, defaultProfile, style)
@@ -102,10 +90,7 @@ function setupHarness(
   return { db, service, configService, dataDir }
 }
 
-function saveDefaultProfile(
-  harness: Harness,
-  profileId: string = 'P1',
-): void {
+function saveDefaultProfile(harness: Harness, profileId = 'P1'): void {
   harness.configService.save({
     dataDir: harness.dataDir,
     dbPath: join(harness.dataDir, 'data.db'),
@@ -225,6 +210,37 @@ describe('mi interview start command (T-9)', () => {
         { service: harness.service, configService: harness.configService },
       ),
     ).toThrow(/请先创建或切换 Profile/)
+  })
+
+  it('throws MiValidationError listing valid styles when --style is invalid (e.g. rude)', () => {
+    saveDefaultProfile(harness)
+    expect(() =>
+      runInterviewCommand(
+        ['start'],
+        { role: 'FE', style: 'rude' },
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(MiValidationError)
+    expect(() =>
+      runInterviewCommand(
+        ['start'],
+        { role: 'FE', style: 'rude' },
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/coaching/)
+  })
+
+  it('accepts --style strict and --style friendly as valid styles', () => {
+    saveDefaultProfile(harness)
+    for (const style of ['strict', 'coaching', 'friendly']) {
+      expect(() =>
+        runInterviewCommand(
+          ['start'],
+          { role: 'FE', style },
+          { service: harness.service, configService: harness.configService },
+        ),
+      ).not.toThrow()
+    }
   })
 
   it('defaults interviewerStyle to coaching from config when --style is absent', () => {
@@ -570,8 +586,7 @@ describe('mi interview score command (T-14)', () => {
         ['score'],
         {
           id: started.id,
-          scores:
-            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+          scores: '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
         },
         { service: harness.service, configService: harness.configService },
       ),
@@ -634,8 +649,7 @@ describe('mi interview score command (T-14)', () => {
         ['score'],
         {
           id: started.id,
-          scores:
-            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+          scores: '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
         },
         { service: harness.service, configService: harness.configService },
       ),
@@ -656,8 +670,7 @@ describe('mi interview score command (T-14)', () => {
         ['score'],
         {
           id: started.id,
-          scores:
-            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+          scores: '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
           depth: 8,
         },
         { service: harness.service, configService: harness.configService },
@@ -705,8 +718,7 @@ describe('mi interview score command (T-14)', () => {
       runInterviewCommand(
         ['score'],
         {
-          scores:
-            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+          scores: '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
         },
         { service: harness.service, configService: harness.configService },
       ),
