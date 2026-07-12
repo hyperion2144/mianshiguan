@@ -133,8 +133,25 @@ export function buildPromptBody(config: InterviewSkillConfig): string {
   const profile = config.defaultProfile ?? '未指定 profile'
   const role = config.targetRole ?? '未指定 目标岗位'
   const dimensions = config.dimensions ?? DEFAULT_DIMENSIONS
-  const styleBlock = STYLE_GUIDANCE[config.interviewerStyle]
-
+  const styleBlock: string = (() => {
+    switch (config.interviewerStyle) {
+      case 'strict':
+        return STYLE_GUIDANCE.strict
+      case 'coaching':
+        return STYLE_GUIDANCE.coaching
+      case 'friendly':
+        return STYLE_GUIDANCE.friendly
+      default: {
+        // Exhaustiveness check — adding a fourth `InterviewerStyle`
+        // value (e.g. `'socratic'`) without extending `STYLE_GUIDANCE`
+        // forces a TS error here (`Type '...' is not assignable to
+        // type 'never'`), surfacing the omission at the type level
+        // before it ever reaches runtime.
+        const _exhaustive: never = config.interviewerStyle
+        throw new Error(`Unhandled interviewer style: ${_exhaustive}`)
+      }
+    }
+  })()
   const rubric = dimensions.map((d) => `- ${d}`).join('\n')
 
   return `你是一位专业的技术面试官，正在对候选人进行真实的技术面试模拟。
