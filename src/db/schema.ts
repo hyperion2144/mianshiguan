@@ -76,7 +76,7 @@ export interface InterviewRow {
   profileId: string
   status: InterviewStatus
   targetRole: string
-  interviewerStyle: string
+  interviewerStyle: 'strict' | 'coaching' | 'friendly'
   scores: string | null
   startedAt: string | null
   completedAt: string | null
