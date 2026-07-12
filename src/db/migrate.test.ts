@@ -213,13 +213,18 @@ describe('MigrationRunner — 0002_add_interviews (interview tables)', () => {
       'created_at',
     ])
 
-    // 3 indexes: idx_interviews_profile_id, idx_interviews_status, idx_answers_interview_id
-    const indexes = db.conn
+    // 3 indexes scoped to the new interview tables: ignore resume_history
+    // indexes from 0001 — this test only asserts the 0002 contract.
+    const allIndexes = db.conn
       .query(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' ORDER BY name",
+        "SELECT name, tbl_name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'",
       )
-      .all() as Array<{ name: string }>
-    expect(indexes.map((i) => i.name)).toEqual([
+      .all() as Array<{ name: string; tbl_name: string }>
+    const interviewIndexes = allIndexes
+      .filter((i) => i.tbl_name === 'interviews' || i.tbl_name === 'interview_answers')
+      .map((i) => i.name)
+      .sort()
+    expect(interviewIndexes).toEqual([
       'idx_answers_interview_id',
       'idx_interviews_profile_id',
       'idx_interviews_status',
