@@ -181,9 +181,9 @@ describe('MigrationRunner — 0002_add_interviews (interview tables)', () => {
     expect(applied).toEqual([1, 2])
 
     // interviews table: all 11 columns present in declared order
-    const interviewCols = db.conn
-      .query("PRAGMA table_info('interviews')")
-      .all() as Array<{ name: string }>
+    const interviewCols = db.conn.query("PRAGMA table_info('interviews')").all() as Array<{
+      name: string
+    }>
     expect(interviewCols.map((c) => c.name)).toEqual([
       'id',
       'profile_id',
@@ -199,9 +199,9 @@ describe('MigrationRunner — 0002_add_interviews (interview tables)', () => {
     ])
 
     // interview_answers table: all 8 columns present in declared order
-    const answerCols = db.conn
-      .query("PRAGMA table_info('interview_answers')")
-      .all() as Array<{ name: string }>
+    const answerCols = db.conn.query("PRAGMA table_info('interview_answers')").all() as Array<{
+      name: string
+    }>
     expect(answerCols.map((c) => c.name)).toEqual([
       'id',
       'interview_id',
@@ -216,9 +216,7 @@ describe('MigrationRunner — 0002_add_interviews (interview tables)', () => {
     // 3 indexes scoped to the new interview tables: ignore resume_history
     // indexes from 0001 — this test only asserts the 0002 contract.
     const allIndexes = db.conn
-      .query(
-        "SELECT name, tbl_name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'",
-      )
+      .query("SELECT name, tbl_name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
       .all() as Array<{ name: string; tbl_name: string }>
     const interviewIndexes = allIndexes
       .filter((i) => i.tbl_name === 'interviews' || i.tbl_name === 'interview_answers')
