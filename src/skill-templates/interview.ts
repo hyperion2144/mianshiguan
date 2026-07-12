@@ -1,5 +1,5 @@
-import { MiValidationError } from '../errors.ts'
 
+import { MiValidationError } from '../errors.ts'
 /**
  * Skill template renderer for the mianshiguan mock-interview CLI.
  *
@@ -271,11 +271,8 @@ export function renderInterviewSkill(config: InterviewSkillConfig): string {
       return wrapForOpencode(body, config)
   }
 }
-
-/**
- * Re-export the upstream validation error class so callers importing
- * this module for tests/handlers get a single import path. Kept as a
- * type-only re-export for the `name` symbol — `MiValidationError` is
- * already exported via `src/errors.ts`.
- */
+// Re-export so external callers can `import { MiValidationError } from
+// '../skill-templates/interview.ts'` without reaching into src/errors.ts.
 export { MiValidationError }
+
+
