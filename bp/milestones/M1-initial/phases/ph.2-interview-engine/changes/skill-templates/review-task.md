@@ -298,15 +298,15 @@ dead `language?` API surface (Q2).
 
 After all three waves land, verify the full chain:
 
-- [ ] `proposal.md` carries concrete PR-1 / PR-2 sections — `grep -n "TBD" proposal.md` returns 0 lines.
-- [ ] `design.md` `Source:` refs resolve to `proposal.md` sections — `grep -n "Source: PR-" design.md` resolves cleanly.
-- [ ] `tasks.md` T-{id} refs resolve to DS-1 / DS-2 — `grep -n "refs: DS-" tasks.md` returns 8 entries (T-1..T-8).
-- [ ] `bun run test src/skill-templates` exits 0 — runner = `bun test` (T-4).
-- [ ] `bun run typecheck` exits 0.
-- [ ] `bun run lint` exits 0 on changed files.
-- [ ] `bun run check:version` exits 0 (T-11).
-- [ ] Snapshot file present at `src/skill-templates/__tests__/__snapshots__/interview.test.ts.snap` and matches Bun Snapshot v1 format.
-- [ ] No `language:` field references remain in `src/` (T-5).
+- [x] `proposal.md` carries concrete PR-1 / PR-2 sections — `grep -n "TBD" proposal.md` returns 0 lines.
+- [x] `design.md` `Source:` refs resolve to `proposal.md` sections — `grep -n "Source: PR-" design.md` resolves cleanly.
+- [x] `tasks.md` T-{id} refs resolve to DS-1 / DS-2 — `grep -n "refs: DS-" tasks.md` returns 8 entries (T-1..T-8).
+- [x] `bun run test src/skill-templates` exits 0 — runner = `bun test` (T-4).
+- [x] `bun run typecheck` exits 0.
+- [x] `bun run lint` exits 0 on changed files.
+- [x] `bun run check:version` exits 0 (T-11).
+- [x] Snapshot file present at `src/skill-templates/__tests__/__snapshots__/interview.test.ts.snap` and matches Bun Snapshot v1 format.
+- [x] No `language:` field references remain in `src/` (T-5).
 
 ---
 
