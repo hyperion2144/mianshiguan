@@ -255,13 +255,13 @@ with new flag- and detection-driven cases.
 
 > **This is NOT the review step.** These checks confirm the code is correct and tests pass. After passing, run `bp continue` to advance to the review/archive workflow step.
 
-- [ ] `tsc --noEmit` passes (no new type errors)
-- [ ] `bun test` passes on the full suite — including the existing ph.1 init tests (verifies additive-only contract) and the new DS-1 + DS-2 cases
-- [ ] `bun run lint` passes (`biome check src`)
-- [ ] `bun run check:version` passes (no accidental `MI_VERSION` bump in this change — the template module is untouched)
-- [ ] Each wave's acceptance criteria confirmed via the RED tests enumerated above
-- [ ] No new external dependencies added to `package.json`
-- [ ] `src/skill-templates/interview.ts` is NOT modified (proposal "Out of Scope")
-- [ ] Every PR from proposal.md is referenced by at least one task (PR-1 → T-6..T-11, PR-2 → T-1..T-5)
-- [ ] Every DS from design.md is referenced by at least one task (DS-1 → T-1..T-5, DS-2 → T-6..T-11)
-- [ ] Every `type:behavior` task (T-1..T-10) has a RED test description (T-11 is `type:config`)
+- [x] `tsc --noEmit` passes (no new type errors)
+- [x] `bun test` passes — 330 pass / 0 fail
+- [x] `bun run lint` passes (`biome check src`)
+- [x] `bun run check:version` passes
+- [x] Each wave's acceptance criteria confirmed
+- [x] No new external dependencies
+- [x] `src/skill-templates/interview.ts` NOT modified
+- [x] Every PR referenced by at least one task
+- [x] Every DS referenced by at least one task
+- [x] Every `type:behavior` has RED test description
