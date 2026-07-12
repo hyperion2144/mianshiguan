@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import type { InterviewerStyle, Platform } from '../skill-templates/interview.ts'
 
 /**
@@ -101,4 +102,28 @@ export interface InstallResult {
   readonly targetPath: string
   readonly content: string
   readonly written: boolean
+}
+
+/**
+ * Pure path resolver — no filesystem side effects. Expands `~` against
+ * `ctx.homedir` for `kind: 'home'` platforms (omp, claude-code), and
+ * anchors `kind: 'project'` platforms (opencode) under `ctx.cwd`.
+ *
+ * `options.targetPathOverride` (test-only affordance) bypasses the
+ * entire resolution and returns the supplied path verbatim.
+ */
+export function resolvePlatformDir(
+  platform: Platform,
+  ctx: InstallContext,
+  options?: { targetPathOverride?: string },
+): string {
+  if (options?.targetPathOverride !== undefined) {
+    return options.targetPathOverride
+  }
+  const spec = PLATFORM_PATHS[platform]
+  const anchor = spec.kind === 'home' ? ctx.homedir : ctx.cwd
+  const targetDir = spec.targetDir.startsWith('~')
+    ? spec.targetDir.replace(/^~/, ctx.homedir)
+    : join(anchor, spec.targetDir)
+  return join(targetDir, spec.filename)
 }
