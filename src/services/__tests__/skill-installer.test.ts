@@ -1,19 +1,16 @@
-/**
- * Skill installer module — frozen mapping (T-1).
- *
- * RED test asserts the module surface and the PLATFORM_PATHS frozen
- * mapping required by `mi init`'s `--platform` flag and platform
- * auto-detection (FR-15, D-4, PR-1, PR-2).
- */
-
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   PLATFORM_PATHS,
   type Platform,
   type PlatformDirKind,
   type PlatformPathSpec,
+  resolvePlatformDir,
+  type InstallContext,
 } from '../skill-installer.ts'
 
+/**
+ * Skill installer module — frozen mapping (T-1) + pure path resolver (T-2).
+ */
 describe('PLATFORM_PATHS (T-1)', () => {
   it('exposes exactly 3 entries: omp, claude-code, opencode', () => {
     expect(Object.keys(PLATFORM_PATHS).sort()).toEqual(['claude-code', 'omp', 'opencode'])
@@ -63,5 +60,58 @@ describe('PLATFORM_PATHS (T-1)', () => {
     expect(entries.omp.kind).toBeDefined()
     expect(entries['claude-code'].targetDir).toBeDefined()
     expect(entries.opencode.filename).toBeDefined()
+  })
+})
+
+
+function makeCtx(overrides: Partial<InstallContext> = {}): InstallContext {
+  return {
+    homedir: '/tmp/fakehome',
+    cwd: '/tmp/fakeproj',
+    existsSync: (() => false) as (p: string) => boolean,
+    mkdirSync: (() => undefined) as InstallContext['mkdirSync'],
+    writeFileSync: (() => undefined) as InstallContext['writeFileSync'],
+    chmodSync: (() => undefined) as InstallContext['chmodSync'],
+    ...overrides,
+  }
+}
+
+describe('resolvePlatformDir (T-2)', () => {
+  it('resolves omp under {homedir}/.config/omp/skills/mianshiguan-interview.md', () => {
+    expect(resolvePlatformDir('omp', makeCtx())).toBe(
+      '/tmp/fakehome/.config/omp/skills/mianshiguan-interview.md',
+    )
+  })
+
+  it('resolves claude-code under {homedir}/.claude/skills/mianshiguan-interview.md', () => {
+    expect(resolvePlatformDir('claude-code', makeCtx())).toBe(
+      '/tmp/fakehome/.claude/skills/mianshiguan-interview.md',
+    )
+  })
+
+  it('resolves opencode under {cwd}/.opencode/mianshiguan-interview.md (ignores homedir)', () => {
+    const ctx = makeCtx({ homedir: '/should/not/apply', cwd: '/tmp/workdir' })
+    expect(resolvePlatformDir('opencode', ctx)).toBe(
+      '/tmp/workdir/.opencode/mianshiguan-interview.md',
+    )
+  })
+
+  it('never invokes existsSync during pure path resolution', () => {
+    const calls: string[] = []
+    const ctx = makeCtx({
+      existsSync: ((p: string) => {
+        calls.push(p)
+        return false
+      }) as (p: string) => boolean,
+    })
+    resolvePlatformDir('omp', ctx)
+    expect(calls).toEqual([])
+  })
+
+  it('options.targetPathOverride replaces the resolved path entirely', () => {
+    const ctx = makeCtx()
+    expect(
+      resolvePlatformDir('omp', ctx, { targetPathOverride: '/tmp/forced/path.md' }),
+    ).toBe('/tmp/forced/path.md')
   })
 })
