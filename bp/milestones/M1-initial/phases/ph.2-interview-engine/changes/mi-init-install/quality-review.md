@@ -4,9 +4,8 @@
 
 ---
 
-## Overall: NEEDS_REVISION
 
-NEEDS_REVISION because Q1 (MINOR) exists. Implementation is functionally correct; one code-quality fix is recommended before archive.
+## Overall: PASS
 
 ## Issues
 
@@ -33,7 +32,7 @@ NEEDS_REVISION because Q1 (MINOR) exists. Implementation is functionally correct
 
 - **Path traversal.** Path resolution uses only `PLATFORM_PATHS` constants + `os.homedir()` / `process.cwd()` — no user input. Zero attack surface. (Verified at `src/services/skill-installer.ts:115-129`.)
 - **`targetPathOverride`.** Test affordance only; production never passes it. `InstallContext` is built fresh from `node:fs`/`node:os` exports at `src/commands/init.ts:123-132`.
-- **`chmodSync` follows symlinks.** If `~/.claude/skills` is a symlink, the install chases it before chmod. Matches ph.1's posture for `config.yml`. Not blocking; informational.
+- [x] Q1 — `resultVersion()` at `src/commands/init.ts:191-195` redundantly renders a full template + regex-extracts a constant (`MI_VERSION`) that is already exported from `src/skill-templates/interview.ts:35`. Replace with direct import. (xref Q1) <!-- fix: T-1 -->
 - **Probes.** `detectPlatform` only consults the frozen `PLATFORM_PATHS[*].probePaths` — never user input.
 
 ## Out-of-scope Note
