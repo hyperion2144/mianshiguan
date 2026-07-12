@@ -18,7 +18,7 @@ import {
  * Consumed by `src/commands/init.ts` (DS-2 — `mi init --platform`
  * and the existing `--dry-run` extension).
  */
-
+export type { InterviewerStyle, Platform } from '../skill-templates/interview.ts'
 /**
  * Anchor kind for a platform's skill directory.
  * - `'home'`:    resolve under `{homedir}` (omp, claude-code).
@@ -144,7 +144,9 @@ export function detectPlatform(ctx: InstallContext): Platform | null {
   for (const platform of Object.keys(PLATFORM_PATHS) as Platform[]) {
     const spec = PLATFORM_PATHS[platform]
     const hit = spec.probePaths.some((probe) => {
-      const absolute = probe.startsWith('~') ? probe.replace(/^~/, ctx.homedir) : join(ctx.cwd, probe)
+      const absolute = probe.startsWith('~')
+        ? probe.replace(/^~/, ctx.homedir)
+        : join(ctx.cwd, probe)
       return ctx.existsSync(absolute)
     })
     if (hit) return platform
@@ -202,7 +204,9 @@ export function installSkillTemplate(
     ...(options?.targetRole !== undefined && { targetRole: options.targetRole }),
   })
   const targetPath = resolvePlatformDir(platform, ctx, {
-    ...(options?.targetPathOverride !== undefined && { targetPathOverride: options.targetPathOverride }),
+    ...(options?.targetPathOverride !== undefined && {
+      targetPathOverride: options.targetPathOverride,
+    }),
   })
   if (options?.dryRun) {
     return { platform, targetPath, content, written: false }

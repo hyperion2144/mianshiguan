@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { MI_VERSION, MiValidationError, type Platform } from '../../skill-templates/interview.ts'
 import {
+  type InstallContext,
   PLATFORM_PATHS,
   type PlatformDirKind,
   type PlatformPathSpec,
   detectPlatform,
-  type InstallContext,
   installSkillTemplate,
   renderSkillForPlatform,
   resolvePlatformDir,
@@ -43,8 +43,8 @@ describe('PLATFORM_PATHS (T-1)', () => {
 
   it('outer object + every entry is deeply frozen (Object.isFrozen)', () => {
     expect(Object.isFrozen(PLATFORM_PATHS)).toBe(true)
-    for (const key of Object.keys(PLATFORM_PATHS) as Platform[]) {
-      const entry = PLATFORM_PATHS[key]!
+    const allEntries: readonly PlatformPathSpec[] = Object.values(PLATFORM_PATHS)
+    for (const entry of allEntries) {
       expect(Object.isFrozen(entry)).toBe(true)
     }
   })
@@ -81,12 +81,16 @@ describe('PLATFORM_PATHS (T-1)', () => {
 
   it('every entry carries the typed PlatformPathSpec shape (compile-time)', () => {
     // This block is type-only — assignment to the strict shape would
-    // fail to compile if any field drifts. Non-null assertions
-    // bypass `noUncheckedIndexedAccess` for the compile-time check.
-    const entries: Readonly<Record<Platform, PlatformPathSpec>> = PLATFORM_PATHS
-    expect(entries.omp!.kind).toBeDefined()
-    expect(entries['claude-code']!.targetDir).toBeDefined()
-    expect(entries.opencode!.filename).toBeDefined()
+    // fail to compile if any field drifts. Direct indexing via
+    // `PLATFORM_PATHS.<key>` (not bracket access) bypasses
+    // `noUncheckedIndexedAccess` because TS treats the literal key as
+    // a known property of the Record type.
+    const ompEntry = PLATFORM_PATHS.omp
+    const ccEntry = PLATFORM_PATHS['claude-code']
+    const ocEntry = PLATFORM_PATHS.opencode
+    expect(ompEntry.kind).toBeDefined()
+    expect(ccEntry.targetDir).toBeDefined()
+    expect(ocEntry.filename).toBeDefined()
   })
 })
 

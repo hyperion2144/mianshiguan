@@ -1,11 +1,19 @@
 import { Database as BunDatabase } from 'bun:sqlite'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MI_VERSION } from '../skill-templates/interview.ts'
-import { type InstallContext } from '../services/skill-installer.ts'
 import { MiValidationError } from '../errors.ts'
+import type { InstallContext } from '../services/skill-installer.ts'
+import { MI_VERSION } from '../skill-templates/interview.ts'
 import { runInitCommand } from './init.ts'
 
 function captureStdout(run: () => void): string[] {
@@ -39,8 +47,9 @@ describe('mi init', () => {
   describe('command handler (ph.1)', () => {
     it('creates owner-only data dir, config.yml, database migration, and prints Chinese success', () => {
       const dataDir = join(tmpDir, 'fresh-data')
+      const installCtx = makeProbeOnlyCtx(join(tmpDir, 'platforms'), () => false)
 
-      const output = captureStdout(() => runInitCommand({ dataDir }))
+      const output = captureStdout(() => runInitCommand({ dataDir, _installContext: installCtx }))
 
       expect(output.join('\n')).toContain(`初始化完成 ✓ 数据目录: ${dataDir}`)
       expect(statSync(dataDir).mode & 0o777).toBe(0o700)
@@ -60,15 +69,22 @@ describe('mi init', () => {
       const dataDir = join(tmpDir, 'non-empty')
       mkdirSync(dataDir)
       writeFileSync(join(dataDir, 'existing.txt'), 'already here')
+      const installCtx = makeProbeOnlyCtx(join(tmpDir, 'platforms'), () => false)
 
-      expect(() => runInitCommand({ dataDir })).toThrow(MiValidationError)
-      expect(() => runInitCommand({ dataDir })).toThrow(/数据目录已存在且非空/)
-      expect(() => runInitCommand({ dataDir })).toThrow(/existing\.txt/)
+      expect(() => runInitCommand({ dataDir, _installContext: installCtx })).toThrow(
+        MiValidationError,
+      )
+      expect(() => runInitCommand({ dataDir, _installContext: installCtx })).toThrow(
+        /数据目录已存在且非空/,
+      )
+      expect(() => runInitCommand({ dataDir, _installContext: installCtx })).toThrow(
+        /existing\.txt/,
+      )
     })
-
     it('with --force overwrites config while preserving an existing database', () => {
       const dataDir = join(tmpDir, 'force-data')
-      runInitCommand({ dataDir })
+      const installCtx = makeProbeOnlyCtx(join(tmpDir, 'platforms'), () => false)
+      runInitCommand({ dataDir, _installContext: installCtx })
 
       const dbPath = join(dataDir, 'data.db')
       const db = new BunDatabase(dbPath)
@@ -79,7 +95,7 @@ describe('mi init', () => {
       }
       writeFileSync(join(dataDir, 'config.yml'), 'interviewerStyle: strict\ndashboardPort: 9999\n')
 
-      runInitCommand({ dataDir, force: true })
+      runInitCommand({ dataDir, force: true, _installContext: installCtx })
 
       const reopened = new BunDatabase(dbPath)
       try {
@@ -94,21 +110,24 @@ describe('mi init', () => {
 
     it('with --dry-run prints planned operations without filesystem writes', () => {
       const dataDir = join(tmpDir, 'dry-run-data')
+      const installCtx = makeProbeOnlyCtx(join(tmpDir, 'platforms'), () => false)
 
-      const output = captureStdout(() => runInitCommand({ dataDir, dryRun: true }))
+      const output = captureStdout(() =>
+        runInitCommand({ dataDir, dryRun: true, _installContext: installCtx }),
+      )
 
       expect(output.join('\n')).toContain(`将创建目录: ${dataDir}`)
       expect(output.join('\n')).toContain('将写入 config.yml')
       expect(output.join('\n')).toContain('将运行迁移: 0001_initial.sql')
       expect(existsSync(dataDir)).toBe(false)
     })
-
     it('uses --data-dir before $MIANSHIGUAN_HOME', () => {
       const explicitDir = join(tmpDir, 'explicit-data')
       const envDir = join(tmpDir, 'env-data')
       process.env.MIANSHIGUAN_HOME = envDir
+      const installCtx = makeProbeOnlyCtx(join(tmpDir, 'platforms'), () => false)
 
-      runInitCommand({ dataDir: explicitDir })
+      runInitCommand({ dataDir: explicitDir, _installContext: installCtx })
 
       expect(existsSync(join(explicitDir, 'config.yml'))).toBe(true)
       expect(existsSync(envDir)).toBe(false)
@@ -117,8 +136,9 @@ describe('mi init', () => {
     it('uses $MIANSHIGUAN_HOME when --data-dir is omitted', () => {
       const envDir = join(tmpDir, 'env-data')
       process.env.MIANSHIGUAN_HOME = envDir
+      const installCtx = makeProbeOnlyCtx(join(tmpDir, 'platforms'), () => false)
 
-      runInitCommand({})
+      runInitCommand({ _installContext: installCtx })
 
       expect(existsSync(join(envDir, 'config.yml'))).toBe(true)
       expect(existsSync(join(envDir, 'data.db'))).toBe(true)
@@ -139,22 +159,21 @@ describe('mi init', () => {
       existsSync: ((p: string) => existsSync(p)) as (p: string) => boolean,
       mkdirSync: ((p: string, opts: { recursive: boolean; mode?: number }) =>
         mkdirSync(p, opts)) as InstallContext['mkdirSync'],
-      writeFileSync: ((p: string, content: string) => writeFileSync(p, content)) as InstallContext['writeFileSync'],
+      writeFileSync: ((p: string, content: string) =>
+        writeFileSync(p, content)) as InstallContext['writeFileSync'],
       chmodSync: ((p: string, mode: number) => chmodSync(p, mode)) as InstallContext['chmodSync'],
     }
   }
 
-  function makeProbeOnlyCtx(
-    rootDir: string,
-    probe: (path: string) => boolean,
-  ): InstallContext {
+  function makeProbeOnlyCtx(rootDir: string, probe: (path: string) => boolean): InstallContext {
     return {
       homedir: rootDir,
       cwd: rootDir,
       existsSync: probe,
       mkdirSync: ((p: string, opts: { recursive: boolean; mode?: number }) =>
         mkdirSync(p, opts)) as InstallContext['mkdirSync'],
-      writeFileSync: ((p: string, content: string) => writeFileSync(p, content)) as InstallContext['writeFileSync'],
+      writeFileSync: ((p: string, content: string) =>
+        writeFileSync(p, content)) as InstallContext['writeFileSync'],
       chmodSync: ((p: string, mode: number) => chmodSync(p, mode)) as InstallContext['chmodSync'],
     }
   }
@@ -190,17 +209,9 @@ describe('mi init', () => {
         join(tmpDir, 'platforms'),
         (p: string) => p === join(tmpDir, 'platforms', '.claude'),
       )
-      const lines = captureStdout(() =>
-        runInitCommand({ dataDir, _installContext: installCtx }),
-      )
+      const lines = captureStdout(() => runInitCommand({ dataDir, _installContext: installCtx }))
       const joined = lines.join('\n')
-      const skillPath = join(
-        tmpDir,
-        'platforms',
-        '.claude',
-        'skills',
-        'mianshiguan-interview.md',
-      )
+      const skillPath = join(tmpDir, 'platforms', '.claude', 'skills', 'mianshiguan-interview.md')
       expect(existsSync(skillPath)).toBe(true)
       expect(joined).toContain(`(platform: claude-code, v${MI_VERSION})`)
       expect(joined).not.toContain('未检测到 coding agent')
@@ -209,9 +220,7 @@ describe('mi init', () => {
     it('prints the skip-hint when no probe path matches', () => {
       const dataDir = join(tmpDir, 'data')
       const installCtx = makeProbeOnlyCtx(join(tmpDir, 'platforms'), () => false)
-      const lines = captureStdout(() =>
-        runInitCommand({ dataDir, _installContext: installCtx }),
-      )
+      const lines = captureStdout(() => runInitCommand({ dataDir, _installContext: installCtx }))
       const joined = lines.join('\n')
       expect(joined).toContain('未检测到 coding agent，已跳过 skill 安装。请使用 --platform 指定。')
       expect(joined).toContain(`初始化完成 ✓ 数据目录: ${dataDir}`)

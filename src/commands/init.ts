@@ -7,14 +7,14 @@ import { Database } from '../db/Database.ts'
 import { MigrationRunner } from '../db/migrate.ts'
 import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
+import { ConfigService } from '../services/config-service.ts'
 import {
-  detectPlatform,
   type InstallContext,
-  installSkillTemplate,
   type Platform,
+  detectPlatform,
+  installSkillTemplate,
   resolvePlatformDir,
 } from '../services/skill-installer.ts'
-import { ConfigService } from '../services/config-service.ts'
 import { renderInterviewSkill, validateConfig } from '../skill-templates/interview.ts'
 
 export interface InitCommandOptions {
@@ -45,11 +45,9 @@ export function registerInitCommand(program: CAC): void {
     .option('--force', '强制覆盖已有数据目录', { default: false })
     .option('--dry-run', '仅打印计划，不写入文件系统', { default: false })
     .option('--data-dir <path>', '自定义数据目录（覆盖 $MIANSHIGUAN_HOME）')
-    .option(
-      '--platform <name>',
-      '指定 coding agent 平台 (omp, claude-code, opencode)',
-      { default: null },
-    )
+    .option('--platform <name>', '指定 coding agent 平台 (omp, claude-code, opencode)', {
+      default: null,
+    })
     .action(
       (options: {
         force?: boolean
@@ -141,10 +139,7 @@ function defaultInstallContext(): InstallContext {
  * `validateConfig` (exit 1). No-platform-detected is NOT a failure
  * (FR-15 acceptance: "user can still install manually via --platform").
  */
-function installSkillOrSkip(
-  platformOverride: Platform | null,
-  installCtx: InstallContext,
-): void {
+function installSkillOrSkip(platformOverride: Platform | null, installCtx: InstallContext): void {
   const platform: Platform | null = platformOverride ?? detectPlatform(installCtx)
   if (!platform) {
     console.log(success('未检测到 coding agent，已跳过 skill 安装。请使用 --platform 指定。'))
@@ -152,9 +147,7 @@ function installSkillOrSkip(
   }
   const result = installSkillTemplate(platform, installCtx)
   console.log(
-    success(
-      `技能文件已安装: ${result.targetPath} (platform: ${platform}, v${resultVersion()})`,
-    ),
+    success(`技能文件已安装: ${result.targetPath} (platform: ${platform}, v${resultVersion()})`),
   )
 }
 
