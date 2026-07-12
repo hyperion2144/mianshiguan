@@ -4,8 +4,9 @@ import {
   type Platform,
   type PlatformDirKind,
   type PlatformPathSpec,
-  resolvePlatformDir,
+  detectPlatform,
   type InstallContext,
+  resolvePlatformDir,
 } from '../skill-installer.ts'
 
 /**
@@ -112,5 +113,57 @@ describe('resolvePlatformDir (T-2)', () => {
     expect(resolvePlatformDir('omp', ctx, { targetPathOverride: '/tmp/forced/path.md' })).toBe(
       '/tmp/forced/path.md',
     )
+  })
+})
+
+function makeExistsCtx(answers: ReadonlyArray<string>): InstallContext {
+  return makeCtx({
+    existsSync: ((p: string) => answers.includes(p)) as (p: string) => boolean,
+  })
+}
+
+describe('detectPlatform (T-3)', () => {
+  it('returns null when no probe path matches', () => {
+    expect(detectPlatform(makeExistsCtx([]))).toBeNull()
+  })
+
+  it('returns "claude-code" when only ~/.claude exists (priority: omp missing)', () => {
+    const ctx = makeExistsCtx(['/home/user/.claude'])
+    expect(detectPlatform(ctx)).toBe('claude-code')
+  })
+
+  it('returns "omp" when both ~/.config/omp and ~/.claude exist (priority: omp first)', () => {
+    const ctx = makeExistsCtx([
+      '/home/user/.config/omp',
+      '/home/user/.claude',
+    ])
+    expect(detectPlatform(ctx)).toBe('omp')
+  })
+
+  it('returns "opencode" when only .opencode exists (cwd-anchored probe)', () => {
+    const ctx = makeCtx({
+      homedir: '/home/user',
+      cwd: '/work/proj',
+      existsSync: ((p: string) => p === '/work/proj/.opencode') as (p: string) => boolean,
+    })
+    expect(detectPlatform(ctx)).toBe('opencode')
+  })
+
+  it('stops probing after the first platform match (short-circuit semantics)', () => {
+    const calls: string[] = []
+    const ctx = makeCtx({
+      existsSync: ((p: string) => {
+        calls.push(p)
+        return p === '/home/user/.claude'
+      }) as (p: string) => boolean,
+    })
+    expect(detectPlatform(ctx)).toBe('claude-code')
+    // omp probes ran (false), claude-code probes ran (hit), opencode probes MUST NOT run
+    const opencodeProbed = calls.some((c) => c === '/work/proj/.opencode')
+    expect(opencodeProbed).toBe(false)
+  })
+
+  it('never throws — absence of an agent is a valid state', () => {
+    expect(() => detectPlatform(makeExistsCtx([]))).not.toThrow()
   })
 })
