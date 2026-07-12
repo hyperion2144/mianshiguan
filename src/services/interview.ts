@@ -465,6 +465,12 @@ export class InterviewService {
    * the module-local `validateScores`.
    */
   recordAnswer(input: RecordAnswerInput): InterviewAnswer {
+    if (typeof input.questionText !== 'string' || input.questionText.trim().length === 0) {
+      throw new MiValidationError('questionText 不能为空')
+    }
+    if (typeof input.answerText !== 'string' || input.answerText.trim().length === 0) {
+      throw new MiValidationError('answerText 不能为空')
+    }
     const parent = this.get(input.interviewId)
     if (parent.status !== 'in_progress' && parent.status !== 'paused') {
       throw new MiValidationError('无法记录回答 — 面试未开始或已结束')
