@@ -84,7 +84,7 @@
     THEN output contains "引导" and the substring "通过反问"
     ```
 - [x] T-5: [type:behavior] `wrapForOmp()` produces omp skill YAML frontmatter + render dispatch <!-- commit: e06bea6 -->
-  - **refs**: DS-1
+  - **refs**: DS-2
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
   - **acceptance**: `wrapForOmp(body, config)` returns a string that begins with `---\n`; Output contains `name: mianshiguan-interview`, `description:`,      `triggers:`, and `version:` keys in the YAML frontmatter
@@ -100,7 +100,7 @@
     THEN output begins with "---\nname: mianshiguan-interview"
     ```
 - [x] T-6: [type:behavior] `wrapForClaudeCode()` produces /mianshi slash command markdown + render dispatch <!-- commit: 9f431f9 -->
-  - **refs**: DS-1
+  - **refs**: DS-2
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
   - **acceptance**: `wrapForClaudeCode(body, config)` returns a string that begins      with Claude-code slash-command frontmatter (`---`) with `description:`
@@ -117,7 +117,7 @@
     THEN output contains "/mianshi" and the substring "argument-hint:"
     ```
 - [x] T-7: [type:behavior] `wrapForOpencode()` produces agent definition block + render dispatch <!-- commit: 25ef97b -->
-  - **refs**: DS-1
+  - **refs**: DS-2
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
   - **acceptance**: `wrapForOpencode(body, config)` returns a string that begins      with an opencode agent definition block
@@ -134,7 +134,7 @@
     THEN output contains "name: mianshiguan-interviewer" and "tools:"
     ```
 - [x] T-8: [type:behavior] Golden file snapshot for all 3 platforms with same config <!-- commit: ea91d2e -->
-  - **refs**: DS-1
+  - **refs**: DS-2
   - **files**: src/skill-templates/interview.ts, src/skill-templates/__tests__/interview.test.ts
   - **spec_ref**: specs/skill-templates/spec.md
   - **acceptance**: A canonical `BASE_CONFIG` is defined in the test file:      platform loops over `omp`, `claude-code`, `opencode`;
