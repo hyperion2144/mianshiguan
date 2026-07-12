@@ -6,9 +6,14 @@
 
 ## Overall: PASS
 
+<!-- PASS / FAIL / NEEDS_REVISION — If any issue below (BLOCKER/MAJOR/MINOR/INFO) or any Issues entry exists, overall MUST be FAIL or NEEDS_REVISION, NOT PASS. -->
+
 ## Issues
 
-(no issues — 19 tests pass, tsc clean, no lint warnings, no any types)
+| # | Severity | Category | Location | Description |
+|---|----------|----------|----------|-------------|
+
+(no issues)
 
 ## Convention Compliance
 
