@@ -16,11 +16,7 @@ import {
 
 describe('PLATFORM_PATHS (T-1)', () => {
   it('exposes exactly 3 entries: omp, claude-code, opencode', () => {
-    expect(Object.keys(PLATFORM_PATHS).sort()).toEqual([
-      'claude-code',
-      'omp',
-      'opencode',
-    ])
+    expect(Object.keys(PLATFORM_PATHS).sort()).toEqual(['claude-code', 'omp', 'opencode'])
   })
 
   it('outer object + every entry is deeply frozen (Object.isFrozen)', () => {

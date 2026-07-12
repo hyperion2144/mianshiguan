@@ -14,6 +14,10 @@ import type { InterviewerStyle, Platform } from '../skill-templates/interview.ts
  * and the existing `--dry-run` extension).
  */
 
+// Re-export the canonical platform union so callers (notably `mi init`'s
+// option types and tests) can consume it without reaching into
+// `src/skill-templates/interview.ts`.
+export type { InterviewerStyle, Platform } from '../skill-templates/interview.ts'
 /**
  * Anchor kind for a platform's skill directory.
  * - `'home'`:    resolve under `{homedir}` (omp, claude-code).
@@ -42,27 +46,26 @@ export interface PlatformPathSpec {
  * Frozen platform → directory mapping — proposal-mandated (PR-2). Do not
  * extend without an update to FR-15 in `bp/requirements.md`.
  */
-export const PLATFORM_PATHS: Readonly<Record<Platform, PlatformPathSpec>> =
-  Object.freeze({
-    omp: Object.freeze({
-      kind: 'home',
-      targetDir: '~/.config/omp/skills',
-      probePaths: Object.freeze(['~/.config/omp', '~/.config/omp/skills']),
-      filename: 'mianshiguan-interview.md',
-    }),
-    'claude-code': Object.freeze({
-      kind: 'home',
-      targetDir: '~/.claude/skills',
-      probePaths: Object.freeze(['~/.claude', '~/.claude/skills']),
-      filename: 'mianshiguan-interview.md',
-    }),
-    opencode: Object.freeze({
-      kind: 'project',
-      targetDir: '.opencode',
-      probePaths: Object.freeze(['.opencode']),
-      filename: 'mianshiguan-interview.md',
-    }),
-  })
+export const PLATFORM_PATHS: Readonly<Record<Platform, PlatformPathSpec>> = Object.freeze({
+  omp: Object.freeze({
+    kind: 'home',
+    targetDir: '~/.config/omp/skills',
+    probePaths: Object.freeze(['~/.config/omp', '~/.config/omp/skills']),
+    filename: 'mianshiguan-interview.md',
+  }),
+  'claude-code': Object.freeze({
+    kind: 'home',
+    targetDir: '~/.claude/skills',
+    probePaths: Object.freeze(['~/.claude', '~/.claude/skills']),
+    filename: 'mianshiguan-interview.md',
+  }),
+  opencode: Object.freeze({
+    kind: 'project',
+    targetDir: '.opencode',
+    probePaths: Object.freeze(['.opencode']),
+    filename: 'mianshiguan-interview.md',
+  }),
+})
 
 /**
  * Injectable environment so the installer stays pure + testable.
