@@ -36,24 +36,6 @@ Specification compliance review. Cross-references delta-spec SHALL/MUST constrai
 |R22|--dry-run previews skill-install plan line OR skip-hint line|src/commands/init.ts:160-183|PASS|printDryRun branches: (a) platformOverride -> install-plan line (lines 169-172); (b) detected -> install-plan line (lines 175-179); (c) nothing -> skip-hint line (line 182)|
 |R23|$MIANSHIGUAN_HOME honored; opencode install path remains cwd-anchored (NOT home)|src/services/skill-installer.ts:124; test at src/services/__tests__/skill-installer.test.ts:110-115|PASS|For kind='project', anchor = ctx.cwd (line 124), NOT homedir; test 'resolves opencode under {cwd}/.opencode/mianshiguan-interview.md (ignores homedir)' verifies independence|
 
-## Edge Case Coverage
-
-|Edge Case|Covered?|Evidence|
-|---|---|---|
-|dryRun + targetPathOverride|yes|installSkillTemplate at src/services/skill-installer.ts:195-219: targetPathOverride resolved at line 206-210 BEFORE dryRun short-circuit at line 211. Each path independently tested (T-2 targetPathOverride test at skill-installer.test.ts:129-134; T-5 dryRun test at skill-installer.test.ts:309-323).|
-|Empty platformOverride + detectPlatform returns null on non-dry-run (skip-hint branch)|yes|src/commands/init.ts:143-146: `platformOverride ?? detectPlatform(installCtx)` yields null, prints skip-hint, returns. Tests: detectPlatform-null at skill-installer.test.ts:138-139.|
-|Empty platformOverride + detectPlatform hits on non-dry-run (auto-install branch)|yes|src/commands/init.ts:143,147-152: detected platform is used for install. Tests: detectPlatform at skill-installer.test.ts:150-158, 160-167.|
-|platformOverride on non-dry-run but target file already exists (overwrite silent)|yes|src/services/skill-installer.ts:216 (writeFileSync without precondition); test at skill-installer.test.ts:325-333 (idempotent re-install).|
-|option interviewerStyle invalid (validateConfig rejects)|yes|T-4 test at skill-installer.test.ts:223-227 asserts throws MiValidationError matching `/^无效的面试官风格: rude/`.|
-|detectPlatform returns null on dry-run => skip-hint line in plan|yes|src/commands/init.ts:169-182: skip branch fires when no platformOverride AND detectPlatform returns null (line 182). Test at skill-installer.test.ts:138-139 for null return.|
-
-## Reference Chain Verification
-
-- proposal.md: PR-1, PR-2 listed as deliverables. ✓
-- design.md: DS-1 refs PR-1, PR-2. DS-2 refs PR-1. Every PR is referenced by >=1 DS. ✓
-- tasks.md: T-1..T-5 refs DS-1. T-6..T-11 refs DS-2. Every DS is referenced by >=1 task. ✓
-- No orphan references.
-
 ## Issues
 
 No findings -- all 23 SHALL/MUST clauses are implemented and exercised by the test suite. Each delta-spec scenario maps to executable test coverage. All edge cases enumerated in the delta-spec are covered by explicit tests or provable code composition. No FAIL or NEEDS_REVISION rows exist.
