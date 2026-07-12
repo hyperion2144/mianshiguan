@@ -9,7 +9,9 @@ import {
   VALID_PLATFORMS,
   VALID_STYLES,
   buildPromptBody,
+  renderInterviewSkill,
   validateConfig,
+  wrapForOmp,
 } from '../interview.ts'
 
 /**
@@ -257,5 +259,58 @@ describe('buildPromptBody style guidance (T-4)', () => {
       })
       expect(body).toContain('通过反问引导候选人思考')
     }
+  })
+})
+
+// ─── T-5: wrapForOmp + omp dispatch ─────────────────────────────────────────
+
+describe('wrapForOmp + renderInterviewSkill omp dispatch (T-5)', () => {
+  const base = {
+    platform: 'omp' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('renderInterviewSkill(omp) begins with "---\\nname: mianshiguan-interview"', () => {
+    const out = renderInterviewSkill(base)
+    expect(out.startsWith('---\nname: mianshiguan-interview')).toBe(true)
+  })
+
+  it('wrapForOmp begins with "---\\n" and ends with the omp version marker', () => {
+    const out = wrapForOmp('shared-body', base)
+    expect(out.startsWith('---\n')).toBe(true)
+    expect(out.endsWith(`<!-- mianshiguan:omp v${MI_VERSION} -->`)).toBe(true)
+  })
+
+  it('YAML frontmatter carries name / description / invocation / triggers / version', () => {
+    const out = wrapForOmp('shared-body', base)
+    expect(out).toContain('name: mianshiguan-interview')
+    expect(out).toContain('description:')
+    expect(out).toContain('invocation:')
+    expect(out).toContain('triggers:')
+    expect(out).toContain(`version: ${MI_VERSION}`)
+  })
+
+  it('frontmatter closes with "---" before the shared body', () => {
+    const out = wrapForOmp('shared-body-XYZ', base)
+    expect(out.startsWith('---\n')).toBe(true)
+    const firstEnd = out.indexOf('---\n')
+    const secondDash = out.indexOf('---\n', firstEnd + 4)
+    expect(secondDash).toBeGreaterThan(firstEnd)
+    const bodyIdx = out.indexOf('shared-body-XYZ')
+    expect(bodyIdx).toBeGreaterThan(secondDash)
+  })
+
+  it('shared body is preserved verbatim after the frontmatter', () => {
+    const out = wrapForOmp('shared-body-XYZ', base)
+    expect(out).toContain('shared-body-XYZ')
+  })
+
+  it('dispatch path: renderInterviewSkill(omp) === wrapForOmp(buildPromptBody, cfg)', () => {
+    const out = renderInterviewSkill(base)
+    expect(out).toContain('你是一位专业的技术面试官')
+    expect(out).toContain('通过反问引导候选人思考')
+    expect(out).toContain('name: mianshiguan-interview')
   })
 })

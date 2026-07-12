@@ -142,6 +142,64 @@ ${rubric}
 <!-- mianshiguan:interview v${MI_VERSION} -->`
 }
 
+// ─── Platform wrappers ──────────────────────────────────────────────────────
+
+/**
+ * Wrap the shared body in omp's YAML-frontmatter / version-marker
+ * shape. Output shape:
+ *
+ *     ---
+ *     name: mianshiguan-interview
+ *     description: ...
+ *     invocation: mianshiguan-interview
+ *     triggers: [...]
+ *     version: <MI_VERSION>
+ *     platform: omp
+ *     ---
+ *     <shared body>
+ *     <!-- mianshiguan:omp v<MI_VERSION> -->
+ *
+ * Body argument is preserved verbatim after the closing `---`.
+ */
+export function wrapForOmp(body: string, _config: InterviewSkillConfig): string {
+  const header = [
+    '---',
+    'name: mianshiguan-interview',
+    `description: mianshiguan AI 面试教练 (v${MI_VERSION}) — 适用于 omp`,
+    'invocation: mianshiguan-interview',
+    'triggers:',
+    '  - 面试',
+    '  - interview',
+    '  - mock interview',
+    `version: ${MI_VERSION}`,
+    'platform: omp',
+    '---',
+  ].join('\n')
+
+  return `${header}\n\n${body}\n\n<!-- mianshiguan:omp v${MI_VERSION} -->`
+}
+
+/**
+ * Public entry point — validates the config, builds the shared body,
+ * then dispatches to the per-platform wrapper. The `config.platform`
+ * discriminator is exhaustively handled; the compiler enforces it.
+ *
+ * T-5 only wires the `omp` branch; T-6 and T-7 add the remaining
+ * platforms so each commit lands atomically.
+ */
+export function renderInterviewSkill(config: InterviewSkillConfig): string {
+  validateConfig(config)
+
+  const body = buildPromptBody(config)
+
+  switch (config.platform) {
+    case 'omp':
+      return wrapForOmp(body, config)
+    default:
+      throw new Error(`Unsupported platform (T-5 stub): ${config.platform}`)
+  }
+}
+
 /**
  * Re-export the upstream validation error class so callers importing
  * this module for tests/handlers get a single import path. Kept as a
