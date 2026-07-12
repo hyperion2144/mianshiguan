@@ -63,7 +63,6 @@ describe('PLATFORM_PATHS (T-1)', () => {
   })
 })
 
-
 function makeCtx(overrides: Partial<InstallContext> = {}): InstallContext {
   return {
     homedir: '/tmp/fakehome',
@@ -110,8 +109,8 @@ describe('resolvePlatformDir (T-2)', () => {
 
   it('options.targetPathOverride replaces the resolved path entirely', () => {
     const ctx = makeCtx()
-    expect(
-      resolvePlatformDir('omp', ctx, { targetPathOverride: '/tmp/forced/path.md' }),
-    ).toBe('/tmp/forced/path.md')
+    expect(resolvePlatformDir('omp', ctx, { targetPathOverride: '/tmp/forced/path.md' })).toBe(
+      '/tmp/forced/path.md',
+    )
   })
 })
