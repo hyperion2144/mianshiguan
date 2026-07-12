@@ -183,7 +183,7 @@ ${rubric}
  *
  * Body argument is preserved verbatim after the closing `---`.
  */
-export function wrapForOmp(body: string, _config: InterviewSkillConfig): string {
+export function wrapForOmp(body: string): string {
   const header = [
     '---',
     'name: mianshiguan-interview',
@@ -207,7 +207,7 @@ export function wrapForOmp(body: string, _config: InterviewSkillConfig): string 
  * `description:` and `argument-hint:`. Body is preserved verbatim
  * after the frontmatter.
  */
-export function wrapForClaudeCode(body: string, _config: InterviewSkillConfig): string {
+export function wrapForClaudeCode(body: string): string {
   const header = [
     '---',
     `description: mianshiguan AI 面试教练 (v${MI_VERSION})`,
@@ -225,7 +225,7 @@ export function wrapForClaudeCode(body: string, _config: InterviewSkillConfig): 
  * permissions, embeds the prompt under `prompt: |`, and ends with
  * the opencode version marker.
  */
-export function wrapForOpencode(body: string, _config: InterviewSkillConfig): string {
+export function wrapForOpencode(body: string): string {
   const promptLines = body
   .split('\n')
     .map((line) => (line.length === 0 ? line : `  ${line}`))
@@ -264,11 +264,11 @@ export function renderInterviewSkill(config: InterviewSkillConfig): string {
 
   switch (config.platform) {
     case 'omp':
-      return wrapForOmp(body, config)
+      return wrapForOmp(body)
     case 'claude-code':
-      return wrapForClaudeCode(body, config)
+      return wrapForClaudeCode(body)
     case 'opencode':
-      return wrapForOpencode(body, config)
+      return wrapForOpencode(body)
   }
 }
 // Re-export so external callers can `import { MiValidationError } from

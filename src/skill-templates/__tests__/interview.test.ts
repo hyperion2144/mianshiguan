@@ -314,13 +314,13 @@ describe('wrapForOmp + renderInterviewSkill omp dispatch (T-5)', () => {
   })
 
   it('wrapForOmp begins with "---\\n" and ends with the omp version marker', () => {
-    const out = wrapForOmp('shared-body', base)
+    const out = wrapForOmp('shared-body')
     expect(out.startsWith('---\n')).toBe(true)
     expect(out.endsWith(`<!-- mianshiguan:omp v${MI_VERSION} -->`)).toBe(true)
   })
 
   it('YAML frontmatter carries name / description / invocation / triggers / version', () => {
-    const out = wrapForOmp('shared-body', base)
+    const out = wrapForOmp('shared-body')
     expect(out).toContain('name: mianshiguan-interview')
     expect(out).toContain('description:')
     expect(out).toContain('invocation:')
@@ -329,7 +329,7 @@ describe('wrapForOmp + renderInterviewSkill omp dispatch (T-5)', () => {
   })
 
   it('frontmatter closes with "---" before the shared body', () => {
-    const out = wrapForOmp('shared-body-XYZ', base)
+    const out = wrapForOmp('shared-body-XYZ')
     expect(out.startsWith('---\n')).toBe(true)
     const firstEnd = out.indexOf('---\n')
     const secondDash = out.indexOf('---\n', firstEnd + 4)
@@ -339,7 +339,7 @@ describe('wrapForOmp + renderInterviewSkill omp dispatch (T-5)', () => {
   })
 
   it('shared body is preserved verbatim after the frontmatter', () => {
-    const out = wrapForOmp('shared-body-XYZ', base)
+    const out = wrapForOmp('shared-body-XYZ')
     expect(out).toContain('shared-body-XYZ')
   })
 
@@ -368,19 +368,19 @@ describe('wrapForClaudeCode + renderInterviewSkill claude-code dispatch (T-6)', 
   })
 
   it('wrapForClaudeCode begins with --- frontmatter carrying description: and argument-hint:', () => {
-    const out = wrapForClaudeCode('shared-body', base)
+    const out = wrapForClaudeCode('shared-body')
     expect(out.startsWith('---\n')).toBe(true)
     expect(out).toContain('description:')
     expect(out).toContain('argument-hint:')
   })
 
   it('ends with the claude-code version marker', () => {
-    const out = wrapForClaudeCode('shared-body', base)
+    const out = wrapForClaudeCode('shared-body')
     expect(out.endsWith(`<!-- mianshiguan:claude-code v${MI_VERSION} -->`)).toBe(true)
   })
 
   it('shared body is preserved verbatim after the frontmatter', () => {
-    const out = wrapForClaudeCode('shared-body-XYZ', base)
+    const out = wrapForClaudeCode('shared-body-XYZ')
     expect(out).toContain('shared-body-XYZ')
     const secondDash = out.indexOf('---\n', 4)
     const bodyIdx = out.indexOf('shared-body-XYZ')
@@ -413,7 +413,7 @@ describe('wrapForOpencode + renderInterviewSkill opencode dispatch (T-7)', () =>
   })
 
   it('wrapForOpencode produces an agent definition with name / description / tools / allowed_commands', () => {
-    const out = wrapForOpencode('shared-body', base)
+    const out = wrapForOpencode('shared-body')
     expect(out).toContain('name: mianshiguan-interviewer')
     expect(out).toContain('description:')
     expect(out).toContain('tools:')
@@ -421,12 +421,12 @@ describe('wrapForOpencode + renderInterviewSkill opencode dispatch (T-7)', () =>
   })
 
   it('ends with the opencode version marker', () => {
-    const out = wrapForOpencode('shared-body', base)
+    const out = wrapForOpencode('shared-body')
     expect(out.endsWith(`<!-- mianshiguan:opencode v${MI_VERSION} -->`)).toBe(true)
   })
 
   it('embeds the shared body verbatim under a "prompt:" field', () => {
-    const out = wrapForOpencode('shared-body-XYZ', base)
+    const out = wrapForOpencode('shared-body-XYZ')
     expect(out).toContain('prompt:')
     expect(out).toContain('shared-body-XYZ')
     const promptIdx = out.indexOf('prompt:')
