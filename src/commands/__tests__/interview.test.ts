@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { cac } from 'cac'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Database } from '../../db/Database.ts'
+import { MiValidationError } from '../../errors.ts'
 import { ConfigService } from '../../services/config-service.ts'
 import {
   type InterviewService,
@@ -322,6 +323,162 @@ describe('mi interview status command (T-10)', () => {
     expect(text).toContain('STATUS')
     expect(text).toContain(created.id)
     expect(text).toContain('in_progress')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-11 — `mi interview pause` transitions active interview to paused.
+// ---------------------------------------------------------------------------
+
+describe('mi interview pause command (T-11)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+    insertProfile(harness.db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('calls service.pause and prints "已暂停面试: <id>"', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'Senior FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['pause'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain(`已暂停面试: ${started.id}`)
+    const reloaded = harness.service.get(started.id)
+    expect(reloaded.status).toBe('paused')
+    expect(reloaded.pausedAt).not.toBeNull()
+  })
+
+  it('throws MiValidationError when no active interview exists', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    expect(() =>
+      runInterviewCommand(
+        ['pause'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/当前无进行中的面试，无法暂停/)
+  })
+
+  it('propagates MiValidationError when service.pause rejects (already paused)', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'Senior FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    harness.service.pause(started.id)
+
+    expect(() =>
+      runInterviewCommand(
+        ['pause'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(MiValidationError)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-12 — `mi interview resume` brings a paused interview back in_progress.
+// ---------------------------------------------------------------------------
+
+describe('mi interview resume command (T-12)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+    insertProfile(harness.db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('calls service.resume on the most-recent paused interview and prints "已恢复面试: <id>"', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'Senior FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    harness.service.pause(started.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['resume'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain(`已恢复面试: ${started.id}`)
+    const reloaded = harness.service.get(started.id)
+    expect(reloaded.status).toBe('in_progress')
+    expect(reloaded.pausedAt).toBeNull()
+  })
+
+  it('throws MiValidationError when no paused interview exists', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    expect(() =>
+      runInterviewCommand(
+        ['resume'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/当前无暂停的面试，无法恢复/)
   })
 })
 

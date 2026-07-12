@@ -146,7 +146,11 @@ export function runInterviewCommand(
         showStatus(service, configService, options)
         return
       case 'pause':
+        pauseInterview(service, configService)
+        return
       case 'resume':
+        resumeInterview(service, configService)
+        return
       case 'list':
       case 'score':
       case 'report':
@@ -233,6 +237,49 @@ function showStatus(
     table.push([field, value])
   }
   console.log(table.toString())
+}
+
+function pauseInterview(service: CliInterviewService, configService: ConfigService): void {
+  const profileId = requireActiveProfile(configService)
+  const active = service.getActive(profileId)
+  if (!active) {
+    throw new MiValidationError('当前无进行中的面试，无法暂停')
+  }
+  const paused = service.pause(active.id)
+  console.log(success(`已暂停面试: ${paused.id}`))
+}
+
+function resumeInterview(service: CliInterviewService, configService: ConfigService): void {
+  const profileId = requireActiveProfile(configService)
+  // resume requires specifically the most-recently-updated paused row;
+  // getActive would also pick an in_progress row, so we filter manually.
+  const paused = findPausedInterview(service, profileId)
+  if (!paused) {
+    throw new MiValidationError('当前无暂停的面试，无法恢复')
+  }
+  const resumed = service.resume(paused.id)
+  console.log(success(`已恢复面试: ${resumed.id}`))
+}
+
+
+function requireActiveProfile(configService: ConfigService): string {
+  const id = resolveProfileId(configService, undefined)
+  if (!id) {
+    throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
+  }
+  return id
+}
+
+function findPausedInterview(
+  service: CliInterviewService,
+  profileId: string,
+): Interview | null {
+  const rows = service.list({ profileId })
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index]
+    if (row && row.status === 'paused') return row
+  }
+  return null
 }
 
 // ---------------------------------------------------------------------------
