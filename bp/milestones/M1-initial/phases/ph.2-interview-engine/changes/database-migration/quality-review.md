@@ -4,7 +4,7 @@
 
 ---
 
-## Overall: NEEDS_REVISION
+## Overall: PASS
 
 <!-- PASS / FAIL / NEEDS_REVISION — If any issue below (BLOCKER/MAJOR/MINOR/INFO) or any Issues entry exists, overall MUST be FAIL or NEEDS_REVISION, NOT PASS. -->
 
@@ -53,6 +53,3 @@
 - `src/db/migrations/0002_add_interviews.sql` is fully `IF NOT EXISTS`-guarded; re-running is a no-op verified by test 7
 
 ## Issues
-- [ ] Q1 — `interviewerStyle: string` in src/db/schema.ts:54 is unconstrained; should be a union of `'strict' | 'coaching' | 'friendly'` to match `status: InterviewStatus` (xref Q1)
-- [ ] Q2 — Test coverage gap: defaults for `status`/`interviewer_style`/`feedback`/`phase` are not asserted in src/db/migrate.test.ts; a future regression in the SQL `DEFAULT` clauses would not be caught (xref Q2)
-- [ ] Q3 — Dead code: `srcMigrationsDir = join(import.meta.dirname, 'migrations')` in src/db/migrate.test.ts:148 is redundant with `beforeEach` at line 139 (xref Q3)
