@@ -38,6 +38,37 @@ export type ScoreDimension = (typeof SCORE_DIMENSIONS)[number]
 export type ScoreMap = Record<ScoreDimension, number>
 
 /**
+ * Runtime guard for the 5-dimension score map. Validates that each
+ * canonical dimension is present AND that its value is an integer in
+ * `[1, 10]`. Extra keys are tolerated (forward-compatibility for
+ * future dimensions) — only the canonical five are checked.
+ *
+ * Throws `MiValidationError` with a Chinese message identifying the
+ * offending dimension. Lives inside the module (not exported) per
+ * the spec — callers exercise it via `complete` and `recordAnswer`.
+ */
+function validateScores(scores: unknown): asserts scores is ScoreMap {
+  if (scores === null || typeof scores !== 'object') {
+    throw new MiValidationError('评分必须是包含 5 个维度的对象')
+  }
+  const map = scores as Record<string, unknown>
+  for (const dim of SCORE_DIMENSIONS) {
+    if (!(dim in map)) {
+      throw new MiValidationError(`缺少评分维度: ${dim}`)
+    }
+    const value = map[dim]
+    if (
+      typeof value !== 'number' ||
+      !Number.isInteger(value) ||
+      value < 1 ||
+      value > 10
+    ) {
+      throw new MiValidationError(`${dim} 评分必须是 1-10 之间的整数`)
+    }
+  }
+}
+
+/**
  * Public domain object — what callers (CLI handlers, future dashboard)
  * consume. Snake_case columns are mapped to camelCase fields by
  * `rowToInterview`.
@@ -374,6 +405,7 @@ export class InterviewService {
    */
   complete(id: string, scores: ScoreMap): Interview {
     this.assertTransitionFrom(id, 'completed', 'in_progress', '完成')
+    validateScores(scores)
     const effectiveScores = this.computeAggregateScores(id, scores)
     try {
       this.db.conn

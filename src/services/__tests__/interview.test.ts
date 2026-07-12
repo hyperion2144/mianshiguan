@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Database } from '../../db/Database.ts'
 import { ConfigService } from '../config-service.ts'
-import { type InterviewService, createInterviewService } from '../interview.ts'
+import {
+  type InterviewService,
+  type ScoreMap,
+  createInterviewService,
+} from '../interview.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -450,12 +454,15 @@ describe('InterviewService state machine — complete + archive (T-4)', () => {
       },
     })
     // Caller-supplied scores must be ignored when answers exist.
+    // Use a deliberately-extreme valid map (all 10s) so the test
+    // survives T-5's `validateScores` 1-10 range check while still
+    // being observably different from the computed averages below.
     const completed = service.complete(a.id, {
-      技术深度: 99,
-      沟通表达: 99,
-      项目能力: 99,
-      系统思维: 99,
-      岗位匹配度: 99,
+      技术深度: 10,
+      沟通表达: 10,
+      项目能力: 10,
+      系统思维: 10,
+      岗位匹配度: 10,
     })
 
     expect(completed.status).toBe('completed')
@@ -585,9 +592,9 @@ describe('InterviewService score validation (T-5)', () => {
   function withOne(
     base: Record<string, number>,
     key: string,
-    value: number,
-  ): Record<string, number> {
-    return { ...base, [key]: value }
+    value: unknown,
+  ): ScoreMap {
+    return { ...base, [key]: value } as unknown as ScoreMap
   }
 
   it('valid 1-10 integer scores across all 5 dimensions pass through complete()', () => {
@@ -613,9 +620,9 @@ describe('InterviewService score validation (T-5)', () => {
     const a = service.create({ profileId: 'P1', targetRole: 'FE' })
     service.start(a.id)
     const { 系统思维: _omit, ...withoutOne } = VALID_SCORES
-    expect(() => service.complete(a.id, withoutOne)).toThrow(
-      /缺少评分维度: 系统思维/,
-    )
+    expect(() =>
+      service.complete(a.id, withoutOne as unknown as ScoreMap),
+    ).toThrow(/缺少评分维度: 系统思维/)
   })
 
   it('throws MiValidationError when 技术深度 = 0 (below range)', () => {
@@ -649,13 +656,15 @@ describe('InterviewService score validation (T-5)', () => {
     const { service } = makeService(db)
     const a = service.create({ profileId: 'P1', targetRole: 'FE' })
     service.start(a.id)
+    // Deliberately mis-type one dim so the runtime guard rejects
+    // the value; the compiler can't see through this cast.
     const scores = {
       技术深度: 8,
       沟通表达: 7,
       项目能力: 6,
       系统思维: 5,
       岗位匹配度: '8',
-    }
+    } as unknown as ScoreMap
     expect(() => service.complete(a.id, scores)).toThrow(
       /岗位匹配度 评分必须是 1-10 之间的整数/,
     )
@@ -667,8 +676,9 @@ describe('InterviewService score validation (T-5)', () => {
     service.start(a.id)
     // Cast around the typed signature so we can exercise the
     // runtime guard with a non-object input.
-    expect(() =>
-      service.complete(a.id, null as unknown as Record<string, number>),
-    ).toThrow(/评分必须是/)
+    expect(() => service.complete(a.id, null as unknown as ScoreMap)).toThrow(
+      /评分必须是/,
+    )
   })
+
 })
