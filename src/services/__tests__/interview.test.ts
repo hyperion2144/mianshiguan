@@ -370,3 +370,191 @@ describe('InterviewService state machine — start / pause / resume (T-3)', () =
     expect(r3.id).toBe(a.id)
   })
 })
+
+describe('InterviewService state machine — complete + archive (T-4)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('complete() with no answers persists the caller-supplied scores verbatim', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    const supplied = {
+      技术深度: 8,
+      沟通表达: 7,
+      项目能力: 6,
+      系统思维: 5,
+      岗位匹配度: 4,
+    }
+    const completed = service.complete(a.id, supplied)
+
+    expect(completed.status).toBe('completed')
+    expect(completed.completedAt).not.toBeNull()
+    expect(completed.scores).toEqual(supplied)
+
+    const row = db.conn
+      .query('SELECT status, completed_at, scores FROM interviews WHERE id = ?')
+      .get(a.id) as { status: string; completed_at: string | null; scores: string | null }
+    expect(row.status).toBe('completed')
+    expect(row.completed_at).not.toBeNull()
+    expect(JSON.parse(row.scores!)).toEqual(supplied)
+  })
+
+  it('complete() with 3 scored answers recomputes per-dimension averages', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    // Three answers with per-dimension scores: (6+6+9)/3, (6+9+3)/3, ...
+    service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q1',
+      answerText: 'A1',
+      scores: {
+        技术深度: 6,
+        沟通表达: 6,
+        项目能力: 6,
+        系统思维: 6,
+        岗位匹配度: 6,
+      },
+    })
+    service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q2',
+      answerText: 'A2',
+      scores: {
+        技术深度: 6,
+        沟通表达: 9,
+        项目能力: 6,
+        系统思维: 9,
+        岗位匹配度: 6,
+      },
+    })
+    service.recordAnswer({
+      interviewId: a.id,
+      questionText: 'Q3',
+      answerText: 'A3',
+      scores: {
+        技术深度: 9,
+        沟通表达: 3,
+        项目能力: 9,
+        系统思维: 3,
+        岗位匹配度: 9,
+      },
+    })
+    // Caller-supplied scores must be ignored when answers exist.
+    const completed = service.complete(a.id, {
+      技术深度: 99,
+      沟通表达: 99,
+      项目能力: 99,
+      系统思维: 99,
+      岗位匹配度: 99,
+    })
+
+    expect(completed.status).toBe('completed')
+    expect(completed.scores).toEqual({
+      技术深度: 7,
+      沟通表达: 6,
+      项目能力: 7,
+      系统思维: 6,
+      岗位匹配度: 7,
+    })
+
+    const row = db.conn
+      .query('SELECT scores FROM interviews WHERE id = ?')
+      .get(a.id) as { scores: string | null }
+    expect(JSON.parse(row.scores!)).toEqual({
+      技术深度: 7,
+      沟通表达: 6,
+      项目能力: 7,
+      系统思维: 6,
+      岗位匹配度: 7,
+    })
+  })
+
+  it('complete() throws on non-in_progress interview (created)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() =>
+      service.complete(a.id, {
+        技术深度: 7,
+        沟通表达: 7,
+        项目能力: 7,
+        系统思维: 7,
+        岗位匹配度: 7,
+      }),
+    ).toThrow(/无法完成 — 当前状态: created/)
+  })
+
+  it('complete() throws on already-completed interview', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    expect(() =>
+      service.complete(a.id, {
+        技术深度: 7,
+        沟通表达: 7,
+        项目能力: 7,
+        系统思维: 7,
+        岗位匹配度: 7,
+      }),
+    ).toThrow(/无法完成 — 当前状态: completed/)
+  })
+
+  it('archive() transitions completed → archived', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    const archived = service.archive(a.id)
+
+    expect(archived.status).toBe('archived')
+
+    const row = db.conn
+      .query('SELECT status FROM interviews WHERE id = ?')
+      .get(a.id) as { status: string }
+    expect(row.status).toBe('archived')
+  })
+
+  it('archive() throws on non-completed interview (in_progress)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    expect(() => service.archive(a.id)).toThrow(/无法归档 — 当前状态: in_progress/)
+  })
+
+  it('archive() throws on already-archived interview', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    service.archive(a.id)
+    expect(() => service.archive(a.id)).toThrow(/无法归档 — 当前状态: archived/)
+  })
+})

@@ -128,13 +128,29 @@ interface InterviewRowRaw {
 }
 
 /**
+ * Snake-case row shape for `interview_answers`. Mirrors the SQL
+ * columns; `rowToAnswer` maps it to the camelCase `InterviewAnswer`
+ * domain object.
+ */
+interface InterviewAnswerRowRaw {
+  id: string
+  interview_id: string
+  question_text: string
+  answer_text: string
+  scores: string | null
+  feedback: string
+  phase: string
+  created_at: string
+}
+
+/**
  * Allowed-transitions table for the 5-state lifecycle
  * (`created → in_progress → paused → completed → archived`).
  *
  * Each value lists the states reachable from the key in one
- * transition. `assertTransition` answers "is `from → to` valid?" in
- * O(1) and produces a Chinese error message that names the offending
- * state.
+ * transition. `assertTransitionFrom` answers "is `from → to` valid?"
+ * in O(1) and produces a Chinese error message that names the
+ * offending state.
  */
 export const TRANSITIONS: Readonly<Record<InterviewStatus, readonly InterviewStatus[]>> = {
   created: ['in_progress'],
@@ -351,13 +367,14 @@ export class InterviewService {
 
   /**
    * Transition an interview from `in_progress` to `completed`. Sets
-   * `completed_at`, persists the supplied `scores`, and refreshes
-   * `updated_at`. Wave 2's `complete` extension recomputes scores
-   * from per-answer averages when answers exist; this minimal
-   * version writes the caller-supplied scores verbatim.
+   * `completed_at`, persists the supplied `scores` (or the per-
+   * dimension average across all recorded answers when at least one
+   * answer carries scores — the supplied `scores` are then ignored),
+   * and refreshes `updated_at`.
    */
   complete(id: string, scores: ScoreMap): Interview {
     this.assertTransitionFrom(id, 'completed', 'in_progress', '完成')
+    const effectiveScores = this.computeAggregateScores(id, scores)
     try {
       this.db.conn
         .query(
@@ -368,11 +385,76 @@ export class InterviewService {
                  updated_at = datetime('now')
              WHERE id = ?`,
         )
-        .run(JSON.stringify(scores), id)
+        .run(JSON.stringify(effectiveScores), id)
     } catch (err) {
       throw new MiDatabaseError(toMessage(err, 'complete interview'))
     }
     return this.get(id)
+  }
+
+  /**
+   * Transition a `completed` interview to `archived`. Refreshes
+   * `updated_at` and leaves the row in place for read-only reports.
+   */
+  archive(id: string): Interview {
+    this.assertTransitionFrom(id, 'archived', 'completed', '归档')
+    try {
+      this.db.conn
+        .query(
+          `UPDATE interviews
+             SET status = 'archived',
+                 updated_at = datetime('now')
+             WHERE id = ?`,
+        )
+        .run(id)
+    } catch (err) {
+      throw new MiDatabaseError(toMessage(err, 'archive interview'))
+    }
+    return this.get(id)
+  }
+
+  /**
+   * Insert a Q&A row and bump the parent interview's `updated_at`.
+   * Used by T-4's `complete` to recompute per-dimension averages
+   * when at least one answer exists. Full per-question validation
+   * (status check, 1-10 score range, post-completion rejection)
+   * lands in T-6.
+   */
+  recordAnswer(input: RecordAnswerInput): InterviewAnswer {
+    const id = ulid()
+    const scoresJson = input.scores ? JSON.stringify(input.scores) : null
+    const feedback = input.feedback ?? ''
+    const phase = input.phase ?? 'general'
+    try {
+      this.db.conn
+        .query(
+          `INSERT INTO interview_answers (
+             id, interview_id, question_text, answer_text,
+             scores, feedback, phase
+           ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          id,
+          input.interviewId,
+          input.questionText,
+          input.answerText,
+          scoresJson,
+          feedback,
+          phase,
+        )
+      this.db.conn
+        .query(`UPDATE interviews SET updated_at = datetime('now') WHERE id = ?`)
+        .run(input.interviewId)
+    } catch (err) {
+      throw new MiDatabaseError(toMessage(err, 'record answer'))
+    }
+    const row = this.db.conn
+      .query('SELECT * FROM interview_answers WHERE id = ?')
+      .get(id) as InterviewAnswerRowRaw | null
+    if (!row) {
+      throw new MiDatabaseError('record answer: row missing after insert')
+    }
+    return rowToAnswer(row)
   }
 
   /**
@@ -393,6 +475,29 @@ export class InterviewService {
    */
   get wiredDb(): Database {
     return this.db
+  }
+
+  /**
+   * Return per-dimension averages across the recorded answers, or
+   * the supplied scores when no answers (or no scored answers) exist.
+   */
+  private computeAggregateScores(id: string, supplied: ScoreMap): ScoreMap {
+    const rows = this.db.conn
+      .query(`SELECT scores FROM interview_answers WHERE interview_id = ?`)
+      .all(id) as { scores: string | null }[]
+    const scored = rows
+      .map((r) => (r.scores === null ? null : safeParseScores(r.scores)))
+      .filter((s): s is ScoreMap => s !== null)
+    if (scored.length === 0) return supplied
+    const aggregate: ScoreMap = { ...supplied }
+    for (const dim of SCORE_DIMENSIONS) {
+      const sum = scored.reduce((acc, s) => acc + s[dim], 0)
+      const avg = sum / scored.length
+      // Snap to the nearest integer so the persisted scores match
+      // the `1..10` integer contract — averages like 6.333 round to 6.
+      aggregate[dim] = Math.round(avg)
+    }
+    return aggregate
   }
 
   /**
@@ -431,11 +536,7 @@ export class InterviewService {
 function rowToInterview(row: InterviewRowRaw): Interview {
   let scores: ScoreMap | null = null
   if (row.scores !== null) {
-    try {
-      scores = JSON.parse(row.scores) as ScoreMap
-    } catch {
-      scores = null
-    }
+    scores = safeParseScores(row.scores)
   }
   return {
     id: row.id,
@@ -449,6 +550,38 @@ function rowToInterview(row: InterviewRowRaw): Interview {
     pausedAt: row.paused_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  }
+}
+
+/**
+ * Defensive `JSON.parse` wrapper. Returns `null` when the input is
+ * not a valid `ScoreMap`; callers decide whether to fall back to
+ * a default or surface the corruption.
+ */
+function safeParseScores(raw: string): ScoreMap | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed === null || typeof parsed !== 'object') return null
+    return parsed as ScoreMap
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Convert a snake_case row from `interview_answers` to the
+ * camelCase `InterviewAnswer` domain object.
+ */
+function rowToAnswer(row: InterviewAnswerRowRaw): InterviewAnswer {
+  return {
+    id: row.id,
+    interviewId: row.interview_id,
+    questionText: row.question_text,
+    answerText: row.answer_text,
+    scores: row.scores === null ? null : safeParseScores(row.scores),
+    feedback: row.feedback,
+    phase: row.phase,
+    createdAt: row.created_at,
   }
 }
 
