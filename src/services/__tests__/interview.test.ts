@@ -558,3 +558,117 @@ describe('InterviewService state machine — complete + archive (T-4)', () => {
     expect(() => service.archive(a.id)).toThrow(/无法归档 — 当前状态: archived/)
   })
 })
+
+describe('InterviewService score validation (T-5)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  // Helpers — a valid baseline + a one-dim mutator so each test
+  // can isolate the dimension under test without restating the
+  // five-dim scaffold every time.
+  const VALID_SCORES = {
+    技术深度: 8,
+    沟通表达: 7,
+    项目能力: 6,
+    系统思维: 5,
+    岗位匹配度: 10,
+  } as const
+
+  function withOne(
+    base: Record<string, number>,
+    key: string,
+    value: number,
+  ): Record<string, number> {
+    return { ...base, [key]: value }
+  }
+
+  it('valid 1-10 integer scores across all 5 dimensions pass through complete()', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    const completed = service.complete(a.id, { ...VALID_SCORES })
+    expect(completed.status).toBe('completed')
+    expect(completed.scores).toEqual({ ...VALID_SCORES })
+  })
+
+  it('extra (non-canonical) dimension keys are tolerated', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    const scores = { ...VALID_SCORES, 代码能力: 9 }
+    const completed = service.complete(a.id, scores)
+    expect(completed.scores).toEqual(scores)
+  })
+
+  it('throws MiValidationError "缺少评分维度: <dim>" when a required dim is missing', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    const { 系统思维: _omit, ...withoutOne } = VALID_SCORES
+    expect(() => service.complete(a.id, withoutOne)).toThrow(
+      /缺少评分维度: 系统思维/,
+    )
+  })
+
+  it('throws MiValidationError when 技术深度 = 0 (below range)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    expect(() =>
+      service.complete(a.id, withOne({ ...VALID_SCORES }, '技术深度', 0)),
+    ).toThrow(/技术深度 评分必须是 1-10 之间的整数/)
+  })
+
+  it('throws MiValidationError when 沟通表达 = 11 (above range)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    expect(() =>
+      service.complete(a.id, withOne({ ...VALID_SCORES }, '沟通表达', 11)),
+    ).toThrow(/沟通表达 评分必须是 1-10 之间的整数/)
+  })
+
+  it('throws MiValidationError when 项目能力 = 7.5 (non-integer)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    expect(() =>
+      service.complete(a.id, withOne({ ...VALID_SCORES }, '项目能力', 7.5)),
+    ).toThrow(/项目能力 评分必须是 1-10 之间的整数/)
+  })
+
+  it('throws MiValidationError when 岗位匹配度 is a string', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    const scores = {
+      技术深度: 8,
+      沟通表达: 7,
+      项目能力: 6,
+      系统思维: 5,
+      岗位匹配度: '8',
+    }
+    expect(() => service.complete(a.id, scores)).toThrow(
+      /岗位匹配度 评分必须是 1-10 之间的整数/,
+    )
+  })
+
+  it('throws MiValidationError when the scores argument is null', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    // Cast around the typed signature so we can exercise the
+    // runtime guard with a non-object input.
+    expect(() =>
+      service.complete(a.id, null as unknown as Record<string, number>),
+    ).toThrow(/评分必须是/)
+  })
+})
