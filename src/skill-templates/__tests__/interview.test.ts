@@ -408,3 +408,47 @@ describe('wrapForOpencode + renderInterviewSkill opencode dispatch (T-7)', () =>
     expect(out).toContain('tools:')
   })
 })
+
+// ─── T-8: golden file snapshot ──────────────────────────────────────────────
+
+/**
+ * Canonical config used by every golden snapshot. Platform is iterated
+ * at test time; the rest is held constant so any drift surfaces
+ * cleanly during snapshot review.
+ */
+const BASE_CONFIG = {
+  interviewerStyle: 'coaching' as InterviewerStyle,
+  defaultProfile: 'P-frontend',
+  targetRole: 'Senior FE',
+}
+
+describe('golden file snapshots (T-8)', () => {
+  it.each(['omp', 'claude-code', 'opencode'] as const)(
+    'snapshot for platform=%s with interviewerStyle=coaching',
+    (platform) => {
+      const out = renderInterviewSkill({ ...BASE_CONFIG, platform })
+      expect(out).toMatchSnapshot(`platform=${platform}-style=coaching`)
+    },
+  )
+
+  it.each(['strict', 'friendly'] as const)(
+    'snapshot for platform=omp with interviewerStyle=%s differs from coaching',
+    (style) => {
+      const out = renderInterviewSkill({ ...BASE_CONFIG, platform: 'omp', interviewerStyle: style })
+      const coaching = renderInterviewSkill({ ...BASE_CONFIG, platform: 'omp' })
+
+      expect(out).toMatchSnapshot(`platform=omp-style=${style}`)
+      expect(out).not.toBe(coaching)
+      expect(out).not.toContain('通过反问引导候选人思考')
+    },
+  )
+
+  it('omitted dimensions fall back to the 5-dim DEFAULT_DIMENSIONS in snapshots', () => {
+    const out = renderInterviewSkill({ ...BASE_CONFIG, platform: 'omp' })
+    expect(out).toContain('技术深度')
+    expect(out).toContain('沟通表达')
+    expect(out).toContain('项目能力')
+    expect(out).toContain('系统思维')
+    expect(out).toContain('岗位匹配度')
+  })
+})
