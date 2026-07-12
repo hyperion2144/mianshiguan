@@ -127,3 +127,27 @@ export function resolvePlatformDir(
     : join(anchor, spec.targetDir)
   return join(targetDir, spec.filename)
 }
+
+/**
+ * Probe the host system for an installed coding agent.
+ *
+ * Walks `PLATFORM_PATHS` in priority order (omp → claude-code →
+ * opencode). For each platform, every `probePaths` entry is checked
+ * via `ctx.existsSync`; the first platform with at least one existing
+ * probe wins and its name is returned. Short-circuits on first match.
+ *
+ * Returns `null` when no platform is detected — absence of an agent is
+ * a valid state (FR-15 acceptance: "user can still install manually
+ * via --platform").
+ */
+export function detectPlatform(ctx: InstallContext): Platform | null {
+  for (const platform of Object.keys(PLATFORM_PATHS) as Platform[]) {
+    const spec = PLATFORM_PATHS[platform]
+    const hit = spec.probePaths.some((probe) => {
+      const absolute = probe.startsWith('~') ? probe.replace(/^~/, ctx.homedir) : join(ctx.cwd, probe)
+      return ctx.existsSync(absolute)
+    })
+    if (hit) return platform
+  }
+  return null
+}

@@ -128,15 +128,20 @@ describe('detectPlatform (T-3)', () => {
   })
 
   it('returns "claude-code" when only ~/.claude exists (priority: omp missing)', () => {
-    const ctx = makeExistsCtx(['/home/user/.claude'])
+    const ctx = makeCtx({
+      homedir: '/home/user',
+      existsSync: ((p: string) => p === '/home/user/.claude') as (p: string) => boolean,
+    })
     expect(detectPlatform(ctx)).toBe('claude-code')
   })
 
   it('returns "omp" when both ~/.config/omp and ~/.claude exist (priority: omp first)', () => {
-    const ctx = makeExistsCtx([
-      '/home/user/.config/omp',
-      '/home/user/.claude',
-    ])
+    const ctx = makeCtx({
+      homedir: '/home/user',
+      existsSync: ((p: string) =>
+        p === '/home/user/.config/omp' || p === '/home/user/.claude'
+      ) as (p: string) => boolean,
+    })
     expect(detectPlatform(ctx)).toBe('omp')
   })
 
@@ -152,6 +157,8 @@ describe('detectPlatform (T-3)', () => {
   it('stops probing after the first platform match (short-circuit semantics)', () => {
     const calls: string[] = []
     const ctx = makeCtx({
+      homedir: '/home/user',
+      cwd: '/work/proj',
       existsSync: ((p: string) => {
         calls.push(p)
         return p === '/home/user/.claude'
