@@ -3,7 +3,7 @@ import {
   MI_VERSION,
   MiValidationError,
   type Platform,
-} from '../skill-templates/interview.ts'
+} from '../../skill-templates/interview.ts'
 import {
   PLATFORM_PATHS,
   type PlatformDirKind,
@@ -47,7 +47,8 @@ describe('PLATFORM_PATHS (T-1)', () => {
   it('outer object + every entry is deeply frozen (Object.isFrozen)', () => {
     expect(Object.isFrozen(PLATFORM_PATHS)).toBe(true)
     for (const key of Object.keys(PLATFORM_PATHS) as Platform[]) {
-      expect(Object.isFrozen(PLATFORM_PATHS[key])).toBe(true)
+      const entry = PLATFORM_PATHS[key]!
+      expect(Object.isFrozen(entry)).toBe(true)
     }
   })
 
@@ -83,11 +84,12 @@ describe('PLATFORM_PATHS (T-1)', () => {
 
   it('every entry carries the typed PlatformPathSpec shape (compile-time)', () => {
     // This block is type-only — assignment to the strict shape would
-    // fail to compile if any field drifts.
+    // fail to compile if any field drifts. Non-null assertions
+    // bypass `noUncheckedIndexedAccess` for the compile-time check.
     const entries: Readonly<Record<Platform, PlatformPathSpec>> = PLATFORM_PATHS
-    expect(entries.omp.kind).toBeDefined()
-    expect(entries['claude-code'].targetDir).toBeDefined()
-    expect(entries.opencode.filename).toBeDefined()
+    expect(entries.omp!.kind).toBeDefined()
+    expect(entries['claude-code']!.targetDir).toBeDefined()
+    expect(entries.opencode!.filename).toBeDefined()
   })
 })
 
@@ -225,7 +227,12 @@ describe('renderSkillForPlatform (T-4)', () => {
 
   it('performs zero fs side effects (pure render delegation)', () => {
     const calls: string[] = []
-    const ctx = makeCtx({
+    // The ctx is constructed but never threaded into the call — its
+    // purpose is to prove that the render path does NOT touch any
+    // install-context surface. The unused variable warning would
+    // fire if `makeCtx` were called and its members not exercised,
+    // so we explicitly assert the intent.
+    makeCtx({
       existsSync: ((p: string) => {
         calls.push(`exists:${p}`)
         return false

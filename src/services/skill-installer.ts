@@ -1,5 +1,9 @@
 import { join } from 'node:path'
-import type { InterviewerStyle, Platform } from '../skill-templates/interview.ts'
+import {
+  type InterviewerStyle,
+  type Platform,
+  renderInterviewSkill,
+} from '../skill-templates/interview.ts'
 
 /**
  * Skill template auto-installer for mianshiguan.
@@ -15,10 +19,6 @@ import type { InterviewerStyle, Platform } from '../skill-templates/interview.ts
  * and the existing `--dry-run` extension).
  */
 
-// Re-export the canonical platform union so callers (notably `mi init`'s
-// option types and tests) can consume it without reaching into
-// `src/skill-templates/interview.ts`.
-export type { InterviewerStyle, Platform } from '../skill-templates/interview.ts'
 /**
  * Anchor kind for a platform's skill directory.
  * - `'home'`:    resolve under `{homedir}` (omp, claude-code).
@@ -150,4 +150,29 @@ export function detectPlatform(ctx: InstallContext): Platform | null {
     if (hit) return platform
   }
   return null
+}
+
+/**
+ * Validate + render a skill template via `renderInterviewSkill`.
+ *
+ * Pure delegation — no filesystem I/O. Re-raises `MiValidationError`
+ * for unknown platforms / interviewer styles (the canonical Chinese
+ * messages emitted by `validateConfig` inside the skill-templates
+ * module). Used by both `installSkillTemplate` (end-to-end) and the
+ * `mi init --dry-run` plan-line preview.
+ */
+export function renderSkillForPlatform(
+  platform: Platform,
+  options: {
+    interviewerStyle: InterviewerStyle
+    defaultProfile?: string
+    targetRole?: string
+  },
+): string {
+  return renderInterviewSkill({
+    platform,
+    interviewerStyle: options.interviewerStyle,
+    ...(options.defaultProfile !== undefined && { defaultProfile: options.defaultProfile }),
+    ...(options.targetRole !== undefined && { targetRole: options.targetRole }),
+  })
 }
