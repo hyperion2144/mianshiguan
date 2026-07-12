@@ -40,7 +40,7 @@ export interface InterviewSkillConfig {
   dimensions?: readonly string[]
   defaultProfile?: string
   targetRole?: string
-  language?: typeof DEFAULT_LANGUAGE
+
 }
 
 /**
