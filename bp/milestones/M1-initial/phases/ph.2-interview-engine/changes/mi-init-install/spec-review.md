@@ -10,8 +10,8 @@ Specification compliance review. Cross-references delta-spec SHALL/MUST constrai
 
 ## Constraint Checklist
 
-|#|Constraint|Location|Status|Evidence|
-|---|---|---|---|---|
+| # | Constraint | Location | Status | Evidence |
+|---|-----------|----------|--------|----------|
 |R1|omp maps to `~/.config/omp/skills/mianshiguan-interview.md`|src/services/skill-installer.ts:51-56, 115-129|PASS|PLATFORM_PATHS.omp.kind='home', targetDir='~/.config/omp/skills', filename='mianshiguan-interview.md'; resolvePlatformDir expands '~' via ctx.homedir|
 |R2|claude-code maps to `~/.claude/skills/mianshiguan-interview.md`|src/services/skill-installer.ts:57-62, 115-129|PASS|PLATFORM_PATHS['claude-code'].kind='home', targetDir='~/.claude/skills', filename='mianshiguan-interview.md'; same resolvePlatformDir tilde expansion|
 |R3|opencode maps to `{cwd}/.opencode/mianshiguan-interview.md` (project-anchored, NOT home)|src/services/skill-installer.ts:63-68, 115-129|PASS|PLATFORM_PATHS.opencode.kind='project', targetDir='.opencode', filename='mianshiguan-interview.md'; resolvePlatformDir uses ctx.cwd (line 124) for kind='project'|
