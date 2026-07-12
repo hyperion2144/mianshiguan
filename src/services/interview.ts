@@ -696,13 +696,24 @@ function rowToInterview(row: InterviewRowRaw): Interview {
  * a default or surface the corruption.
  */
 function safeParseScores(raw: string): ScoreMap | null {
+  let parsed: unknown
   try {
-    const parsed: unknown = JSON.parse(raw)
-    if (parsed === null || typeof parsed !== 'object') return null
-    return parsed as ScoreMap
+    parsed = JSON.parse(raw)
   } catch {
     return null
   }
+  if (parsed === null || typeof parsed !== 'object') return null
+  // Re-validate the 5-dim 1-10 integer contract: safeParseScores is
+  // the canonical entry point for "parse raw JSON to ScoreMap", so
+  // checking here means every downstream caller (rowToInterview,
+  // rowToAnswer, computeAggregateScores) silently drops malformed
+  // rows without a separate validation pass.
+  try {
+    validateScores(parsed)
+  } catch {
+    return null
+  }
+  return parsed as ScoreMap
 }
 
 /**
