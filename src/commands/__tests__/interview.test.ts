@@ -227,7 +227,31 @@ describe('mi interview start command (T-9)', () => {
     ).toThrow(/请先创建或切换 Profile/)
   })
 
-// ---------------------------------------------------------------------------
+  it('defaults interviewerStyle to coaching from config when --style is absent', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const createSpy = vi.spyOn(harness.service, 'create')
+
+    captureStdout(() =>
+      runInterviewCommand(
+        ['start'],
+        { role: 'Senior FE' },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    expect(createSpy).toHaveBeenCalledWith({
+      profileId: 'P1',
+      targetRole: 'Senior FE',
+      interviewerStyle: 'coaching',
+    })
+  })
+})
 // T-10 — `mi interview status` shows the active interview for the profile.
 // ---------------------------------------------------------------------------
 
@@ -596,7 +620,20 @@ describe('mi interview list command (T-13)', () => {
   })
 })
 
-  it('defaults interviewerStyle to coaching from config when --style is absent', () => {
+describe('mi interview score command (T-14)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+    insertProfile(harness.db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('--scores JSON parses the 5 dimensions and calls service.recordScore with the ScoreMap', () => {
     harness.configService.save({
       dataDir: harness.dataDir,
       dbPath: join(harness.dataDir, 'data.db'),
@@ -604,20 +641,199 @@ describe('mi interview list command (T-13)', () => {
       dashboardPort: 3456,
       defaultProfile: 'P1',
     })
-    const createSpy = vi.spyOn(harness.service, 'create')
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    const recordSpy = vi.spyOn(harness.service, 'recordScore')
 
     captureStdout(() =>
       runInterviewCommand(
-        ['start'],
-        { role: 'Senior FE' },
+        ['score'],
+        {
+          id: started.id,
+          scores:
+            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+        },
         { service: harness.service, configService: harness.configService },
       ),
     )
 
-    expect(createSpy).toHaveBeenCalledWith({
+    expect(recordSpy).toHaveBeenCalledWith(started.id, {
+      技术深度: 8,
+      沟通表达: 7,
+      项目能力: 9,
+      系统思维: 7,
+      岗位匹配度: 8,
+    })
+  })
+
+  it('flat flags (--depth --expression --project --system --match) build the ScoreMap', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
       profileId: 'P1',
-      targetRole: 'Senior FE',
+      targetRole: 'FE',
       interviewerStyle: 'coaching',
     })
+    const started = harness.service.start(created.id)
+    const recordSpy = vi.spyOn(harness.service, 'recordScore')
+
+    captureStdout(() =>
+      runInterviewCommand(
+        ['score'],
+        {
+          id: started.id,
+          depth: 8,
+          expression: 7,
+          project: 9,
+          system: 7,
+          match: 8,
+        },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    expect(recordSpy).toHaveBeenCalledWith(started.id, {
+      技术深度: 8,
+      沟通表达: 7,
+      项目能力: 9,
+      系统思维: 7,
+      岗位匹配度: 8,
+    })
+  })
+
+  it('prints "已记录评分: ..." on success', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['score'],
+        {
+          id: started.id,
+          scores:
+            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+        },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    expect(stripAnsi(output.join('\n'))).toContain('已记录评分:')
+  })
+
+  it('throws MiValidationError on mutual exclusion (--scores and flat flags both provided)', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    expect(() =>
+      runInterviewCommand(
+        ['score'],
+        {
+          id: started.id,
+          scores:
+            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+          depth: 8,
+        },
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/--scores 与维度标志互斥/)
+  })
+
+  it('throws MiValidationError when neither --scores nor flat flags are provided', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    expect(() =>
+      runInterviewCommand(
+        ['score'],
+        { id: started.id },
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/用法错误: --scores <json> 或提供 5 个维度标志/)
+  })
+
+  it('throws MiValidationError on malformed --scores JSON', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    expect(() =>
+      runInterviewCommand(
+        ['score'],
+        { id: started.id, scores: '{not-json' },
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/评分 JSON 格式错误: /)
+  })
+
+  it('throws MiValidationError when no --id and no active interview', () => {
+    harness.configService.save({
+      dataDir: harness.dataDir,
+      dbPath: join(harness.dataDir, 'data.db'),
+      interviewerStyle: 'coaching',
+      dashboardPort: 3456,
+      defaultProfile: 'P1',
+    })
+    expect(() =>
+      runInterviewCommand(
+        ['score'],
+        {
+          scores:
+            '{"技术深度":8,"沟通表达":7,"项目能力":9,"系统思维":7,"岗位匹配度":8}',
+        },
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/请指定 --id 或先开始面试/)
   })
 })

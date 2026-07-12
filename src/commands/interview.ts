@@ -65,15 +65,13 @@ export type CliInterviewService = InterviewService & {
   recordScore(id: string, scores: ScoreMap): Interview
 }
 
-// ---------------------------------------------------------------------------
-// Constants — Chinese strings and table headers. Each constant is named so
-// the matching spec scenario is traceable from CLI source back to spec.md.
-// ---------------------------------------------------------------------------
-
 const USAGE_START_MESSAGE = '用法错误: mi interview start --role <岗位> [--style <风格>]'
+const USAGE_SCORE_MESSAGE = '用法错误: --scores <json> 或提供 5 个维度标志'
 const NO_ACTIVE_PROFILE_MESSAGE = '请先创建或切换 Profile'
 const NO_ACTIVE_INTERVIEW_MESSAGE = '当前无进行中的面试'
 const EMPTY_LIST_MESSAGE = '暂无面试记录'
+const SCORE_JSON_PARSE_ERROR_PREFIX = '评分 JSON 格式错误: '
+const SCORE_MUTEX_ERROR = '--scores 与维度标志互斥，只用其一'
 const COACHING_DEFAULT = 'coaching'
 
 const SHOW_HEADERS = ['字段', '值'] as const
@@ -179,6 +177,8 @@ export function runInterviewCommand(
         listInterviews(service, configService, options)
         return
       case 'score':
+        scoreInterview(service, configService, options)
+        return
       case 'report':
         throw new MiValidationError(`未知 interview 子命令: ${subcommand}`)
       default:
@@ -329,6 +329,69 @@ function listInterviews(
     ])
   }
   console.log(table.toString())
+}
+
+function scoreInterview(
+  service: CliInterviewService,
+  configService: ConfigService,
+  options: InterviewCommandOptions,
+): void {
+  let id = (options.id ?? '').trim()
+  if (!id) {
+    const profileId = resolveProfileId(configService, options.profile)
+    if (!profileId) {
+      throw new MiValidationError(NO_ACTIVE_PROFILE_MESSAGE)
+    }
+    const active = service.getActive(profileId)
+    if (!active) {
+      throw new MiValidationError('请指定 --id 或先开始面试')
+    }
+    id = active.id
+  }
+
+  const scoresJson = (options.scores ?? '').trim()
+  const flatValues = [
+    options.depth,
+    options.expression,
+    options.project,
+    options.system,
+    options.match,
+  ]
+  const flatCount = flatValues.filter(
+    (v) => v !== undefined && v !== null && String(v).length > 0,
+  ).length
+  const hasJson = scoresJson.length > 0
+  const hasFlat = flatCount > 0
+
+  if (hasJson && hasFlat) {
+    throw new MiValidationError(SCORE_MUTEX_ERROR)
+  }
+
+  let parsed: ScoreMap
+  if (hasJson) {
+    try {
+      parsed = JSON.parse(scoresJson) as ScoreMap
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
+      throw new MiValidationError(`${SCORE_JSON_PARSE_ERROR_PREFIX}${detail}`)
+    }
+  } else if (hasFlat) {
+    if (flatCount !== SCORE_DIMENSIONS.length) {
+      throw new MiValidationError(USAGE_SCORE_MESSAGE)
+    }
+    parsed = {
+      技术深度: Number(options.depth),
+      沟通表达: Number(options.expression),
+      项目能力: Number(options.project),
+      系统思维: Number(options.system),
+      岗位匹配度: Number(options.match),
+    }
+  } else {
+    throw new MiValidationError(USAGE_SCORE_MESSAGE)
+  }
+
+  service.recordScore(id, parsed)
+  console.log(success(`已记录评分: ${JSON.stringify(parsed, null, 2)}`))
 }
 
 // ---------------------------------------------------------------------------
