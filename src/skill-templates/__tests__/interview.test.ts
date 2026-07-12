@@ -110,6 +110,40 @@ describe('validateConfig (T-2)', () => {
       }),
     ).toThrow(/^无效的平台/)
   })
+
+  // ─── T-12: negative-input tightening (Q3 / Q9) ─────────────────────────
+  it('rejects an empty config object as a missing platform', () => {
+    expect(() => validateConfig({} as unknown as Parameters<typeof validateConfig>[0])).toThrow(
+      MiValidationError,
+    )
+    expect(() => validateConfig({} as unknown as Parameters<typeof validateConfig>[0])).toThrow(
+      /^无效的平台: 缺失/,
+    )
+  })
+
+  it('rejects config with platform explicitly set to undefined', () => {
+    expect(() =>
+      validateConfig({
+        platform: undefined,
+        interviewerStyle: 'coaching',
+      } as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(/^无效的平台: 缺失/)
+  })
+
+  it('rejects config with interviewerStyle omitted after a valid platform', () => {
+    expect(() =>
+      validateConfig({ platform: 'omp' } as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(/^无效的面试官风格: 缺失/)
+  })
+
+  it('rejects null input without leaking a TypeError', () => {
+    expect(() =>
+      validateConfig(null as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(MiValidationError)
+    expect(() =>
+      validateConfig(null as unknown as Parameters<typeof validateConfig>[0]),
+    ).not.toThrow(TypeError)
+  })
 })
 
 // ─── T-3: buildPromptBody — shared prompt body ──────────────────────────────
