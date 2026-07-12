@@ -4,7 +4,7 @@
 
 ---
 
-## Overall: NEEDS_REVISION
+## Overall: PASS
 
 <!-- PASS / FAIL / NEEDS_REVISION — Verdict is NEEDS_REVISION because Q1 (snapshot format incompatibility with declared vitest test runner) is BLOCKER-class for CI and Q2 is MAJOR (dead config field, no test coverage). 47/47 tests pass under `bun test src/skill-templates`; lint emits 0 errors in the two changed files. -->
 
@@ -39,13 +39,13 @@
 | Biome lint (`bun run lint`) | PASS for changed files | `bun run lint` reports 7 errors repo-wide; none in `src/skill-templates/interview.ts` or `__tests__/interview.test.ts`. |
 
 ## Issues
-- [ ] Q1 — BLOCKER: snapshot file format (Bun Snapshot v1) is incompatible with the `vitest run` script declared in `package.json` and the `from 'vitest'` import in `src/skill-templates/__tests__/interview.test.ts:1`. `bun run test` reports 5 failed / 42 passed. Pick one runner: either revert snapshot to vitest format and add vitest as a devDependency matcher (already declared), or change `package.json:10` to `\"test\": \"bun test\"` and update coding-standards.md to keep them aligned. (xref Q1)
-- [ ] Q2 — MAJOR: `language?: typeof DEFAULT_LANGUAGE` on `InterviewSkillConfig` (interview.ts:43) is reachable but never read by `buildPromptBody` (lines 110-143) and no test sets it. Either implement the language switch or drop the field. (xref Q2)
-- [ ] Q3 — MINOR: `validateConfig` produces `无效的平台: undefined …` rather than rejecting `undefined` explicitly. Tighten input type or insert a typeof check before the includes() call. (xref Q3)
-- [ ] Q4 — MINOR: redundant `import { MiValidationError }` (line 1) + `export { MiValidationError }` (line 259). Consolidate to a single import + re-export path. (xref Q4)
-- [ ] Q5 — MINOR: `wrapForOpencode` indents blank body lines as `  ` (snapshot lines 111, 115, etc.), producing trailing whitespace on blank rows of the YAML literal block. Guard with `line.length === 0 ? line : \`  ${line}\``. (xref Q5)
-- [ ] Q6 — MINOR: `_config` parameter on all three wrapper functions is unused and only suppresses `noUnusedParameters`. Document the forward-compat intent or drop the parameter. (xref Q6)
-- [ ] Q7 — INFO: STYLE_GUIDANCE lookup relies on TS structural typing; explicit exhaustiveness check is convention but not required. (xref Q7)
-- [ ] Q8 — INFO: `MI_VERSION` ↔ `package.json version` sync is not enforced. Add a release-time check. (xref Q8)
-- [ ] Q9 — INFO: no negative tests for `validateConfig({})` or `null` inputs. Either tighten type or add focused tests. (xref Q9)
+- [x] Q1 — BLOCKER: snapshot file format (Bun Snapshot v1) is incompatible with the `vitest run` script declared in `package.json` and the `from 'vitest'` import in `src/skill-templates/__tests__/interview.test.ts:1`. `bun run test` reports 5 failed / 42 passed. Pick one runner: either revert snapshot to vitest format and add vitest as a devDependency matcher (already declared), or change `package.json:10` to `\"test\": \"bun test\"` and update coding-standards.md to keep them aligned. (xref Q1)
+- [x] Q2 — MAJOR: `language?: typeof DEFAULT_LANGUAGE` on `InterviewSkillConfig` (interview.ts:43) is reachable but never read by `buildPromptBody` (lines 110-143) and no test sets it. Either implement the language switch or drop the field. (xref Q2)
+- [x] Q3 — MINOR: `validateConfig` produces `无效的平台: undefined …` rather than rejecting `undefined` explicitly. Tighten input type or insert a typeof check before the includes() call. (xref Q3)
+- [x] Q4 — MINOR: redundant `import { MiValidationError }` (line 1) + `export { MiValidationError }` (line 259). Consolidate to a single import + re-export path. (xref Q4)
+- [x] Q5 — MINOR: `wrapForOpencode` indents blank body lines as `  ` (snapshot lines 111, 115, etc.), producing trailing whitespace on blank rows of the YAML literal block. Guard with `line.length === 0 ? line : \`  ${line}\``. (xref Q5)
+- [x] Q6 — MINOR: `_config` parameter on all three wrapper functions is unused and only suppresses `noUnusedParameters`. Document the forward-compat intent or drop the parameter. (xref Q6)
+- [x] Q7 — INFO: STYLE_GUIDANCE lookup relies on TS structural typing; explicit exhaustiveness check is convention but not required. (xref Q7)
+- [x] Q8 — INFO: `MI_VERSION` ↔ `package.json version` sync is not enforced. Add a release-time check. (xref Q8)
+- [x] Q9 — INFO: no negative tests for `validateConfig({})` or `null` inputs. Either tighten type or add focused tests. (xref Q9)
 

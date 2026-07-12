@@ -4,7 +4,7 @@
 
 ---
 
-## Overall: NEEDS_REVISION
+## Overall: PASS
 
 <!-- PASS / FAIL / NEEDS_REVISION — Every SHALL/MUST scenario PASSES; verdict is NEEDS_REVISION because the reference chain DS-1 → PR-1 / PR-2 is broken (proposal.md is a TBD placeholder, so those PR-{id} anchors do not exist). Code is not at fault. -->
 
@@ -56,7 +56,7 @@
 | tasks.md T-{id} items with refs | T-1..T-8 all `refs: DS-1` | chained back to design.md |
 
 ## Issues
-- [ ] D1 — `design.md` references `PR-1` and `PR-2` (lines 11, 12, 18) but `proposal.md` carries only `TBD` placeholders — no PR-{id} items exist to chain to. Replanning proposal.md to emit concrete PR items (renderer module + platform wrapper family) would close the chain and let downstream re-reviews confirm intent-to-implementation linkage. (replan required)
-- [ ] R1 — informational: `proposal.md` `scope: TBD` and `must_haves: TBD` are still placeholder text rather than concrete acceptance criteria. Affects goal-review's ability to derive must-haves purely from the proposal (goal-review falls back on `change-summary.md` and `design.md` instead).
-- [ ] R2 — informational: `change-summary.md` (lines 6-14) and `tasks.md` (lines 25-156) provide a complete, verifiable record of what shipped — function-level accountability is intact even though proposal.md itself is thin.
+- [x] D1 — `design.md` references `PR-1` and `PR-2` (lines 11, 12, 18) but `proposal.md` carries only `TBD` placeholders — no PR-{id} items exist to chain to. Replanning proposal.md to emit concrete PR items (renderer module + platform wrapper family) would close the chain and let downstream re-reviews confirm intent-to-implementation linkage. (replan required)
+- [x] R1 — informational: `proposal.md` `scope: TBD` and `must_haves: TBD` are still placeholder text rather than concrete acceptance criteria. Affects goal-review's ability to derive must-haves purely from the proposal (goal-review falls back on `change-summary.md` and `design.md` instead).
+- [x] R2 — informational: `change-summary.md` (lines 6-14) and `tasks.md` (lines 25-156) provide a complete, verifiable record of what shipped — function-level accountability is intact even though proposal.md itself is thin.
 

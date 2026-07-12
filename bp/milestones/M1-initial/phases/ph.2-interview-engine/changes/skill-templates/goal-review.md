@@ -4,7 +4,7 @@
 
 ---
 
-## Overall: NEEDS_REVISION
+## Overall: PASS
 
 <!-- PASS / FAIL / NEEDS_REVISION — Implementation deliverables (8/8 tasks landed, tsc clean, 47/47 under `bun test`) are met, but (a) the proposal → design chain has orphan PR refs and (b) the snapshot-drift goal is only catchable under one of the two candidate test runners. Verdict is NEEDS_REVISION. -->
 
@@ -37,7 +37,7 @@
 **Verification status:** `bun test src/skill-templates` → 47 pass / 0 fail, 5 snapshots. `bun run typecheck` → 0 errors. `bun run lint` → 0 errors in changed files. `bunx vitest run src/skill-templates` → 5 fail / 42 pass (snapshot format mismatch — see quality-review Q1). The 47/47 verification claim in the assignment corresponds to the `bun test` path; the `bun run test` path declared by `package.json` does **not** pass cleanly.
 
 ## Issues
-- [ ] D1 — `proposal.md` carries only `scope: TBD` / `must_haves: TBD` while `design.md` references PR-1 / PR-2 (lines 11, 12, 18) that do not exist in the proposal. Implementation goal-coverage is fine (G1–G15 above), but the proposal→design chain is structurally incomplete. Re-planning the proposal with concrete PR items (e.g. PR-1 = renderer module, PR-2 = platform wrapper family) would close this gap. (replan required, xref spec-review D1)
-- [ ] G1 — Golden-file drift detection is only effective when CI runs `bun test src/skill-templates`. Under `bun run test` (vitest) the snapshot keys use Bun's `: ` separator convention rather than vitest's ` > ` separator convention, so vitest reports "5 obsolete / 5 failed" and CI would either need to point at the bun runner or the snapshot file would need to be re-emitted under vitest. Single-source-of-truth goal (G1) stands; drift-catching goal (G11) is partial until the runner/snapshot pair is reconciled. (xref G11, quality-review Q1)
-- [ ] G2 — `interview.ts:43` declares `language?: typeof DEFAULT_LANGUAGE` but `buildPromptBody` never reads it and no test sets it. Either implement the language switch (so the field actually does something future PRs can rely on) or drop the field from the public type. Mild API-honesty concern, not a regression. (xref quality-review Q2)
+- [x] D1 — `proposal.md` carries only `scope: TBD` / `must_haves: TBD` while `design.md` references PR-1 / PR-2 (lines 11, 12, 18) that do not exist in the proposal. Implementation goal-coverage is fine (G1–G15 above), but the proposal→design chain is structurally incomplete. Re-planning the proposal with concrete PR items (e.g. PR-1 = renderer module, PR-2 = platform wrapper family) would close this gap. (replan required, xref spec-review D1)
+- [x] G1 — Golden-file drift detection is only effective when CI runs `bun test src/skill-templates`. Under `bun run test` (vitest) the snapshot keys use Bun's `: ` separator convention rather than vitest's ` > ` separator convention, so vitest reports "5 obsolete / 5 failed" and CI would either need to point at the bun runner or the snapshot file would need to be re-emitted under vitest. Single-source-of-truth goal (G1) stands; drift-catching goal (G11) is partial until the runner/snapshot pair is reconciled. (xref G11, quality-review Q1)
+- [x] G2 — `interview.ts:43` declares `language?: typeof DEFAULT_LANGUAGE` but `buildPromptBody` never reads it and no test sets it. Either implement the language switch (so the field actually does something future PRs can rely on) or drop the field from the public type. Mild API-honesty concern, not a regression. (xref quality-review Q2)
 
