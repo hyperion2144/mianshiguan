@@ -227,8 +227,8 @@ export function wrapForClaudeCode(body: string, _config: InterviewSkillConfig): 
  */
 export function wrapForOpencode(body: string, _config: InterviewSkillConfig): string {
   const promptLines = body
-    .split('\n')
-    .map((line) => `  ${line}`)
+  .split('\n')
+    .map((line) => (line.length === 0 ? line : `  ${line}`))
     .join('\n')
 
   const header = [
