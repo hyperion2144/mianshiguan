@@ -29,38 +29,6 @@
 | File modes match data-sensitivity posture | PASS | Skill files `0o644` (non-sensitive), platform dirs `0o700` (matches ph.1 data-dir posture), data dir `0o700`, config/db `0o600` — aligned with `research.md` §7 (referenced from `design.md` "Decision inheritance"). |
 | Bun-compatible Node stdlib usage only | PASS | Only `node:fs`, `node:os`, `node:path`, `node:url` — all available under Bun. No npm packages added (`design.md` "External Dependencies": "This change introduces no new external dependencies"). |
 
-## Security Notes
-
-- **Path traversal.** Path resolution uses only the frozen `PLATFORM_PATHS` constants + `os.homedir()` / `process.cwd()` — no user input flows into `resolvePlatformDir`. Zero attack surface. (Verified at `src/services/skill-installer.ts:115-129`.)
-- **Probe injection.** `detectPlatform` consults only the frozen `PLATFORM_PATHS[*].probePaths` — never user input. (Verified at `src/services/skill-installer.ts:143-155`.)
-- **`targetPathOverride`.** Test affordance only; production never passes it. `InstallContext` is built fresh from `node:fs` / `node:os` exports at `src/commands/init.ts:123-132`; `_installContext` is documented as "Test-only override" at `:30-35`.
-- **Validation before mutation.** Unknown `--platform` is rejected at `src/commands/init.ts:89-92` BEFORE `ConfigService.resolveDataDir` (`:94`), `ensureDataDirWritable` (`:102`), and `installSkillOrSkip` (`:114`). Test asserts no FS mutation at `src/commands/init.test.ts:230-247`.
-- **Idempotent overwrite.** Re-install on an existing target file overwrites silently (matches ph.1 `--force` semantics for `config.yml`); no exception leaks to the user. `src/services/skill-installer.ts:216-217`.
-
-## Re-verification of resolved finding (Q1)
-
-The MINOR finding originally raised in the previous review round — `resultVersion()` redundantly rendering a full template + regex-extracting `MI_VERSION` from the output — has been fixed by commit `4ea0170`. The current `src/commands/init.ts`:
-
-```ts
-// src/commands/init.ts:18
-import { MI_VERSION, validateConfig } from '../skill-templates/interview.ts'
-...
-// src/commands/init.ts:150
-success(`技能文件已安装: ${result.targetPath} (platform: ${platform}, v${MI_VERSION})`),
-```
-
-No `resultVersion` symbol remains anywhere in `src/` (verified by ripgrep). `MI_VERSION` is the canonical export from `src/skill-templates/interview.ts:35` (`export const MI_VERSION = '0.1.0'`) and is also imported by `src/commands/init.test.ts:16` for cross-test consistency assertions.
-
-## Verification at the time of this review
-
-- `tsc --noEmit`: clean (zero output)
-- `bun test`: 330 pass / 0 fail / 854 `expect()` calls across 16 files
-- `biome check` on changed files: `Checked 4 files in 29ms. No fixes applied.`
-
-## Out-of-scope Note
-
-`bun run lint` (biome) reports 9 pre-existing errors in files this change did NOT modify (`src/services/interview.ts`, `src/services/profile-service.ts`, `src/services/__tests__/interview.test.ts`, `src/skill-templates/interview.ts`, `src/skill-templates/__tests__/interview.test.ts`). Per `proposal.md` "Out of Scope: Modifications to skill template content", these are explicitly outside this change's scope. The verification claim in `tasks.md` "Implementation Verification" that `bun run lint` passes is inaccurate as written for the whole repo, but every file this change produced (`src/services/skill-installer.ts`, `src/services/__tests__/skill-installer.test.ts`, `src/commands/init.ts`, `src/commands/init.test.ts`) passes biome cleanly.
-
 ## Issues
 
 <!-- No issues. -->

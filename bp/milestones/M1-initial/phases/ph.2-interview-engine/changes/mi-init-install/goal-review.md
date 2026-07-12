@@ -55,10 +55,6 @@
 | G24 | File permission table: `config.yml` `0o600`, `data.db` `0o600`, data dir `0o700` preserved | ACHIEVED | `src/commands/init.ts:113` (db chmod 0o600) and `:200-201` (data dir chmod 0o700) unchanged. Ph.1 test at `src/commands/init.test.ts:54-57` asserts all three modes still match. |
 | G25 | Skill file `0o644` (non-sensitive per research.md §7); platform dir `0o700` | ACHIEVED | `src/services/skill-installer.ts:215,217`. T-6 asserts skill file mode at `src/commands/init.test.ts:199`. |
 
-## Completeness Assessment
-
-This change fully delivers its proposal. Every goal in `proposal.md` ("Deliverables"), every goal in `design.md` ("Goals (≤3)"), and every must-have in `tasks.md` ("Implementation Verification") is satisfied with both implementation and test evidence. The single MINOR finding raised in the prior review round (Q1 — `resultVersion()` redundant computation) was fixed by commit `4ea0170` and verified absent from the codebase. All four source files this change produced pass biome. The full test suite is green at 330/330. `tsc --noEmit` is clean. The reference chain is complete (PR-1 ↔ DS-1/DS-2, PR-2 ↔ DS-1; DS-1 ↔ T-1..T-5; DS-2 ↔ T-6..T-11). The change is ready to archive.
-
 ## Issues
 
 <!-- No issues. -->

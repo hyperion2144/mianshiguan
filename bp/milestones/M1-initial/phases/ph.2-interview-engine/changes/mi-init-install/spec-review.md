@@ -63,20 +63,6 @@
 | R24 | DS-1 (Skill Installer Module) | T-1, T-2, T-3, T-4, T-5 | PASS | `tasks.md:30,52,71,90,110` each carry `refs: DS-1`. |
 | R25 | DS-2 (mi init Extension) | T-6, T-7, T-8, T-9, T-10, T-11 | PASS | `tasks.md:141,163,184,203,225,243` each carry `refs: DS-2`. |
 
-## Edge Case Coverage
-
-| Edge Case | Covered? | Evidence |
-|-----------|---------|----------|
-| Unknown `--platform` value rejected before any FS mutation | YES | `src/commands/init.test.ts:230-247` — `dataDir` does not exist post-call. |
-| All probe paths missing → null + skip-hint + exit 0 | YES | `src/commands/__tests__/skill-installer.test.ts:138-139,185-187` + `src/commands/init.test.ts:220-227`. |
-| Both omp AND claude-code exist → omp wins | YES | `src/services/__tests__/skill-installer.test.ts:150-158`. |
-| Idempotent overwrite of an existing skill file | YES | `src/services/__tests__/skill-installer.test.ts:325-333`. |
-| `dryRun: true` performs zero `mkdirSync`/`writeFileSync`/`chmodSync` calls | YES | `src/services/__tests__/skill-installer.test.ts:309-323` asserts `calls` array is empty. |
-| `--dry-run` with explicit platform OR no platform resolved — both paths mutually exclusive | YES | T-9 at `src/commands/init.test.ts:249-278`; T-10 at `:280-292`. |
-| `targetPathOverride` test affordance replaces the resolved path | YES | `src/services/__tests__/skill-installer.test.ts:129-134,359-370`. |
-| `existsSync` is never invoked during pure path resolution | YES | `src/services/__tests__/skill-installer.test.ts:117-127` records call count → 0. |
-| Short-circuit: probing stops after the first platform match | YES | `src/services/__tests__/skill-installer.test.ts:169-183` asserts the opencode probe was never queried after a claude-code hit. |
-
 ## Issues
 
 <!-- No issues. -->
