@@ -159,7 +159,7 @@ Goal: All 7 `mi interview` subcommands wire to the service, emit correct Chinese
     THEN console.log output starts with '{' and JSON.parse on stdout yields an object with status==='in_progress' AND id matching the interview
     ```
 
-- [ ] T-11: [type:behavior] `mi interview pause`
+- [x] T-11: [type:behavior] `mi interview pause` <!-- commit: 6cb47c4 -->
   - **refs**: DS-2
   - **files**: src/commands/interview.ts, src/commands/__tests__/interview.test.ts
   - **spec_ref**: specs/interview/spec.md
