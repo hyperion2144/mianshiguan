@@ -15,5 +15,5 @@
 
 ## Implementation Verification
 
-- [ ] `tsc --noEmit` passes
-- [ ] `bun test` passes
+- [x] `tsc --noEmit` passes
+- [x] `bun test` passes — 330 pass / 0 fail
