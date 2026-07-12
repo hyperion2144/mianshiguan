@@ -10,7 +10,6 @@
 
 ## Goal Checklist
 
-Goals from `design.md` "Context & Goals" section:
 
 | # | Goal / Must-have | Status | Evidence |
 |---|-----------------|--------|----------|
@@ -32,7 +31,7 @@ Must-haves from `proposal.md` "Deliverables → PR-1":
 | G11 | File: `src/db/migrations/0002_add_interviews.sql` | ACHIEVED | File exists at src/db/migrations/0002_add_interviews.sql |
 | G12 | Files (from design.md File Manifest): src/db/schema.ts extended; src/db/migrate.test.ts extended | ACHIEVED | src/db/schema.ts:38-80 adds the three new types; src/db/migrate.test.ts:138-340 adds the new `describe` block with 7 tests |
 
-## Out-of-Scope Adherence
+## Completeness Assessment
 
 From `proposal.md` "Out of Scope":
 

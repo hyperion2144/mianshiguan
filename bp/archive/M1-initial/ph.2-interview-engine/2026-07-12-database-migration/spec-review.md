@@ -8,6 +8,17 @@
 
 <!-- PASS / FAIL / NEEDS_REVISION — If any row below is FAIL, or any Issues entry exists, overall MUST be FAIL or NEEDS_REVISION, NOT PASS. -->
 
+## Constraint Checklist
+
+| # | Constraint | Location | Status | Evidence |
+|---|-----------|----------|--------|----------|
+| R1 | interviews and interview_answers tables created | 0002_add_interviews.sql | PASS | 14 migration tests pass |
+| R2 | FK CASCADE on profile_id and interview_id | 0002_add_interviews.sql | PASS | FK constraint + cascade tests pass |
+| R3 | 3 indexes (profile_id, status, interview_id) | 0002_add_interviews.sql | PASS | Index test confirms all 3 exist |
+| R4 | Idempotent (IF NOT EXISTS) | 0002_add_interviews.sql | PASS | Re-run test passes |
+| R5 | InterviewRow, InterviewAnswerRow, InterviewStatus in schema.ts | schema.ts | PASS | tsc --noEmit passes |
+| R6 | 7 migration tests | migrate.test.ts | PASS | 16 tests pass (7 original + 7 0002 + 2 default) |
+
 ## Reference Chain Check
 
 | Item | Type | Refs | Status |
