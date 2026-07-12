@@ -233,6 +233,22 @@ describe('mi interview start command (T-9)', () => {
   it('accepts --style strict and --style friendly as valid styles', () => {
     saveDefaultProfile(harness)
     for (const style of ['strict', 'coaching', 'friendly']) {
+      // Archive any active interview from the previous iteration so the
+      // profile can host a new one — otherwise `create()` throws the
+      // "current interview active" guard.
+      const active = harness.service.getActive('P1')
+      if (active) {
+        if (active.status === 'in_progress' || active.status === 'paused') {
+          harness.service.complete(active.id, {
+            技术深度: 5,
+            沟通表达: 5,
+            项目能力: 5,
+            系统思维: 5,
+            岗位匹配度: 5,
+          })
+        }
+        harness.service.archive(active.id)
+      }
       expect(() =>
         runInterviewCommand(
           ['start'],
