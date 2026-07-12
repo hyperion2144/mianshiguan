@@ -5,12 +5,12 @@ import { MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success, warning } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import {
-  SCORE_DIMENSIONS,
   type CreateInterviewInput,
   type Interview,
   type InterviewAnswer,
   type InterviewReport,
   type InterviewService,
+  SCORE_DIMENSIONS,
   type ScoreDimension,
   type ScoreMap,
   createInterviewService,
@@ -123,7 +123,9 @@ export function registerInterviewCommand(program: CAC): void {
     .example('mi interview pause')
     .example('mi interview resume')
     .example('mi interview list')
-    .example('mi interview score --id <id> --depth 8 --expression 7 --project 9 --system 7 --match 8')
+    .example(
+      'mi interview score --id <id> --depth 8 --expression 7 --project 9 --system 7 --match 8',
+    )
     .example('mi interview report <id>')
     .action((args: string[] | undefined, options: InterviewCommandOptions) => {
       runCommandAction(() => runInterviewCommand(args ?? [], options))
@@ -463,7 +465,7 @@ function resolveInterviewerStyle(
     if ((VALID_STYLES as readonly string[]).includes(trimmed)) {
       return trimmed as ValidStyle
     }
-    return COACHING_DEFAULT
+    throw new MiValidationError(`--style 必须是 ${VALID_STYLES.join(' / ')}`)
   }
   try {
     const stored = configService.load().interviewerStyle
@@ -476,10 +478,7 @@ function resolveInterviewerStyle(
   return COACHING_DEFAULT
 }
 
-function findPausedInterview(
-  service: CliInterviewService,
-  profileId: string,
-): Interview | null {
+function findPausedInterview(service: CliInterviewService, profileId: string): Interview | null {
   const rows = service.list({ profileId })
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const row = rows[index]
