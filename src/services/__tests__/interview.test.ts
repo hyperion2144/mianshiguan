@@ -950,20 +950,24 @@ describe('InterviewService getReport (T-7)', () => {
       answerText: 'A2',
       scores: VALID_SCORES,
     })
-    // Pin completed_at to 1h after started_at so duration is exact.
+    // Pin status + completed_at to a known instant so the duration
+    // and isComplete assertions are exact. Bypassing `complete()`
+    // keeps the test independent of T-4's aggregate-score logic.
     db.conn
       .query(
         `UPDATE interviews
-         SET completed_at = '2026-01-01 11:00:00'
+         SET status = 'completed',
+             completed_at = '2026-01-01 11:00:00',
+             scores = ?
          WHERE id = ?`,
       )
-      .run(a.id)
+      .run(JSON.stringify(VALID_SCORES), a.id)
     const r = service.getReport(a.id)
     expect(r.session.status).toBe('completed')
     expect(r.isComplete).toBe(true)
     expect(r.answers).toHaveLength(2)
     expect(r.aggregateScores).toEqual(VALID_SCORES)
-    expect(r.perDimensionAverages).toBe(VALID_SCORES)
+    expect(r.perDimensionAverages).toEqual(VALID_SCORES)
     expect(r.durationSeconds).toBe(3600)
   })
 

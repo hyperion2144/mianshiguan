@@ -502,8 +502,8 @@ export class InterviewService {
 
   /**
    * Return all answers for an interview ordered by insertion
-   * (`created_at ASC, id ASC`). Throws `MiNotFoundError` when the
-   * interview id doesn't exist; returns `[]` when none recorded.
+   * (`created_at ASC, rowid ASC`). Throws `MiNotFoundError` when
+   * the interview id doesn't exist; returns `[]` when none recorded.
    */
   listAnswers(interviewId: string): InterviewAnswer[] {
     if (typeof interviewId !== 'string' || interviewId.length === 0) {
@@ -512,14 +512,45 @@ export class InterviewService {
     // Existence check — distinguishes "no answers yet" from
     // "interview never existed" so callers see the right error.
     this.get(interviewId)
+    // Order by `created_at` first, but break ties with `rowid`
+    // (the implicit SQLite rowid) instead of `id`. ULIDs share a
+    // time-prefix when three records insert within the same
+    // millisecond, and the ULID random suffix is NOT monotonic —
+    // `ORDER BY id` would shuffle sub-second siblings. `rowid` is
+    // assigned at INSERT time and IS monotonically increasing per
+    // table, so it gives true insertion order on tie.
     const rows = this.db.conn
       .query(
         `SELECT * FROM interview_answers
          WHERE interview_id = ?
-         ORDER BY created_at ASC, id ASC`,
+         ORDER BY created_at ASC, rowid ASC`,
       )
       .all(interviewId) as InterviewAnswerRowRaw[]
     return rows.map(rowToAnswer)
+  }
+
+  /**
+   * Assemble the full report for an interview: session, answers,
+   * aggregate scores, per-dimension averages (alias), duration,
+   * and completion flag. Throws `MiNotFoundError` when the id
+   * doesn't exist. `aggregateScores` is the parsed `session.scores`
+   * JSON or `null` when the interview completed with zero answers
+   * (or was never completed). `durationSeconds` is
+   * `(completedAt - startedAt) / 1000` when both timestamps are
+   * present, otherwise `null`.
+   */
+  getReport(id: string): InterviewReport {
+    const session = this.get(id)
+    const answers = this.listAnswers(id)
+    const aggregateScores = session.scores
+    return {
+      session,
+      answers,
+      aggregateScores,
+      perDimensionAverages: aggregateScores,
+      durationSeconds: computeDurationSeconds(session.startedAt, session.completedAt),
+      isComplete: session.status === 'completed' || session.status === 'archived',
+    }
   }
 
   /**
@@ -658,4 +689,42 @@ function rowToAnswer(row: InterviewAnswerRowRaw): InterviewAnswer {
 function toMessage(err: unknown, action: string): string {
   const detail = err instanceof Error ? err.message : String(err)
   return `${action} 失败: ${detail}`
+}
+
+/**
+ * Compute `(completedAt - startedAt) / 1000` for two SQLite-style
+ * timestamps of the form `YYYY-MM-DD HH:MM:SS`. Both are interpreted
+ * as UTC (SQLite's `datetime('now')` returns UTC). Returns `null`
+ * when either input is missing or malformed so callers can detect
+ * "interview not started" / "interview not completed" without
+ * branching on raw strings.
+ */
+function computeDurationSeconds(
+  startedAt: string | null,
+  completedAt: string | null,
+): number | null {
+  if (startedAt === null || completedAt === null) return null
+  const startMs = sqliteTimestampToMs(startedAt)
+  const endMs = sqliteTimestampToMs(completedAt)
+  if (startMs === null || endMs === null) return null
+  return (endMs - startMs) / 1000
+}
+
+/**
+ * Parse a SQLite `YYYY-MM-DD HH:MM:SS` timestamp into ms since
+ * epoch (UTC). Uses `Date.UTC` rather than `new Date(s)` because
+ * V8 interprets the bare form as local time — wrong for our UTC
+ * stamps. Returns `null` on shape mismatch.
+ */
+function sqliteTimestampToMs(raw: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(raw)
+  if (!match) return null
+  return Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6]),
+  )
 }
