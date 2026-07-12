@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -146,6 +146,85 @@ describe('MigrationRunner — applies pending SQL in numeric order', () => {
     expect(runner.currentVersion()).toBe(0)
     runner.run()
     expect(runner.currentVersion()).toBe(2)
+    db.close()
+  })
+})
+
+describe('MigrationRunner — 0002_add_interviews (interview tables)', () => {
+  let tmpDir: string
+  let migrationsDir: string
+  let srcMigrationsDir: string
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'mi-migrate-0002-test-'))
+    migrationsDir = join(tmpDir, 'migrations')
+    mkdirSync(migrationsDir, { recursive: true })
+    srcMigrationsDir = join(import.meta.dirname, 'migrations')
+  })
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('applies 0002_add_interviews.sql: creates interviews + interview_answers tables with all columns and 3 indexes', () => {
+    // Read both migrations from the canonical src/db/migrations/ directory
+    // so the test verifies the actual on-disk SQL contract.
+    const sql0001 = readFileSync(join(srcMigrationsDir, '0001_initial.sql'), 'utf8')
+    const sql0002 = readFileSync(join(srcMigrationsDir, '0002_add_interviews.sql'), 'utf8')
+    writeFileSync(join(migrationsDir, '0001_initial.sql'), sql0001)
+    writeFileSync(join(migrationsDir, '0002_add_interviews.sql'), sql0002)
+
+    const db = new Database(':memory:')
+    const runner = new MigrationRunner(db, migrationsDir)
+
+    const applied = runner.run()
+    expect(applied).toEqual([1, 2])
+
+    // interviews table: all 11 columns present in declared order
+    const interviewCols = db.conn
+      .query("PRAGMA table_info('interviews')")
+      .all() as Array<{ name: string }>
+    expect(interviewCols.map((c) => c.name)).toEqual([
+      'id',
+      'profile_id',
+      'status',
+      'target_role',
+      'interviewer_style',
+      'scores',
+      'started_at',
+      'completed_at',
+      'paused_at',
+      'created_at',
+      'updated_at',
+    ])
+
+    // interview_answers table: all 8 columns present in declared order
+    const answerCols = db.conn
+      .query("PRAGMA table_info('interview_answers')")
+      .all() as Array<{ name: string }>
+    expect(answerCols.map((c) => c.name)).toEqual([
+      'id',
+      'interview_id',
+      'question_text',
+      'answer_text',
+      'scores',
+      'feedback',
+      'phase',
+      'created_at',
+    ])
+
+    // 3 indexes: idx_interviews_profile_id, idx_interviews_status, idx_answers_interview_id
+    const indexes = db.conn
+      .query(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' ORDER BY name",
+      )
+      .all() as Array<{ name: string }>
+    expect(indexes.map((i) => i.name)).toEqual([
+      'idx_answers_interview_id',
+      'idx_interviews_profile_id',
+      'idx_interviews_status',
+    ])
+
     db.close()
   })
 })
