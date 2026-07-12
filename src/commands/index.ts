@@ -1,6 +1,7 @@
 import type { CAC } from 'cac'
 import { registerConfigCommand } from './config.ts'
 import { registerInitCommand } from './init.ts'
+import { registerInterviewCommand } from './interview.ts'
 import { registerProfileCommand } from './profile.ts'
 import { registerResumeCommand } from './resume.ts'
 
@@ -12,4 +13,5 @@ export function registerCommands(program: CAC): void {
   registerConfigCommand(program)
   registerProfileCommand(program)
   registerResumeCommand(program)
+  registerInterviewCommand(program)
 }

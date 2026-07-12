@@ -542,6 +542,38 @@ export class InterviewService {
   }
 
   /**
+   * [auto-add] Persist the 5-dimension aggregate score on an interview
+   * row without changing the interview's status. Backs the
+   * `mi interview score` CLI command (Wave 3 T-14) so the agent can
+   * persist per-dimension scores before completion. `complete()`
+   * will overwrite this column with the per-answer average when the
+   * interview moves to `completed`.
+   *
+   * Validates the score map via the same module-private
+   * `validateScores` guard used by `complete` and `recordAnswer` —
+   * each canonical dimension MUST be present and an integer in `[1, 10]`.
+   */
+  recordScore(id: string, scores: ScoreMap): Interview {
+    if (typeof id !== 'string' || id.length === 0) {
+      throw new MiValidationError('id 不能为空')
+    }
+    validateScores(scores)
+    const serialized = JSON.stringify(scores)
+    try {
+      this.db.conn
+        .query(
+          `UPDATE interviews
+             SET scores = ?, updated_at = datetime('now')
+             WHERE id = ?`,
+        )
+        .run(serialized, id)
+    } catch (err) {
+      throw new MiDatabaseError(toMessage(err, 'record score'))
+    }
+    return this.get(id)
+  }
+
+  /**
    * Touch the wired `config` dependency so the strict
    * `noUnusedParameters` check is satisfied. The CLI handlers in
    * Wave 3 will call `configService.load()` for the default profile;
