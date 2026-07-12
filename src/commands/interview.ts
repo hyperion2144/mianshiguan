@@ -2,7 +2,7 @@ import type { CAC } from 'cac'
 import Table from 'cli-table3'
 import { Database } from '../db/Database.ts'
 import { MiError, MiValidationError } from '../errors.ts'
-import { error as formatError, success } from '../output/colors.ts'
+import { error as formatError, success, warning } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import {
   SCORE_DIMENSIONS,
@@ -66,26 +66,25 @@ export type CliInterviewService = InterviewService & {
 }
 
 const USAGE_START_MESSAGE = '用法错误: mi interview start --role <岗位> [--style <风格>]'
+const USAGE_REPORT_MESSAGE = '用法错误: mi interview report <id> [--json]'
 const USAGE_SCORE_MESSAGE = '用法错误: --scores <json> 或提供 5 个维度标志'
 const NO_ACTIVE_PROFILE_MESSAGE = '请先创建或切换 Profile'
 const NO_ACTIVE_INTERVIEW_MESSAGE = '当前无进行中的面试'
 const EMPTY_LIST_MESSAGE = '暂无面试记录'
 const SCORE_JSON_PARSE_ERROR_PREFIX = '评分 JSON 格式错误: '
 const SCORE_MUTEX_ERROR = '--scores 与维度标志互斥，只用其一'
+const REPORT_INCOMPLETE_WARNING = '面试尚未结束，报告不完整'
+const NO_SCORES_FOOTER = '(本次面试暂无评分记录)'
 const COACHING_DEFAULT = 'coaching'
 
 const SHOW_HEADERS = ['字段', '值'] as const
 const LIST_HEADERS = ['ID', 'PROFILE', 'ROLE', 'STATUS', 'STARTED', 'COMPLETED', 'SCORES'] as const
+const REPORT_TABLE_HEADERS = ['#', 'PHASE', 'QUESTION', 'ANSWER', 'FEEDBACK', 'SCORES'] as const
 const MISSING_FIELD_PLACEHOLDER = '(空)'
 const MISSING_NUMBER_PLACEHOLDER = '(未评分)'
 
 const VALID_STYLES = ['strict', 'coaching', 'friendly'] as const
 type ValidStyle = (typeof VALID_STYLES)[number]
-
-// ---------------------------------------------------------------------------
-// runCommandAction — wraps the body of an action callback in a typed-error
-// trap and exit-code map. Mirrors the helper in profile.ts.
-// ---------------------------------------------------------------------------
 
 function runCommandAction(action: () => void): void {
   try {
@@ -102,10 +101,6 @@ function runCommandAction(action: () => void): void {
     process.exit(2)
   }
 }
-
-// ---------------------------------------------------------------------------
-// registerInterviewCommand — wires the `interview [...args]` command.
-// ---------------------------------------------------------------------------
 
 export function registerInterviewCommand(program: CAC): void {
   program
@@ -134,11 +129,6 @@ export function registerInterviewCommand(program: CAC): void {
       runCommandAction(() => runInterviewCommand(args ?? [], options))
     })
 }
-
-// ---------------------------------------------------------------------------
-// runInterviewCommand — public entry point used by tests and the action
-// callback. Resolves service + config wiring, then dispatches.
-// ---------------------------------------------------------------------------
 
 export function runInterviewCommand(
   args: string[],
@@ -180,7 +170,8 @@ export function runInterviewCommand(
         scoreInterview(service, configService, options)
         return
       case 'report':
-        throw new MiValidationError(`未知 interview 子命令: ${subcommand}`)
+        reportInterview(service, options, args[1])
+        return
       default:
         throw new MiValidationError(`未知 interview 子命令: ${subcommand}`)
     }
@@ -190,7 +181,7 @@ export function runInterviewCommand(
 }
 
 // ---------------------------------------------------------------------------
-// Subcommand handlers — each is a thin adapter around the service.
+// Subcommand handlers
 // ---------------------------------------------------------------------------
 
 function startInterview(
@@ -277,7 +268,7 @@ function pauseInterview(service: CliInterviewService, configService: ConfigServi
 
 function resumeInterview(service: CliInterviewService, configService: ConfigService): void {
   const profileId = requireActiveProfile(configService)
-  // resume requires specifically the most-recently-updated paused row;
+  // resume requires the most-recently-updated paused row;
   // getActive would also pick an in_progress row, so we filter manually.
   const paused = findPausedInterview(service, profileId)
   if (!paused) {
@@ -394,9 +385,52 @@ function scoreInterview(
   console.log(success(`已记录评分: ${JSON.stringify(parsed, null, 2)}`))
 }
 
+function reportInterview(
+  service: CliInterviewService,
+  options: InterviewCommandOptions,
+  idArg: string | undefined,
+): void {
+  const idRaw = (idArg ?? '').trim()
+  if (idRaw.length === 0) {
+    throw new MiValidationError(USAGE_REPORT_MESSAGE)
+  }
+  const report = service.getReport(idRaw)
+  if (options.json) {
+    const payload: Record<string, unknown> = { ...report }
+    if (!report.isComplete) {
+      payload.warning = REPORT_INCOMPLETE_WARNING
+    }
+    console.log(JSON.stringify(payload, null, 2))
+    return
+  }
+
+  console.log(`面试报告 — ${report.session.id} (status: ${report.session.status})`)
+  if (!report.isComplete) {
+    console.log(warning(REPORT_INCOMPLETE_WARNING))
+  }
+
+  if (report.answers.length === 0) {
+    console.log(`汇总: ${NO_SCORES_FOOTER}`)
+    return
+  }
+
+  const table = new Table({ head: [...REPORT_TABLE_HEADERS] })
+  report.answers.forEach((answer, index) => {
+    table.push([
+      String(index + 1),
+      answer.phase,
+      truncate(answer.questionText, 60),
+      truncate(answer.answerText, 80),
+      answer.feedback || MISSING_FIELD_PLACEHOLDER,
+      formatScoresInline(answer.scores),
+    ])
+  })
+  console.log(table.toString())
+  console.log(`汇总: ${formatScoresInline(report.aggregateScores)}`)
+}
+
 // ---------------------------------------------------------------------------
-// Helpers — small named utilities. Each is referenced from more than one
-// place or captures a domain concept worth naming.
+// Helpers
 // ---------------------------------------------------------------------------
 
 function resolveProfileId(
@@ -452,6 +486,10 @@ function findPausedInterview(
     if (row && row.status === 'paused') return row
   }
   return null
+}
+
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`
 }
 
 /**

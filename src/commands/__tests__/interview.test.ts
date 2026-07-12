@@ -1,8 +1,7 @@
 // Wave 3 — `mi interview` command family tests.
 //
-// T-8 dispatch probe verifies the cac `[...args]` flat-with-args pattern
-// works for the interview command. Behaviour tests for each subcommand
-// land in T-9..T-15 commits.
+// Tests for each subcommand live alongside the dispatch probe. Each
+// describe block corresponds to one T-N from tasks.md.
 
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -11,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { cac } from 'cac'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Database } from '../../db/Database.ts'
-import { MiValidationError } from '../../errors.ts'
+import { MiNotFoundError, MiValidationError } from '../../errors.ts'
 import { ConfigService } from '../../services/config-service.ts'
 import {
   type InterviewService,
@@ -56,8 +55,7 @@ function captureStdout(run: () => void): string[] {
 function insertProfile(db: Database, id: string, name: string): void {
   db.conn
     .query(
-      `INSERT INTO profiles (id, name, resume_text, resume_path)
-       VALUES (?, ?, '', NULL)`,
+      `INSERT INTO profiles (id, name, resume_text, resume_path) VALUES (?, ?, '', NULL)`,
     )
     .run(id, name)
 }
@@ -69,7 +67,11 @@ function makeDb(): Database {
   return db
 }
 
-function seedConfig(dataDir: string, defaultProfile?: string, style: string = 'coaching'): void {
+function seedConfig(
+  dataDir: string,
+  defaultProfile?: string,
+  style: string = 'coaching',
+): void {
   const configService = new ConfigService(dataDir)
   configService.save({
     dataDir,
@@ -87,7 +89,10 @@ interface Harness {
   dataDir: string
 }
 
-function setupHarness(defaultProfile?: string, style: string = 'coaching'): Harness {
+function setupHarness(
+  defaultProfile?: string,
+  style: string = 'coaching',
+): Harness {
   const dataDir = mkdtempSync(join(tmpdir(), 'mi-interview-cmd-test-'))
   const db = makeDb()
   seedConfig(dataDir, defaultProfile, style)
@@ -97,18 +102,28 @@ function setupHarness(defaultProfile?: string, style: string = 'coaching'): Harn
   return { db, service, configService, dataDir }
 }
 
+function saveDefaultProfile(
+  harness: Harness,
+  profileId: string = 'P1',
+): void {
+  harness.configService.save({
+    dataDir: harness.dataDir,
+    dbPath: join(harness.dataDir, 'data.db'),
+    interviewerStyle: 'coaching',
+    dashboardPort: 3456,
+    defaultProfile: profileId,
+  })
+}
+
 // ---------------------------------------------------------------------------
-// T-8 dispatch probe — verifies cac accepts the `[...args]` pattern and
-// surfaces the parsed args to the action callback.
+// T-8 dispatch probe
 // ---------------------------------------------------------------------------
 
 describe('registerInterviewCommand (T-8 dispatch probe)', () => {
   it('parses `mi interview status` resolving to the interview command with args=[status]', () => {
     const program = cac('mi')
     registerInterviewCommand(program)
-
     program.parse(['node', 'mi', 'interview', 'status'], { run: false })
-
     expect(program.matchedCommand).not.toBeNull()
     expect(program.matchedCommand?.name).toBe('interview')
     expect(program.args).toEqual(['status'])
@@ -117,9 +132,7 @@ describe('registerInterviewCommand (T-8 dispatch probe)', () => {
   it('parses `mi interview start --role X` resolving with args=[start]', () => {
     const program = cac('mi')
     registerInterviewCommand(program)
-
     program.parse(['node', 'mi', 'interview', 'start', '--role', 'X'], { run: false })
-
     expect(program.matchedCommand?.name).toBe('interview')
     expect(program.args).toEqual(['start'])
   })
@@ -127,11 +140,10 @@ describe('registerInterviewCommand (T-8 dispatch probe)', () => {
   it('exposes the documented flags on the command', () => {
     const program = cac('mi')
     registerInterviewCommand(program)
-
     const registered = program.commands.find((c) => c.name === 'interview')
     expect(registered).toBeDefined()
     const optionNames = registered?.options.map((o) => o.name) ?? []
-    for (const flag of [
+    const expected = [
       'json',
       'profile',
       'dataDir',
@@ -144,14 +156,15 @@ describe('registerInterviewCommand (T-8 dispatch probe)', () => {
       'project',
       'system',
       'match',
-    ]) {
+    ]
+    for (const flag of expected) {
       expect(optionNames).toContain(flag)
     }
   })
 })
 
 // ---------------------------------------------------------------------------
-// T-9 — `mi interview start` creates and starts an interview in one step.
+// T-9 — `mi interview start`
 // ---------------------------------------------------------------------------
 
 describe('mi interview start command (T-9)', () => {
@@ -167,16 +180,10 @@ describe('mi interview start command (T-9)', () => {
     rmSync(harness.dataDir, { recursive: true, force: true })
   })
 
-  it('calls service.create then service.start and prints the Chinese success line with the new id', () => {
+  it('calls service.create then service.start and prints the Chinese success line', () => {
+    saveDefaultProfile(harness)
     const createSpy = vi.spyOn(harness.service, 'create')
     const startSpy = vi.spyOn(harness.service, 'start')
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
 
     const output = captureStdout(() =>
       runInterviewCommand(
@@ -200,14 +207,7 @@ describe('mi interview start command (T-9)', () => {
   })
 
   it('throws MiValidationError when --role is missing', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
-
+    saveDefaultProfile(harness)
     expect(() =>
       runInterviewCommand(
         ['start'],
@@ -217,7 +217,7 @@ describe('mi interview start command (T-9)', () => {
     ).toThrow(/用法错误: mi interview start/)
   })
 
-  it('throws MiValidationError when no active profile and no --profile flag is provided', () => {
+  it('throws MiValidationError when no active profile', () => {
     expect(() =>
       runInterviewCommand(
         ['start'],
@@ -228,15 +228,8 @@ describe('mi interview start command (T-9)', () => {
   })
 
   it('defaults interviewerStyle to coaching from config when --style is absent', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const createSpy = vi.spyOn(harness.service, 'create')
-
     captureStdout(() =>
       runInterviewCommand(
         ['start'],
@@ -244,7 +237,6 @@ describe('mi interview start command (T-9)', () => {
         { service: harness.service, configService: harness.configService },
       ),
     )
-
     expect(createSpy).toHaveBeenCalledWith({
       profileId: 'P1',
       targetRole: 'Senior FE',
@@ -252,7 +244,9 @@ describe('mi interview start command (T-9)', () => {
     })
   })
 })
-// T-10 — `mi interview status` shows the active interview for the profile.
+
+// ---------------------------------------------------------------------------
+// T-10 — `mi interview status`
 // ---------------------------------------------------------------------------
 
 describe('mi interview status command (T-10)', () => {
@@ -269,13 +263,7 @@ describe('mi interview status command (T-10)', () => {
   })
 
   it('--json mode prints parseable JSON with the active interview', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'Senior FE',
@@ -291,21 +279,13 @@ describe('mi interview status command (T-10)', () => {
       ),
     )
 
-    const joined = output.join('\n')
-    const parsed = JSON.parse(joined) as { id: string; status: string }
+    const parsed = JSON.parse(output.join('\n')) as { id: string; status: string }
     expect(parsed.id).toBe(started.id)
     expect(parsed.status).toBe('in_progress')
   })
 
-  it('--json on no active interview prints {"active": false} (NOT throwing)', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
-
+  it('--json on no active interview prints {"active": false}', () => {
+    saveDefaultProfile(harness)
     const output = captureStdout(() =>
       runInterviewCommand(
         ['status'],
@@ -313,18 +293,11 @@ describe('mi interview status command (T-10)', () => {
         { service: harness.service, configService: harness.configService },
       ),
     )
-
     expect(JSON.parse(output.join('\n'))).toEqual({ active: false })
   })
 
   it('human format prints a cli-table3 with the active interview fields', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'Senior FE',
@@ -351,7 +324,7 @@ describe('mi interview status command (T-10)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// T-11 — `mi interview pause` transitions active interview to paused.
+// T-11 — `mi interview pause`
 // ---------------------------------------------------------------------------
 
 describe('mi interview pause command (T-11)', () => {
@@ -368,13 +341,7 @@ describe('mi interview pause command (T-11)', () => {
   })
 
   it('calls service.pause and prints "已暂停面试: <id>"', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'Senior FE',
@@ -398,13 +365,7 @@ describe('mi interview pause command (T-11)', () => {
   })
 
   it('throws MiValidationError when no active interview exists', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     expect(() =>
       runInterviewCommand(
         ['pause'],
@@ -415,13 +376,7 @@ describe('mi interview pause command (T-11)', () => {
   })
 
   it('propagates MiValidationError when service.pause rejects (already paused)', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'Senior FE',
@@ -429,7 +384,6 @@ describe('mi interview pause command (T-11)', () => {
     })
     const started = harness.service.start(created.id)
     harness.service.pause(started.id)
-
     expect(() =>
       runInterviewCommand(
         ['pause'],
@@ -441,7 +395,7 @@ describe('mi interview pause command (T-11)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// T-12 — `mi interview resume` brings a paused interview back in_progress.
+// T-12 — `mi interview resume`
 // ---------------------------------------------------------------------------
 
 describe('mi interview resume command (T-12)', () => {
@@ -457,14 +411,8 @@ describe('mi interview resume command (T-12)', () => {
     rmSync(harness.dataDir, { recursive: true, force: true })
   })
 
-  it('calls service.resume on the most-recent paused interview and prints "已恢复面试: <id>"', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+  it('resumes the most-recent paused interview and prints "已恢复面试: <id>"', () => {
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'Senior FE',
@@ -489,13 +437,7 @@ describe('mi interview resume command (T-12)', () => {
   })
 
   it('throws MiValidationError when no paused interview exists', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     expect(() =>
       runInterviewCommand(
         ['resume'],
@@ -507,7 +449,7 @@ describe('mi interview resume command (T-12)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// T-13 — `mi interview list` enumerates interviews for a profile.
+// T-13 — `mi interview list`
 // ---------------------------------------------------------------------------
 
 describe('mi interview list command (T-13)', () => {
@@ -524,15 +466,7 @@ describe('mi interview list command (T-13)', () => {
   })
 
   it('--json mode prints an array of interviews filtered by profile', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
-    // One completed + one in-progress so both can coexist (the service
-    // forbids stacking two ACTIVE interviews on one profile).
+    saveDefaultProfile(harness)
     const a = harness.service.create({ profileId: 'P1', targetRole: 'FE' })
     harness.service.start(a.id)
     harness.service.complete(a.id, {
@@ -556,7 +490,6 @@ describe('mi interview list command (T-13)', () => {
     const parsed = JSON.parse(output.join('\n')) as Array<{
       id: string
       status: string
-      scores: unknown
     }>
     expect(parsed).toHaveLength(2)
     const completed = parsed.find((row) => row.status === 'completed')
@@ -566,14 +499,6 @@ describe('mi interview list command (T-13)', () => {
   })
 
   it('human format prints the empty message when there are no interviews', () => {
-    expect(() =>
-      runInterviewCommand(
-        ['list'],
-        {},
-        { service: harness.service, configService: harness.configService },
-      ),
-    ).not.toThrow()
-
     const output = captureStdout(() =>
       runInterviewCommand(
         ['list'],
@@ -581,18 +506,11 @@ describe('mi interview list command (T-13)', () => {
         { service: harness.service, configService: harness.configService },
       ),
     )
-
     expect(stripAnsi(output.join('\n'))).toContain('暂无面试记录')
   })
 
   it('human format prints a cli-table3 with the documented column headers', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'Senior FE',
@@ -620,6 +538,10 @@ describe('mi interview list command (T-13)', () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// T-14 — `mi interview score`
+// ---------------------------------------------------------------------------
+
 describe('mi interview score command (T-14)', () => {
   let harness: Harness
 
@@ -633,14 +555,8 @@ describe('mi interview score command (T-14)', () => {
     rmSync(harness.dataDir, { recursive: true, force: true })
   })
 
-  it('--scores JSON parses the 5 dimensions and calls service.recordScore with the ScoreMap', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+  it('--scores JSON parses the 5 dimensions and calls service.recordScore', () => {
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'FE',
@@ -670,14 +586,8 @@ describe('mi interview score command (T-14)', () => {
     })
   })
 
-  it('flat flags (--depth --expression --project --system --match) build the ScoreMap', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+  it('flat flags build the ScoreMap', () => {
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'FE',
@@ -711,13 +621,7 @@ describe('mi interview score command (T-14)', () => {
   })
 
   it('prints "已记录评分: ..." on success', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'FE',
@@ -736,25 +640,17 @@ describe('mi interview score command (T-14)', () => {
         { service: harness.service, configService: harness.configService },
       ),
     )
-
     expect(stripAnsi(output.join('\n'))).toContain('已记录评分:')
   })
 
-  it('throws MiValidationError on mutual exclusion (--scores and flat flags both provided)', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+  it('throws MiValidationError on mutual exclusion (--scores and flat flags both)', () => {
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'FE',
       interviewerStyle: 'coaching',
     })
     const started = harness.service.start(created.id)
-
     expect(() =>
       runInterviewCommand(
         ['score'],
@@ -770,20 +666,13 @@ describe('mi interview score command (T-14)', () => {
   })
 
   it('throws MiValidationError when neither --scores nor flat flags are provided', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'FE',
       interviewerStyle: 'coaching',
     })
     const started = harness.service.start(created.id)
-
     expect(() =>
       runInterviewCommand(
         ['score'],
@@ -794,20 +683,13 @@ describe('mi interview score command (T-14)', () => {
   })
 
   it('throws MiValidationError on malformed --scores JSON', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     const created = harness.service.create({
       profileId: 'P1',
       targetRole: 'FE',
       interviewerStyle: 'coaching',
     })
     const started = harness.service.start(created.id)
-
     expect(() =>
       runInterviewCommand(
         ['score'],
@@ -818,13 +700,7 @@ describe('mi interview score command (T-14)', () => {
   })
 
   it('throws MiValidationError when no --id and no active interview', () => {
-    harness.configService.save({
-      dataDir: harness.dataDir,
-      dbPath: join(harness.dataDir, 'data.db'),
-      interviewerStyle: 'coaching',
-      dashboardPort: 3456,
-      defaultProfile: 'P1',
-    })
+    saveDefaultProfile(harness)
     expect(() =>
       runInterviewCommand(
         ['score'],
@@ -835,5 +711,130 @@ describe('mi interview score command (T-14)', () => {
         { service: harness.service, configService: harness.configService },
       ),
     ).toThrow(/请指定 --id 或先开始面试/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-15 — `mi interview report`
+// ---------------------------------------------------------------------------
+
+describe('mi interview report command (T-15)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+    insertProfile(harness.db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('--json mode prints parseable JSON with the report fields', () => {
+    saveDefaultProfile(harness)
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    // recordAnswer BEFORE complete — service rejects on non-in_progress.
+    harness.service.recordAnswer({
+      interviewId: started.id,
+      questionText: 'Q1',
+      answerText: 'A1',
+    })
+    harness.service.complete(started.id, {
+      技术深度: 8,
+      沟通表达: 7,
+      项目能力: 9,
+      系统思维: 7,
+      岗位匹配度: 8,
+    })
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['report', started.id],
+        { json: true },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+
+    const parsed = JSON.parse(output.join('\n')) as {
+      session: { id: string; status: string }
+      answers: Array<{ interviewId: string }>
+      isComplete: boolean
+      warning?: string
+    }
+    expect(parsed.session.id).toBe(started.id)
+    expect(parsed.isComplete).toBe(true)
+    expect(parsed.warning).toBeUndefined()
+    expect(parsed.answers).toHaveLength(1)
+  })
+
+  it('human format prints the warning line for an in-progress interview', () => {
+    saveDefaultProfile(harness)
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['report', started.id],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('面试尚未结束')
+    expect(text).toContain(started.id)
+  })
+
+  it('--json on in-progress interview includes the warning field', () => {
+    saveDefaultProfile(harness)
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['report', started.id],
+        { json: true },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+    const parsed = JSON.parse(output.join('\n')) as {
+      isComplete: boolean
+      warning?: string
+    }
+    expect(parsed.isComplete).toBe(false)
+    expect(parsed.warning).toContain('面试尚未结束')
+  })
+
+  it('throws MiValidationError when id arg is missing', () => {
+    expect(() =>
+      runInterviewCommand(
+        ['report'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(/用法错误: mi interview report <id>/)
+  })
+
+  it('propagates MiNotFoundError when the interview id does not exist', () => {
+    expect(() =>
+      runInterviewCommand(
+        ['report', '01J00000000000000000000099'],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    ).toThrow(MiNotFoundError)
   })
 })
