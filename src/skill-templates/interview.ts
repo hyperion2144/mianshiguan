@@ -44,6 +44,31 @@ export interface InterviewSkillConfig {
 }
 
 /**
+ * Runtime guard for `InterviewSkillConfig.platform` and
+ * `interviewerStyle`. Accepts the config-level pick so callers can
+ * pass a wider object (e.g. unvalidated `unknown`) and a single
+ * `as unknown as Platform` cast — the field types in
+ * `InterviewSkillConfig` stay narrow while the validator remains
+ * callable from tests that exercise the rejection paths.
+ *
+ * @throws {MiValidationError} when platform or interviewerStyle is
+ *   outside the canonical tuple. The Chinese message lists the legal
+ *   values verbatim.
+ */
+export function validateConfig(
+  config: Pick<InterviewSkillConfig, 'platform' | 'interviewerStyle'>,
+): void {
+  if (!VALID_PLATFORMS.includes(config.platform as Platform)) {
+    throw new MiValidationError(`无效的平台: ${config.platform} (合法: omp, claude-code, opencode)`)
+  }
+  if (!VALID_STYLES.includes(config.interviewerStyle as InterviewerStyle)) {
+    throw new MiValidationError(
+      `无效的面试官风格: ${config.interviewerStyle} (合法: strict, coaching, friendly)`,
+    )
+  }
+}
+
+/**
  * Re-export the upstream validation error class so callers importing
  * this module for tests/handlers get a single import path. Kept as a
  * type-only re-export for the `name` symbol — `MiValidationError` is

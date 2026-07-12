@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_DIMENSIONS,
   DEFAULT_LANGUAGE,
+  type InterviewerStyle,
   MI_VERSION,
+  MiValidationError,
+  type Platform,
   VALID_PLATFORMS,
   VALID_STYLES,
-  type InterviewerStyle,
-  type Platform,
+  validateConfig,
 } from '../interview.ts'
 
 /**
@@ -49,5 +51,58 @@ describe('module surface (T-1)', () => {
     const style: InterviewerStyle = 'coaching'
     expect(platform).toBe('omp')
     expect(style).toBe('coaching')
+  })
+})
+
+// ─── T-2: validateConfig ────────────────────────────────────────────────────
+
+describe('validateConfig (T-2)', () => {
+  it('rejects an unknown platform with the canonical Chinese message', () => {
+    expect(() =>
+      validateConfig({
+        platform: 'unknown' as unknown as Platform,
+        interviewerStyle: 'coaching',
+      }),
+    ).toThrow(MiValidationError)
+
+    expect(() =>
+      validateConfig({
+        platform: 'unknown' as unknown as Platform,
+        interviewerStyle: 'coaching',
+      }),
+    ).toThrow(/^无效的平台: unknown \(合法: omp, claude-code, opencode\)/)
+  })
+
+  it('rejects an invalid interviewer style with the canonical Chinese message', () => {
+    expect(() =>
+      validateConfig({
+        platform: 'omp',
+        interviewerStyle: 'casual' as unknown as InterviewerStyle,
+      }),
+    ).toThrow(MiValidationError)
+
+    expect(() =>
+      validateConfig({
+        platform: 'omp',
+        interviewerStyle: 'casual' as unknown as InterviewerStyle,
+      }),
+    ).toThrow(/^无效的面试官风格: casual \(合法: strict, coaching, friendly\)/)
+  })
+
+  it('accepts every combination of valid platform and style', () => {
+    for (const platform of VALID_PLATFORMS) {
+      for (const interviewerStyle of VALID_STYLES) {
+        expect(() => validateConfig({ platform, interviewerStyle })).not.toThrow()
+      }
+    }
+  })
+
+  it('checks platform before interviewer style (stable order)', () => {
+    expect(() =>
+      validateConfig({
+        platform: 'unknown' as unknown as Platform,
+        interviewerStyle: 'casual' as unknown as InterviewerStyle,
+      }),
+    ).toThrow(/^无效的平台/)
   })
 })
