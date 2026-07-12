@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  MI_VERSION,
-  MiValidationError,
-  type Platform,
-} from '../../skill-templates/interview.ts'
+import { MI_VERSION, MiValidationError, type Platform } from '../../skill-templates/interview.ts'
 import {
   PLATFORM_PATHS,
   type PlatformDirKind,
@@ -150,9 +146,9 @@ describe('detectPlatform (T-3)', () => {
   it('returns "omp" when both ~/.config/omp and ~/.claude exist (priority: omp first)', () => {
     const ctx = makeCtx({
       homedir: '/home/user',
-      existsSync: ((p: string) =>
-        p === '/home/user/.config/omp' || p === '/home/user/.claude'
-      ) as (p: string) => boolean,
+      existsSync: ((p: string) => p === '/home/user/.config/omp' || p === '/home/user/.claude') as (
+        p: string,
+      ) => boolean,
     })
     expect(detectPlatform(ctx)).toBe('omp')
   })
@@ -327,9 +323,7 @@ describe('installSkillTemplate (T-5)', () => {
     installSkillTemplate('omp', ctx, { interviewerStyle: 'coaching' })
     const firstCallCount = calls.length
 
-    expect(() =>
-      installSkillTemplate('omp', ctx, { interviewerStyle: 'coaching' }),
-    ).not.toThrow()
+    expect(() => installSkillTemplate('omp', ctx, { interviewerStyle: 'coaching' })).not.toThrow()
     // Second invocation performs the same set of fs ops.
     expect(calls.length).toBe(firstCallCount * 2)
   })
@@ -339,9 +333,7 @@ describe('installSkillTemplate (T-5)', () => {
     const result = installSkillTemplate('claude-code', ctx, { interviewerStyle: 'strict' })
 
     expect(result.platform).toBe('claude-code')
-    expect(result.targetPath).toBe(
-      '/tmp/installer-home/.claude/skills/mianshiguan-interview.md',
-    )
+    expect(result.targetPath).toBe('/tmp/installer-home/.claude/skills/mianshiguan-interview.md')
     expect(result.content).toContain('/mianshi')
     expect(calls.find((c) => c.fn === 'mkdirSync')?.args[0]).toBe(
       '/tmp/installer-home/.claude/skills',
@@ -370,8 +362,6 @@ describe('installSkillTemplate (T-5)', () => {
     })
 
     expect(result.targetPath).toBe('/tmp/forced/install.md')
-    expect(calls.find((c) => c.fn === 'writeFileSync')?.args[0]).toBe(
-      '/tmp/forced/install.md',
-    )
+    expect(calls.find((c) => c.fn === 'writeFileSync')?.args[0]).toBe('/tmp/forced/install.md')
   })
 })
