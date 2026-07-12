@@ -10,6 +10,7 @@ import {
   type PlatformPathSpec,
   detectPlatform,
   type InstallContext,
+  installSkillTemplate,
   renderSkillForPlatform,
   resolvePlatformDir,
 } from '../skill-installer.ts'
@@ -249,5 +250,128 @@ describe('renderSkillForPlatform (T-4)', () => {
     })
     renderSkillForPlatform('omp', { interviewerStyle: 'coaching' })
     expect(calls).toEqual([])
+  })
+})
+
+describe('installSkillTemplate (T-5)', () => {
+  function makeRecordingCtx(
+    homedir: string,
+    overrides: Partial<InstallContext> = {},
+  ): { ctx: InstallContext; calls: { fn: string; args: unknown[] }[] } {
+    const calls: { fn: string; args: unknown[] }[] = []
+    const ctx = makeCtx({
+      homedir,
+      cwd: '/tmp/workdir',
+      existsSync: (() => false) as (p: string) => boolean,
+      mkdirSync: ((path: string, opts: { recursive: boolean; mode?: number }) => {
+        calls.push({ fn: 'mkdirSync', args: [path, opts] })
+      }) as InstallContext['mkdirSync'],
+      writeFileSync: ((path: string, content: string) => {
+        calls.push({ fn: 'writeFileSync', args: [path, content] })
+      }) as InstallContext['writeFileSync'],
+      chmodSync: ((path: string, mode: number) => {
+        calls.push({ fn: 'chmodSync', args: [path, mode] })
+      }) as InstallContext['chmodSync'],
+      ...overrides,
+    })
+    return { ctx, calls }
+  }
+
+  it('happy path: mkdir {recursive,mode=0o700}, write, chmod 0o644', () => {
+    const { ctx, calls } = makeRecordingCtx('/tmp/installer-home')
+    const result = installSkillTemplate('omp', ctx, { interviewerStyle: 'coaching' })
+
+    expect(result.platform).toBe('omp')
+    expect(result.targetPath).toBe(
+      '/tmp/installer-home/.config/omp/skills/mianshiguan-interview.md',
+    )
+    expect(result.written).toBe(true)
+    expect(result.content).toContain('name: mianshiguan-interview')
+
+    const mkdirCall = calls.find((c) => c.fn === 'mkdirSync')
+    expect(mkdirCall).toBeDefined()
+    expect(mkdirCall?.args[0]).toBe('/tmp/installer-home/.config/omp/skills')
+    expect(mkdirCall?.args[1]).toEqual({ recursive: true, mode: 0o700 })
+
+    const writeCall = calls.find((c) => c.fn === 'writeFileSync')
+    expect(writeCall?.args[0]).toBe(
+      '/tmp/installer-home/.config/omp/skills/mianshiguan-interview.md',
+    )
+    expect(typeof writeCall?.args[1]).toBe('string')
+
+    const chmodCall = calls.find((c) => c.fn === 'chmodSync')
+    expect(chmodCall?.args[0]).toBe(
+      '/tmp/installer-home/.config/omp/skills/mianshiguan-interview.md',
+    )
+    expect(chmodCall?.args[1]).toBe(0o644)
+  })
+
+  it('dryRun: true returns written=false and never calls any fs method', () => {
+    const { ctx, calls } = makeRecordingCtx('/tmp/installer-home')
+    const result = installSkillTemplate('omp', ctx, {
+      interviewerStyle: 'coaching',
+      dryRun: true,
+    })
+
+    expect(result.platform).toBe('omp')
+    expect(result.targetPath).toBe(
+      '/tmp/installer-home/.config/omp/skills/mianshiguan-interview.md',
+    )
+    expect(result.written).toBe(false)
+    expect(result.content).toContain('name: mianshiguan-interview')
+    expect(calls).toEqual([])
+  })
+
+  it('overwrites an existing target file silently (idempotent re-install)', () => {
+    const { ctx, calls } = makeRecordingCtx('/tmp/installer-home')
+    installSkillTemplate('omp', ctx, { interviewerStyle: 'coaching' })
+    const firstCallCount = calls.length
+
+    expect(() =>
+      installSkillTemplate('omp', ctx, { interviewerStyle: 'coaching' }),
+    ).not.toThrow()
+    // Second invocation performs the same set of fs ops.
+    expect(calls.length).toBe(firstCallCount * 2)
+  })
+
+  it('installs for claude-code at ~/.claude/skills/mianshiguan-interview.md', () => {
+    const { ctx, calls } = makeRecordingCtx('/tmp/installer-home')
+    const result = installSkillTemplate('claude-code', ctx, { interviewerStyle: 'strict' })
+
+    expect(result.platform).toBe('claude-code')
+    expect(result.targetPath).toBe(
+      '/tmp/installer-home/.claude/skills/mianshiguan-interview.md',
+    )
+    expect(result.content).toContain('/mianshi')
+    expect(calls.find((c) => c.fn === 'mkdirSync')?.args[0]).toBe(
+      '/tmp/installer-home/.claude/skills',
+    )
+  })
+
+  it('installs for opencode at {cwd}/.opencode/mianshiguan-interview.md', () => {
+    const { ctx, calls } = makeRecordingCtx('/tmp/installer-home', {
+      cwd: '/work/proj',
+    })
+    const result = installSkillTemplate('opencode', ctx, { interviewerStyle: 'friendly' })
+
+    expect(result.platform).toBe('opencode')
+    expect(result.targetPath).toBe('/work/proj/.opencode/mianshiguan-interview.md')
+    expect(result.content).toContain('name: mianshiguan-interviewer')
+    expect(calls.find((c) => c.fn === 'mkdirSync')?.args[0]).toBe('/work/proj/.opencode')
+  })
+
+  it('options.targetPathOverride replaces the install path entirely', () => {
+    const { ctx, calls } = makeRecordingCtx('/tmp/installer-home', {
+      cwd: '/work/proj',
+    })
+    const result = installSkillTemplate('omp', ctx, {
+      interviewerStyle: 'coaching',
+      targetPathOverride: '/tmp/forced/install.md',
+    })
+
+    expect(result.targetPath).toBe('/tmp/forced/install.md')
+    expect(calls.find((c) => c.fn === 'writeFileSync')?.args[0]).toBe(
+      '/tmp/forced/install.md',
+    )
   })
 })
