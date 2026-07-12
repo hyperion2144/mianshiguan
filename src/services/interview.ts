@@ -286,7 +286,7 @@ export class InterviewService {
    * `started_at` and refreshes `updated_at`.
    */
   start(id: string): Interview {
-    this.assertTransition(id, 'in_progress')
+    this.assertTransitionFrom(id, 'in_progress', 'created', '开始')
     try {
       this.db.conn
         .query(
@@ -308,7 +308,7 @@ export class InterviewService {
    * `paused_at` and refreshes `updated_at`.
    */
   pause(id: string): Interview {
-    this.assertTransition(id, 'paused')
+    this.assertTransitionFrom(id, 'paused', 'in_progress', '暂停')
     try {
       this.db.conn
         .query(
@@ -332,7 +332,7 @@ export class InterviewService {
    * original start.
    */
   resume(id: string): Interview {
-    this.assertTransition(id, 'in_progress')
+    this.assertTransitionFrom(id, 'in_progress', 'paused', '恢复')
     try {
       this.db.conn
         .query(
@@ -351,11 +351,13 @@ export class InterviewService {
 
   /**
    * Transition an interview from `in_progress` to `completed`. Sets
-   * `completed_at`, persists the supplied `scores` (unless answers
-   * exist — see Wave 2), and refreshes `updated_at`.
+   * `completed_at`, persists the supplied `scores`, and refreshes
+   * `updated_at`. Wave 2's `complete` extension recomputes scores
+   * from per-answer averages when answers exist; this minimal
+   * version writes the caller-supplied scores verbatim.
    */
   complete(id: string, scores: ScoreMap): Interview {
-    this.assertTransition(id, 'completed')
+    this.assertTransitionFrom(id, 'completed', 'in_progress', '完成')
     try {
       this.db.conn
         .query(
@@ -375,8 +377,7 @@ export class InterviewService {
 
   /**
    * Touch the wired `config` dependency so the strict
-   * `noUnusedParameters` check is satisfied while T-2 has no method
-   * that actually consumes the active profile. The CLI handlers in
+   * `noUnusedParameters` check is satisfied. The CLI handlers in
    * Wave 3 will call `configService.load()` for the default profile;
    * this accessor is a thin handle the test surface can use to
    * assert the factory injected the right instance.
@@ -395,14 +396,28 @@ export class InterviewService {
   }
 
   /**
-   * Throw `MiNotFoundError` when the row is gone, then verify the
-   * requested transition is permitted by `TRANSITIONS` and throw a
-   * Chinese `MiValidationError` otherwise.
+   * Look up the interview, then verify the requested transition is
+   * permitted by `TRANSITIONS` AND that the current state matches
+   * `from`. The explicit `from` check disambiguates transitions that
+   * target the same state from different sources — `start` and
+   * `resume` both target `in_progress`, but only `start` accepts
+   * `created` and only `resume` accepts `paused`. Throws
+   * `MiNotFoundError` (via `get`) or a Chinese `MiValidationError`
+   * otherwise. The `verb` is the Chinese action the caller is
+   * attempting ("开始", "暂停", "恢复", "完成", "归档").
    */
-  private assertTransition(id: string, to: InterviewStatus): void {
+  private assertTransitionFrom(
+    id: string,
+    to: InterviewStatus,
+    from: InterviewStatus,
+    verb: string,
+  ): void {
     const current = this.get(id).status
-    if (!TRANSITIONS[current].includes(to)) {
-      throw new MiValidationError(`无法跳转 — 当前状态: ${current}`)
+    if (current !== from) {
+      throw new MiValidationError(`无法${verb} — 当前状态: ${current}`)
+    }
+    if (!TRANSITIONS[from].includes(to)) {
+      throw new MiValidationError(`无法${verb} — 当前状态: ${current}`)
     }
   }
 }

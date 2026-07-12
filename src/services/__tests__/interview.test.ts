@@ -180,6 +180,7 @@ describe('InterviewService.list (T-2)', () => {
     const ids = interviews.map((i) => i.id)
     const sorted = [...ids].sort()
     expect(ids).toEqual(sorted)
+    expect([a.id, b.id, c.id].sort()).toEqual(ids)
   })
 
   it('filters by profileId when provided', () => {
@@ -244,5 +245,128 @@ describe('InterviewService.getActive (T-2)', () => {
       岗位匹配度: 7,
     })
     expect(service.getActive('P1')).toBeNull()
+  })
+})
+
+describe('InterviewService state machine — start / pause / resume (T-3)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDb()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('start() transitions created → in_progress and sets startedAt', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    const started = service.start(a.id)
+
+    expect(started.status).toBe('in_progress')
+    expect(started.startedAt).not.toBeNull()
+    expect(started.startedAt).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+
+    const row = db.conn
+      .query('SELECT status, started_at FROM interviews WHERE id = ?')
+      .get(a.id) as { status: string; started_at: string | null }
+    expect(row.status).toBe('in_progress')
+    expect(row.started_at).not.toBeNull()
+  })
+
+  it('pause() transitions in_progress → paused and sets pausedAt', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    const paused = service.pause(a.id)
+
+    expect(paused.status).toBe('paused')
+    expect(paused.pausedAt).not.toBeNull()
+
+    const row = db.conn
+      .query('SELECT status, paused_at FROM interviews WHERE id = ?')
+      .get(a.id) as { status: string; paused_at: string | null }
+    expect(row.status).toBe('paused')
+    expect(row.paused_at).not.toBeNull()
+  })
+
+  it('resume() transitions paused → in_progress and clears pausedAt', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.pause(a.id)
+    const resumed = service.resume(a.id)
+
+    expect(resumed.status).toBe('in_progress')
+    expect(resumed.pausedAt).toBeNull()
+    expect(resumed.startedAt).not.toBeNull()
+
+    const row = db.conn
+      .query('SELECT status, paused_at, started_at FROM interviews WHERE id = ?')
+      .get(a.id) as { status: string; paused_at: string | null; started_at: string | null }
+    expect(row.status).toBe('in_progress')
+    expect(row.paused_at).toBeNull()
+    expect(row.started_at).not.toBeNull()
+  })
+
+  it('start() throws on non-created interview with Chinese message', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    expect(() => service.start(a.id)).toThrow(/无法开始 — 当前状态: in_progress/)
+  })
+
+  it('pause() throws on non-in_progress interview (created)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() => service.pause(a.id)).toThrow(/无法暂停 — 当前状态: created/)
+  })
+
+  it('pause() throws on non-in_progress interview (paused)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.pause(a.id)
+    expect(() => service.pause(a.id)).toThrow(/无法暂停 — 当前状态: paused/)
+  })
+
+  it('pause() throws on completed interview', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    expect(() => service.pause(a.id)).toThrow(/无法暂停 — 当前状态: completed/)
+  })
+
+  it('resume() throws on non-paused interview (created)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() => service.resume(a.id)).toThrow(/无法恢复 — 当前状态: created/)
+  })
+
+  it('resume() throws on non-paused interview (in_progress)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    expect(() => service.resume(a.id)).toThrow(/无法恢复 — 当前状态: in_progress/)
+  })
+
+  it('all four transition methods refresh and return the Interview', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    const r1 = service.start(a.id)
+    const r2 = service.pause(a.id)
+    const r3 = service.resume(a.id)
+    expect(r1.id).toBe(a.id)
+    expect(r2.id).toBe(a.id)
+    expect(r3.id).toBe(a.id)
   })
 })
