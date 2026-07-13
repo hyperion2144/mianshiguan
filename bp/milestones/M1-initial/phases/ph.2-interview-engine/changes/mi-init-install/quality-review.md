@@ -10,9 +10,6 @@
 
 ## Issues
 
-| # | Severity | Category | Location | Description |
-|---|----------|----------|----------|-------------|
-
 
 ## Convention Compliance
 
