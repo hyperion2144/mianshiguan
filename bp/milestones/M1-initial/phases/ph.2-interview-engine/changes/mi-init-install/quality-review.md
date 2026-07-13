@@ -10,6 +10,10 @@
 
 ## Issues
 
+| # | Severity | Category | Location | Description |
+|---|----------|----------|----------|-------------|
+| Q1 | MINOR | AI-mistake / redundant computation | src/commands/init.ts:191-195 | resultVersion() rendered full template + regex; replaced with direct MI_VERSION import (fix: 4ea0170) |
+
 
 ## Convention Compliance
 
