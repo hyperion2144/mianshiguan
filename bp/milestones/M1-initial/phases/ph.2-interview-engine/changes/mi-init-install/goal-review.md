@@ -12,7 +12,6 @@
 
 
 | # | Goal / Must-have | Status | Evidence |
-|---|-----------------|--------|----------|
 | G1 | PR-1: Extend `mi init` to detect platform (omp/claude-code/opencode), render via `renderInterviewSkill()`, write to platform dir. `--platform` overrides detection. `--dry-run` previews without writing. | ACHIEVED | Detection: `src/services/skill-installer.ts:143-155` (`detectPlatform`). Render delegation: `src/services/skill-installer.ts:166-180`. End-to-end install with dry-run: `src/services/skill-installer.ts:195-219`. CLI wiring: `src/commands/init.ts:48` (`--platform` flag), `:89-92` (validation), `:142-152` (override-or-detect dispatch), `:160-183` (extended `--dry-run` plan). Tests cover all four scenarios: T-6 (happy install at `src/commands/init.test.ts:181-202`), T-7 (auto-detect at `:205-218`, skip-hint at `:220-227`), T-8 (invalid rejected at `:230-247`), T-9 + T-10 (dry-run branches at `:249-278,280-292`). |
 | G2 | PR-1 verify clause: `mi init --platform omp --dry-run` prints where the file would go | ACHIEVED | `src/commands/init.ts:165-172` prints the three ph.1 plan lines + the install-plan line `将安装 skill 模板 (platform: omp): <abs install path>`. T-9 at `src/commands/init.test.ts:249-278` asserts the install-plan line, asserts `existsSync(dataDir) === false`, and asserts `existsSync(<abs install path>) === false`. |
 | G3 | PR-1 verify clause: `mi init --platform omp` writes the skill file to the correct path | ACHIEVED | `src/commands/init.ts:142-151` resolves + installs + emits the Chinese success line. T-6 at `src/commands/init.test.ts:181-202` asserts `existsSync(skillPath) === true`, `mode & 0o777 === 0o644`, the success line contains `(platform: omp, v${MI_VERSION})`, and the existing ph.1 success line still prints. |
@@ -21,15 +20,11 @@
 | G6 | PR-2: Detection uses `fs.existsSync()` on common paths with `--platform` flag fallback | ACHIEVED | `detectPlatform` uses `ctx.existsSync` over `probePaths` at `src/services/skill-installer.ts:143-155`. `installSkillOrSkip` falls through to `detectPlatform` only when no override is supplied at `src/commands/init.ts:142-152`. |
 
 
-| # | Goal | Status | Evidence |
-|---|------|--------|----------|
 | G7 | Goal 1: Land a pure, testable skill-installer module that knows the platform → directory mapping, renders via `renderInterviewSkill()`, and writes atomically without invoking any LLM or touching the database | ACHIEVED | `src/services/skill-installer.ts` is pure I/O (no LLM, no DB): `resolvePlatformDir` (`:115-129`) does no fs calls (test asserts this at `:117-127`), `renderSkillForPlatform` (`:166-180`) calls only the existing renderer, `installSkillTemplate` (`:195-219`) is end-to-end fs. The module imports `node:path` only — no `bun:sqlite`, no `node:crypto`, no LLM client. |
 | G8 | Goal 2: Extend `mi init` so `--platform <omp|claude-code|opencode>` and the existing `--dry-run` cover FR-15's three acceptance criteria (auto-install, manual override, preview), with Chinese output consistent with surrounding init output | ACHIEVED | Flag registered with Chinese description at `src/commands/init.ts:48`. Manual override branch: `:142-152` (override wins). Auto-install branch: `detectPlatform` invoked when override is `null`. Preview branch: `printDryRun` at `:160-183`. All Chinese strings match the ph.1 style (`成功` / `跳过` / `将…` prefixes; ✓ glyph preserved at `:115`). |
 | G9 | Goal 3: Keep the change strictly additive on ph.1's init semantics — `--force`, `--dry-run`, `--data-dir`, `$MIANSHIGUAN_HOME`, exit codes, file modes, and the success message all remain identical when no platform flag is passed | ACHIEVED | Order of operations in `runInitCommand` (`src/commands/init.ts:83-116`) is: validate platform → resolve data dir → dry-run short-circuit → `ensureDataDirWritable` → `ConfigService.save` → `runMigrations` → `chmodSync(dbPath, 0o600)` → `installSkillOrSkip` → ph.1 success line. The ph.1 success line `初始化完成 ✓ 数据目录: <path>` still prints verbatim at `:115`. All ph.1 tests at `src/commands/init.test.ts:47-146` still pass (verified by `bun test` → 330/0). |
 
 
-| # | Must-have | Status | Evidence |
-|---|-----------|--------|----------|
 | G10 | `tsc --noEmit` passes (no new type errors) | ACHIEVED | Verified at review time — zero output, exit 0. |
 | G11 | `bun test` passes — 330 pass / 0 fail | ACHIEVED | Verified at review time — `330 pass / 0 fail / 854 expect() calls across 16 files`. |
 | G12 | `bun run lint` passes (`biome check src`) for changed files | ACHIEVED (for this change's files) | `biome check src/services/skill-installer.ts src/services/__tests__/skill-installer.test.ts src/commands/init.ts src/commands/init.test.ts` → `Checked 4 files in 29ms. No fixes applied.` The repo-wide `bun run lint` has 9 pre-existing errors in files this change did NOT modify — explicitly out of scope per `proposal.md` "Out of Scope: Modifications to skill template content". |
@@ -41,19 +36,19 @@
 | G18 | Every `type:behavior` task has a RED test description | ACHIEVED | T-1..T-10 each carry a `***RED test***` GIVEN/WHEN/THEN block under `tasks.md:42-48, 61-67, 81-86, 100-106, 119-127, 150-159, 172-179, 190-198, 208-220, 230-238`. T-11 is `type:config` (flag registration) and is documented with an explicit "no separate RED" note at `tasks.md:250`. |
 
 
-| # | Acceptance | Status | Evidence |
-|---|------------|--------|----------|
 | G19 | FR-15: "三种平台自动安装到位，用户无需手动复制 skill 文件" — system auto-installs skill to all three platforms | ACHIEVED | `installSkillTemplate` covers all three platforms: `omp` (test at `src/services/__tests__/skill-installer.test.ts:280-307`), `claude-code` (`:335-345`), `opencode` (`:347-357`). The CLI exposes the platform via `--platform <name>` (`:48`) or via `detectPlatform` (`:142-152`). Per-invocation single-platform semantics (documented at `design.md` Alternatives: "Install for every detected platform simultaneously" → Rejected for predictable dry-run preview). |
 | G20 | FR-15: "用户可以手动指定平台" — user can manually override platform | ACHIEVED | `--platform <omp\|claude-code\|opencode>` flag at `src/commands/init.ts:48`. T-6 verifies end-to-end install with explicit override at `src/commands/init.test.ts:181-202`. |
 
 
-| # | Item | Status | Evidence |
-|---|------|--------|----------|
 | G21 | D-4 (single-source template, one render per platform) — installer does NOT fork the renderer or duplicate YAML-frontmatter / slash-command / opencode-agent format logic | ACHIEVED | `src/services/skill-installer.ts:166-180` (`renderSkillForPlatform`) calls only `renderInterviewSkill({ platform, ... })` from `src/skill-templates/interview.ts`. No `wrapForOmp` / `wrapForClaudeCode` / `wrapForOpencode` is re-implemented in the installer module. |
 | G22 | Data-dir resolution precedence (`--data-dir` > `$MIANSHIGUAN_HOME` > `~/.mianshiguan`) preserved | ACHIEVED | `ConfigService.resolveDataDir(options.dataDir)` called unchanged at `src/commands/init.ts:94`. Ph.1 tests for precedence still green at `src/commands/init.test.ts:124-145`. |
 | G23 | `--dry-run` semantics: "no files created, database file does not exist after command completes" preserved AND extended with skill-install plan line | ACHIEVED | `src/commands/init.ts:97-100` short-circuits before `ensureDataDirWritable`. T-9 asserts `existsSync(dataDir) === false` AND `existsSync(<abs install path>) === false` at `src/commands/init.test.ts:275-276`. |
 | G24 | File permission table: `config.yml` `0o600`, `data.db` `0o600`, data dir `0o700` preserved | ACHIEVED | `src/commands/init.ts:113` (db chmod 0o600) and `:200-201` (data dir chmod 0o700) unchanged. Ph.1 test at `src/commands/init.test.ts:54-57` asserts all three modes still match. |
 | G25 | Skill file `0o644` (non-sensitive per research.md §7); platform dir `0o700` | ACHIEVED | `src/services/skill-installer.ts:215,217`. T-6 asserts skill file mode at `src/commands/init.test.ts:199`. |
+
+## Completeness Assessment
+
+The change delivers all 25 goals (G1-G25) with evidence. 330 tests pass.
 
 ## Issues
 

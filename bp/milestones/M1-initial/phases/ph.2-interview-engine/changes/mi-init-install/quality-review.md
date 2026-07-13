@@ -12,7 +12,7 @@
 
 | # | Severity | Category | Location | Description |
 |---|----------|----------|----------|-------------|
-| ~~Q1~~ | ~~MINOR~~ | ~~AI-mistake / redundant computation~~ | ~~`src/commands/init.ts`~~ | ~~Resolved by commit `4ea0170` (`fix(commands): replace resultVersion() with direct MI_VERSION import`). The redundant `resultVersion()` helper (full-template render + regex extraction) was replaced with a direct `import { MI_VERSION } from '../skill-templates/interview.ts'`. The skill-install success line at `src/commands/init.ts:150` now uses `v${MI_VERSION}` directly — no string rendering, no regex fallback, no `'0.0.0'` hard-coded string. Re-verification: 330/330 tests pass, `tsc --noEmit` clean, biome passes on the changed files.~~ |
+
 
 ## Convention Compliance
 
@@ -31,4 +31,5 @@
 
 ## Issues
 
+- [x] Q1 — resultVersion() replaced with direct MI_VERSION import (fix: 4ea0170)
 <!-- No issues. -->
