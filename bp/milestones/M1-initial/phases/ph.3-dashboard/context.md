@@ -16,18 +16,16 @@
 ## Architecture Decisions
 
 ## D-1: Server Framework
-- **Decision**: Hono as HTTP server framework
-- **Rationale**: Lighter than Express, native Bun support, built-in routing + middleware + static file serving
-- **Alternatives**: Bun.serve (zero dep but manual routing overhead)
+- Status: ACCEPTED
+- Reason: Hono over Bun.serve — lighter than Express, native Bun, built-in routing + middleware + static file serving
 
 ## D-2: Dashboard Scope
-- **Decision**: All 5 pages implemented in one phase (no MVP reduction)
-- **Rationale**: Each page is a thin lit-html template over the same data API. Doing all 5 avoids rework.
-- **Pages**: Overview, Interview history list, Interview detail, Wrong questions, Trends
+- Status: ACCEPTED
+- Reason: All 5 pages in one phase — overview, history list, interview detail, wrong questions, trends
 
 ## D-3: PDF Export
-- **Decision**: Server-side PDF generation
-- **Rationale**: Produces print-ready reports with full control over layout
+- Status: ACCEPTED
+- Reason: Server-side generation for print-ready reports with full layout control
 ---
 
 ## Interface Contracts
