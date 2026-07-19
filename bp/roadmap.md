@@ -73,20 +73,20 @@
  
  ### Phase: P1.4 - Hybrid Interview & Launch [ACTIVE]
  
- - **Goal**: Agent 主导的混合选题、算法题混合评估（测试用例 + Agent 评分）、文档、CI/CD、发布
- - **Spec domain**: interview, question-bank, cli
- - **Changes**: 1/5
+ - **Changes**: 2/5
  - **Status**: IN_PROGRESS
  
  **Changes**:
  
- 
  - [x] hybrid-question-source (archived 2026-07-19)
+ - [ ] code-execution-sandbox
  
- - Code execution sandbox for algorithm verification + scoring (not yet proposed)
+ **Planned changes**:
+ 
  - Auto-evaluation score integration into interview report (not yet proposed)
  - README, LICENSE, CHANGELOG, CI/CD pipeline (not yet proposed)
  - Multi-platform installation polish + npm publish (not yet proposed)
+ 
 
 ---
 
