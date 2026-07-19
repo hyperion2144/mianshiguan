@@ -1,0 +1,5 @@
+- TypeScript with strict checks including noUncheckedIndexedAccess and exactOptionalPropertyTypes.
+- Bun runtime and bun:sqlite.
+- Vitest tests run through Bun.
+- cac parses CLI commands; ULID generates IDs; Biome formats/enforces style.
+- SQL migrations live under `src/db/migrations/` and are applied by `MigrationRunner`.

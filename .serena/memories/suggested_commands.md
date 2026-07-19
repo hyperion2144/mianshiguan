@@ -1,0 +1,4 @@
+- Use `bun test` for Vitest suite.
+- Use `bun run format` for Biome formatting.
+- Use project CLI entrypoint via Bun/package scripts (inspect `package.json` before choosing exact invocation).
+- Prefer repository tools for source navigation; use `src/db/migrate.test.ts` for migration contract coverage.

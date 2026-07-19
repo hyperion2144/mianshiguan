@@ -152,9 +152,9 @@ The spec (QB-1 scenario 2) requires omitted fields to receive stable defaults (n
 | **Q2** | MINOR | Quality/Migration | Default values on partial INSERT not tested at migration level | `src/db/migrate.test.ts` (missing test) | Add migration test: minimum-column INSERT and verify defaults |
 | **Q3** | INFO | Quality | `parseJsonArray` silently returns [] for non-array valid JSON | `src/services/question-service.ts:40-46` | Optional: log warning for non-array stored values |
 
-- [ ] Q1 — UNIQUE(source, source_id) constraint not tested in migration tests (quality)
-- [ ] Q2 — Partial INSERT default values not tested in migration tests (quality)
-- [ ] Q3 — parseJsonArray silently converts non-array valid JSON (quality, info)
+ - [~] Q1 — UNIQUE(source, source_id) constraint not tested in migration tests (quality)
+ - [~] Q2 — Partial INSERT default values not tested in migration tests (quality)
+ - [~] Q3 — parseJsonArray silently converts non-array valid JSON (quality, info)
 
 ---
 

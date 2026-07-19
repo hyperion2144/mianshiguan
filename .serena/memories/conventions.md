@@ -1,0 +1,6 @@
+- Files, functions, classes, interfaces, constants follow documented coding conventions in `bp/conventions/coding.md`.
+- Local imports include `.ts`; type-only imports use `import type`; no default exports.
+- Domain errors extend `MiError` and use `E_{DOMAIN}` codes; CLI maps user errors to exit 1 and database/system errors to exit 2.
+- SQL columns use snake_case; domain objects use camelCase with `rowTo*` converters.
+- Services are domain-focused modules; public domain types/errors are barrel-exported where applicable.
+- Tests colocate beside source with matching `*.test.ts` names and cover happy/error paths.

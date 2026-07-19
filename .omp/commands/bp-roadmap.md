@@ -1,110 +1,92 @@
 ---
 name: bp:roadmap
-description: Roadmap definition — split project into Milestones × Phases
+description: View or modify roadmap.md
 ---
 
 ## Input
 
-### Parameters
-- **No parameters**: operate on the current project
-
-### Prerequisites
-- `bp/requirements.md` — complete requirements
-- `bp/research/` — technical research results (if available)
+- No parameters: operate on the current project
 
 ## Steps
 
-### Step 1: Get context
-Run `bp context roadmap` — outputs state, requirements.md, and research/ paths. Read all listed files.
+### Step 1: Grill the user on project requirements (RELENTLESS - do NOT skip)
 
-### Step 2: Detect roadmap state
-Read `bp/roadmap.md`. Check if it already has defined milestones.
+Before defining milestones, you must reach FULL shared understanding with the user.
+This is NOT a checklist. It is a relentless interview that walks every branch of the decision tree,
+resolving dependencies between decisions one by one.
+
+Process:
+1. Start with what the user described. Map the decision tree in your mind:
+   every feature, priority, dependency, constraint, and unknown.
+2. Pick the first unresolved branch. Ask ONE focused question about it.
+   **Provide your recommended answer** so the user can just confirm or correct.
+3. If the question can be answered by exploring the codebase, explore it yourself - do NOT ask the user.
+4. After the user answers, check if their answer opened new branches. If so, ask about those next.
+5. Repeat until every branch is resolved and you have shared understanding.
+
+What to grill on (walk every branch):
+- **Project goal**: What is this project trying to achieve? What problem does it solve?
+- **Target users**: Who will use this? What are their needs? What are their pain points?
+- **Key features**: What are the main capabilities? What must be in v1 vs later?
+- **Dependencies**: Which features depend on others? What is the build order?
+- **Constraints**: Technical, timeline, or resource constraints? Existing tech stack?
+- **Existing codebase**: If brownfield, what exists? What needs to change? Extend or rewrite?
+- **Edge cases**: What happens at scale? What are the failure modes?
+- **Scope boundaries**: What is explicitly NOT being built?
+
+**Hard rules:**
+- Ask ONE question at a time. Wait for the answer. Do not batch.
+- Always provide a recommended answer when one exists.
+- Do NOT proceed to Step 2 until you can describe every phase's deliverables without guessing.
+- Do NOT use assumptions. If you are about to assume, STOP and ask instead.
+- If the user says "use your best judgment" on a specific point, you may proceed without asking.
+
+### Step 2: Get context
+
+Read `bp/config.yaml` and `bp/specs/` to understand the project scope, tech stack, and existing behavioral contracts.
+
+### Step 3: Detect roadmap state
+
+Read `bp/roadmap.md`. Check if it already has defined milestones (look for `## Milestone:` headers that have real content, not template placeholders).
 
 **First time (no milestones defined):**
-Continue to Step 3.
+Continue to Step 4.
 
 **Adding a new milestone (roadmap already exists):**
-- Mark all existing milestones as completed in the roadmap. Add `[COMPLETED]` tag after the milestone name:
-  ```diff
-  - ## M1-core: Core Features
-  + ## M1-core: Core Features [COMPLETED]
-  ```
-- Append new milestone(s) BELOW the existing milestones, keeping them separated by `---`
-- Keep planning mode consistent — if M1 was technical-layer, M2 should be too
-- Phase count for new milestone: determine by requirements scope
-- Create directories for the new milestone ONLY:
-  ```bash
-  mkdir -p bp/milestones/$1/phases/[BP:PHASE_ID]
-  ```
+- Append new milestone(s) BELOW existing milestones, separated by `---`
+- Keep existing milestones with their status unchanged
 
-### Step 3: Choose planning mode (first time only)
-Ask the user which planning mode shapes **phases within each milestone**:
+### Step 4: Choose planning mode (first time only)
 
-- **MVP mode** (product-facing): each phase delivers user-facing value — ph.1 thinnest end-to-end → ph.2 expand → ph.3 polish
-- **Technical-layer mode** (infrastructure/CLI): each phase produces a runnable/testable artifact — ph.1 data+core logic → ph.2 API+integration → ph.3 hardening
+Use `ask` to determine the planning mode:
 
-Use the `ask` tool. Record the choice at the top of roadmap.md: `> Planning mode: <mvp || technical-layer>`
+- **MVP mode** (product-facing): each phase delivers user-facing value
+- **Technical-layer mode** (infrastructure/CLI): each phase produces a runnable/testable artifact
 
-### Step 4: Define Milestones
-Get the roadmap template: `bp template roadmap`. Fill with milestones and phases per the mode chosen above.
+### Step 5: Define Milestones
 
-**Default: 1 milestone = the entire project.** Milestones are product releases, NOT development phases. Only add M2+ when the user explicitly wants iterative releases (v1.0 → v2.0) and each milestone independently delivers value.
+Get the roadmap template: `bp template roadmap`. Fill with milestones and phases.
 
-### Step 5: Create ALL milestone-phase directories at once (first time only)
+**Default: 1 milestone = the entire project.** Milestones are product releases, NOT development phases.
 
-**CRITICAL: Create every milestone and phase directory NOW, in ONE batch.**
-Do NOT create them one at a time as you advance — the state machine will fail to proceed.
+### Step 6: Validate
 
-List all milestone-phase pairs from your roadmap, then create them ALL:
-
-```bash
-# Example: M1-core with ph.1-engine, ph.2-api; M2-expansion with ph.1-plugins
-mkdir -p bp/milestones/M1-core/phases/ph.1-engine
-mkdir -p bp/milestones/M1-core/phases/ph.2-api
-mkdir -p bp/milestones/M2-expansion/phases/ph.1-plugins
-```
-
-Without these directories, the state machine cannot advance past roadmap.
-Verify with: `ls -R bp/milestones/` — every milestone-phase must have a directory.
-
-### Step 6: Validate coverage
-- All requirements.md scope covered by milestones and phases
+Check before finishing:
+- All project requirements from Step 1 discussion are covered by some phase
 - Phase dependencies form a DAG (no cycles)
-- Each phase has a concrete, verifiable deliverable (not "design complete" — must be executable)
+- Each phase has a concrete, verifiable deliverable
 - Phase count per milestone: small 1-2, medium 2-3, large 3-4
 - First phase is always the thinnest possible end-to-end path
-
-### Step 7: Commit
-```bash
-bp commit "docs(roadmap): define milestones and phases" --files "bp/roadmap.md" --scope roadmap --record
-```
-
-### Step 8: Advance
-**First milestone:**
-```bash
-bp state set-milestone $1
-bp state set-phase [BP:PHASE_ID]
-```
-
-**New milestone (M1 already archived):**
-```bash
-bp state set-milestone $1
-```
-Do NOT set a phase — the new milestone needs grill → research → split first.
-
-```bash
-bp continue
-```
+- No template placeholders remaining
 
 ## Output
-- `bp/roadmap.md` — structured roadmap with milestone and phase tables
-- `bp/milestones/[BP:MILESTONE_ID]/` — per-milestone directories
+
+- `bp/roadmap.md` — structured roadmap with milestone and phase info
 
 ## Guardrails
+
 - **Default: 1 milestone.** No "foundation", "setup", "scaffolding" — M1 = shippable product.
-- **Create ALL milestone-phase directories at once.** Do NOT defer — the state machine checks for directory existence.
-- Mode (MVP/technical-layer) shapes **phases within a milestone**, not the milestones themselves.
-- First phase = thinnest end-to-end path (always phase 1, never phase 0).
-- **Adding new milestone**: mark old ones as [COMPLETED], append new ones below, don't overwrite.
-- **New milestone**: do NOT set-phase — grill/research/split will be done first.
-- **Naming rules**: milestone IDs MUST use `M<number>-<kebab-case>` (e.g. `M1-core`). Phase IDs MUST use `ph.<number>-<kebab-case>` (e.g. `ph.1-core`).
+- Mode (MVP/technical-layer) shapes phases within a milestone, not the milestones themselves.
+- First phase = thinnest end-to-end path (always first phase, never "phase 0").
+- **Adding new milestone**: append new ones below existing, don't overwrite.
+- Do NOT create milestone directories — v2 uses roadmap.md as the single tracking document.
