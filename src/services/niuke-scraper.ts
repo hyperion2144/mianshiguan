@@ -1,5 +1,5 @@
 // niuke-scraper.ts — DS-2 (T-6..T-11: NiukeScraper + mapNiukeListEntry + mapNiukeDetailToImportRecord).
-import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
+import { MiDatabaseError, MiError, MiNotFoundError, MiValidationError } from '../errors.ts'
 
 import { type BrowserHandle, type NiukeBrowser, type PageHandle } from './niuke-browser.ts'
 import type {
