@@ -32,7 +32,7 @@
   and call into the public importRecords method.
 -->
 
-- [ ] T-1: [type:behavior] LeetCodeApiClient posts a GraphQL query to the configured endpoint <!-- commit: -->
+- [x] T-1: [type:behavior] LeetCodeApiClient posts a GraphQL query to the configured endpoint <!-- commit: dcbad60 -->
   - **refs**: DS-1
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-1
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -43,7 +43,7 @@
     AND `questions[0].title` SHALL equal the stubbed title
     AND `fetcher` SHALL have been called once with the documented request body shape
 
-- [ ] T-2: [type:behavior] LeetCodeApiClient maps non-2xx responses to MiValidationError <!-- commit: -->
+- [x] T-2: [type:behavior] LeetCodeApiClient maps non-2xx responses to MiValidationError <!-- commit: 26a10d9 -->
   - **refs**: DS-1
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-1
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -53,7 +53,7 @@
     THEN it SHALL reject with `MiValidationError`
     AND the error message SHALL contain `LeetCode 请求失败` and `404`
 
-- [ ] T-3: [type:behavior] LeetCodeApiClient maps transport failures and GraphQL errors to MiDatabaseError <!-- commit: -->
+- [x] T-3: [type:behavior] LeetCodeApiClient maps transport failures and GraphQL errors to MiDatabaseError <!-- commit: ccbe96a -->
   - **refs**: DS-1
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-1
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -67,7 +67,7 @@
     THEN it SHALL reject with `MiDatabaseError`
     AND the message SHALL contain `Rate limit exceeded`
 
-- [ ] T-4: [type:behavior] LeetCodeApiClient.fetchQuestionDetail posts the titleSlug and returns the question object <!-- commit: -->
+- [x] T-4: [type:behavior] LeetCodeApiClient.fetchQuestionDetail posts the titleSlug and returns the question object <!-- commit: f0c7809 -->
   - **refs**: DS-1
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-2
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -77,7 +77,7 @@
     THEN the result SHALL equal `data.question`
     AND `fetcher` SHALL have been called with body containing `"titleSlug":"two-sum"` and `"operationName":"questionData"`
 
-- [ ] T-5: [type:behavior] LeetCodeScraper.scrape paginates the list query until limit is reached <!-- commit: -->
+- [x] T-5: [type:behavior] LeetCodeScraper.scrape paginates the list query until limit is reached <!-- commit: 48c904c -->
   - **refs**: DS-2
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-3
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -89,7 +89,7 @@
     AND `fetchQuestionList` SHALL have been called 3 times with `skip` values `0, 50, 100`
     AND `fetchQuestionDetail` SHALL have been called exactly 120 times
 
-- [ ] T-6: [type:behavior] LeetCodeScraper skips questions whose sourceId already exists in the database <!-- commit: -->
+- [x] T-6: [type:behavior] LeetCodeScraper skips questions whose sourceId already exists in the database <!-- commit: 3c5f882 -->
   - **refs**: DS-2
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-5
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -100,7 +100,7 @@
     AND the returned `result.skipped` SHALL be at least `1`
     AND the returned `result.imported` SHALL be `4`
 
-- [ ] T-7: [type:behavior] LeetCodeScraper maps a list entry + detail into a complete QuestionImportRecord <!-- commit: -->
+- [x] T-7: [type:behavior] LeetCodeScraper maps a list entry + detail into a complete QuestionImportRecord <!-- commit: 1d66538 -->
   - **refs**: DS-2
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-3
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -118,7 +118,7 @@
     AND `referenceAnswer` SHALL be a non-empty string
     AND `testCases` SHALL be an array containing the sample test case string
 
-- [ ] T-8: [type:behavior] LeetCodeScraper filters paid-only questions from the list response <!-- commit: -->
+- [x] T-8: [type:behavior] LeetCodeScraper filters paid-only questions from the list response <!-- commit: df72fd5 -->
   - **refs**: DS-2
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-5
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -129,7 +129,7 @@
     AND `fetchQuestionDetail` SHALL not have been called for the paid entry's `titleSlug`
     AND the paid entry SHALL not appear in `result.ids`
 
-- [ ] T-9: [type:behavior] LeetCodeScraper surfaces client errors as MiError rather than swallowing them <!-- commit: -->
+- [x] T-9: [type:behavior] LeetCodeScraper surfaces client errors as MiError rather than swallowing them <!-- commit: 55ab962 -->
   - **refs**: DS-2
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-3
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
@@ -139,7 +139,7 @@
     THEN the promise SHALL reject with `MiDatabaseError` whose message contains `boom`
     AND the database SHALL contain zero rows in `questions`
 
-- [ ] T-10: [type:behavior] QuestionService.importRecords persists validated records atomically <!-- commit: -->
+- [x] T-10: [type:behavior] QuestionService.importRecords persists validated records atomically <!-- commit: 81f6bf0 -->
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-4
   - **files**: src/services/question-service.ts, src/services/question-service.test.ts
@@ -149,7 +149,7 @@
     THEN it SHALL return `{ imported: 2, skipped: 1, ids: [<idA>, <idB>] }`
     AND `service.list({ source: 'leetcode' })` SHALL return exactly the two records (order: createdAt asc, id asc)
 
-- [ ] T-11: [type:behavior] QuestionService.importRecords rolls back on a validation error <!-- commit: -->
+- [x] T-11: [type:behavior] QuestionService.importRecords rolls back on a validation error <!-- commit: 81f6bf0 -->
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-4
   - **files**: src/services/question-service.ts, src/services/question-service.test.ts
@@ -168,7 +168,7 @@
   must exist before the CLI can dispatch to them).
 -->
 
-- [ ] T-12: [type:behavior] `mi question fetch` without a source reports a Chinese validation error <!-- commit: -->
+- [x] T-12: [type:behavior] `mi question fetch` without a source reports a Chinese validation error <!-- commit: 11255a5 -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
@@ -179,7 +179,7 @@
     AND stderr SHALL contain `用法错误: mi question fetch`
   - **depends_on**: T-1, T-10
 
-- [ ] T-13: [type:behavior] `mi question fetch unknown-source` reports a validation error listing the supported sources <!-- commit: -->
+- [x] T-13: [type:behavior] `mi question fetch unknown-source` reports a validation error listing the supported sources <!-- commit: d13aa71 -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
@@ -190,7 +190,7 @@
     AND `runCommandAction` SHALL exit `1`
   - **depends_on**: T-12
 
-- [ ] T-14: [type:behavior] `mi question fetch leetcode` validates `--limit` and rejects non-positive integers <!-- commit: -->
+- [x] T-14: [type:behavior] `mi question fetch leetcode` validates `--limit` and rejects non-positive integers <!-- commit: a8f7514 -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
@@ -204,7 +204,7 @@
     THEN it SHALL throw `MiValidationError`
   - **depends_on**: T-12
 
-- [ ] T-15: [type:behavior] `mi question fetch leetcode` runs the scraper and prints a Chinese scrape summary <!-- commit: -->
+- [x] T-15: [type:behavior] `mi question fetch leetcode` runs the scraper and prints a Chinese scrape summary <!-- commit: 72083fe -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
@@ -218,7 +218,7 @@
     AND stdout SHALL contain `idA`
   - **depends_on**: T-10
 
-- [ ] T-16: [type:behavior] `mi question fetch leetcode --json` prints a single QuestionImportResult JSON object on stdout <!-- commit: -->
+- [x] T-16: [type:behavior] `mi question fetch leetcode --json` prints a single QuestionImportResult JSON object on stdout <!-- commit: e0cd5da -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
@@ -229,7 +229,7 @@
     AND stdout SHALL NOT contain `抓取完成`
   - **depends_on**: T-15
 
-- [ ] T-17: [type:behavior] `mi question fetch leetcode` maps a scraper MiDatabaseError to exit code 2 with a Chinese system-error message <!-- commit: -->
+- [x] T-17: [type:behavior] `mi question fetch leetcode` maps a scraper MiDatabaseError to exit code 2 with a Chinese system-error message <!-- commit: 9b19c0d -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
@@ -240,7 +240,7 @@
     AND stderr SHALL contain `LeetCode 请求失败: 503`
   - **depends_on**: T-15
 
-- [ ] T-18: [type:behavior] `registerQuestionCommand` advertises the `fetch` subcommand in help text and examples <!-- commit: -->
+- [x] T-18: [type:behavior] `registerQuestionCommand` advertises the `fetch` subcommand in help text and examples <!-- commit: a53cd4f -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts

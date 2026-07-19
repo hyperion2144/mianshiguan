@@ -12,6 +12,11 @@ import {
   type QuestionService,
   createQuestionService,
 } from '../services/question-service.ts'
+import {
+  LeetCodeApiClient,
+  type LeetCodeScraper,
+  createLeetCodeScraper,
+} from '../services/leetcode-scraper.ts'
 
 export interface QuestionCommandOptions {
   dataDir?: string
@@ -20,6 +25,7 @@ export interface QuestionCommandOptions {
   difficulty?: string
   category?: string
   tag?: string
+  limit?: number | string
 }
 
 export interface QuestionCommandDeps {
@@ -29,6 +35,7 @@ export interface QuestionCommandDeps {
    * a service backed by an in-memory DB or a vi.fn() mock.
    */
   service?: QuestionService
+  scraper?: Pick<LeetCodeScraper, 'scrape'>
 }
 
 const SEARCH_LIST_HEADERS = ['ID', '来源', '来源ID', '标题', '难度', '分类', '标签'] as const
@@ -39,6 +46,7 @@ const EMPTY_FIELD_PLACEHOLDER = '(空)'
 const USAGE_SEARCH_MESSAGE = '用法错误: mi question search <关键词> [过滤选项]'
 const USAGE_SHOW_MESSAGE = '用法错误: mi question show <id>'
 const USAGE_IMPORT_MESSAGE = '用法错误: mi question import <文件路径>'
+const USAGE_FETCH_MESSAGE = '用法错误: mi question fetch <来源> [--limit N]'
 const UNKNOWN_SUBCOMMAND_MESSAGE = '未知 question 子命令: '
 /**
  * Wrap a command body so `MiError` and unknown throws map to the
@@ -50,45 +58,51 @@ const UNKNOWN_SUBCOMMAND_MESSAGE = '未知 question 子命令: '
  * The CLI action callback and integration tests both invoke this
  * directly so the wrapper is exercised end-to-end.
  */
-export function runCommandAction(action: () => void): void {
+function exitForCommandError(err: unknown): never {
+  if (err instanceof MiError) {
+    console.error(formatError(err.message))
+    process.exit(err instanceof MiDatabaseError ? 2 : 1)
+  }
+  const message = err instanceof Error ? err.message : String(err)
+  console.error(formatError(`系统错误: ${message}`))
+  process.exit(2)
+}
+
+export function runCommandAction(action: () => void | Promise<void>): void | Promise<void> {
   try {
-    action()
+    const result = action()
+    if (result instanceof Promise) return result.catch(exitForCommandError)
   } catch (err) {
-    if (err instanceof MiError) {
-      console.error(formatError(err.message))
-      const code = err instanceof MiDatabaseError ? 2 : 1
-      process.exit(code)
-    }
-    const message = err instanceof Error ? err.message : String(err)
-    console.error(formatError(`系统错误: ${message}`))
-    process.exit(2)
+    exitForCommandError(err)
   }
 }
 
 export function registerQuestionCommand(program: CAC): void {
   program
-    .command('question [...args]', '题库管理：搜索 / 列表 / 详情 / 导入')
-    .usage('question <search|list|show|import> ...')
+    .command('question [...args]', '题库管理：搜索 / 列表 / 详情 / 导入 / 抓取')
+    .usage('question <search|list|show|import|fetch> ...')
     .option('--json', '以 JSON 格式输出', { default: false })
     .option('--data-dir <path>', '自定义数据目录（覆盖 $MIANSHIGUAN_HOME）')
     .option('--source <source>', '按来源过滤（search/list）')
     .option('--difficulty <level>', '按难度过滤（easy|medium|hard）')
     .option('--category <name>', '按分类过滤（algorithm|system-design|behavioral）')
     .option('--tag <tag>', '按标签过滤（search/list）')
+    .option('--limit <n>', '最大抓取数量')
     .example('mi question search "two sum"')
     .example('mi question list --source leetcode --difficulty easy')
     .example('mi question show 01HQUESTION --json')
     .example('mi question import questions.json')
-    .action((args: string[] | undefined, options: QuestionCommandOptions) => {
-      runCommandAction(() => runQuestionCommand(args ?? [], options))
-    })
+    .example('mi question fetch leetcode --limit 100')
+    .action((args: string[] | undefined, options: QuestionCommandOptions) =>
+      runCommandAction(() => runQuestionCommand(args ?? [], options)),
+    )
 }
 
 export function runQuestionCommand(
   args: string[],
   options: QuestionCommandOptions = {},
   deps: QuestionCommandDeps = {},
-): void {
+): void | Promise<void> {
   const dataDir = ConfigService.resolveDataDir(options.dataDir)
   const configService = new ConfigService(dataDir)
 
@@ -119,6 +133,21 @@ export function runQuestionCommand(
       case 'import': {
         importQuestions(service, args[1], Boolean(options.json))
         return
+      }
+      case 'fetch': {
+        const source = args[1]
+        if (source === undefined) {
+          throw new MiValidationError(USAGE_FETCH_MESSAGE)
+        }
+        if (source !== 'leetcode') {
+          throw new MiValidationError(`未知 fetch 来源: ${source}; 支持的来源: leetcode`)
+        }
+        const scraper =
+          deps.scraper ?? createLeetCodeScraper({ client: new LeetCodeApiClient(), service })
+        const task = fetchLeetcodeQuestions(scraper, options)
+        const fetchDb = ownedDb
+        ownedDb = null
+        return task.finally(() => fetchDb?.close())
       }
       case undefined:
         throw new MiValidationError(USAGE_SEARCH_MESSAGE)
@@ -187,9 +216,35 @@ function importQuestions(
   }
 }
 
+function fetchLeetcodeQuestions(
+  scraper: Pick<LeetCodeScraper, 'scrape'>,
+  options: QuestionCommandOptions,
+): Promise<void> {
+  const limit = parseFetchLimit(options.limit)
+  return scraper.scrape({ limit }).then((result) => {
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2))
+      return
+    }
+    console.log(success(`抓取完成: 新增 ${result.imported}, 跳过 ${result.skipped}`))
+    if (result.ids.length > 0) {
+      console.log(`新增 ID: ${result.ids.join(', ')}`)
+    }
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function parseFetchLimit(value: number | string | undefined): number {
+  if (value === undefined) return 100
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new MiValidationError(`--limit 必须是正整数, 当前值: ${value}`)
+  }
+  return parsed
+}
 
 function displayValue(value: string | null | undefined): string {
   return value && value.length > 0 ? value : EMPTY_FIELD_PLACEHOLDER

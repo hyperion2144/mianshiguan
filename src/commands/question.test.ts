@@ -39,6 +39,20 @@ function captureStdout(run: () => void): string[] {
   }
 }
 
+async function captureStdoutAsync(run: () => void | Promise<void>): Promise<string[]> {
+  const lines: string[] = []
+  const originalLog = console.log
+  console.log = (message?: unknown) => {
+    lines.push(String(message ?? ''))
+  }
+  try {
+    await run()
+    return lines
+  } finally {
+    console.log = originalLog
+  }
+}
+
 interface Harness {
   db: Database
   service: QuestionService
@@ -124,6 +138,129 @@ describe('registerQuestionCommand (T-8)', () => {
     for (const flag of expected) {
       expect(optionNames).toContain(flag)
     }
+  })
+
+  it('advertises fetch in description, usage, options, and examples', () => {
+    const program = cac('mi')
+    registerQuestionCommand(program)
+    const registered = program.commands.find((c) => c.name === 'question')
+
+    expect(registered?.description).toContain('抓取')
+    expect(registered?.usageText).toContain('fetch')
+    expect(registered?.options.map((option) => option.name)).toContain('limit')
+    expect(registered?.examples).toContain('mi question fetch leetcode --limit 100')
+  })
+})
+
+describe('mi question fetch command (T-12)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('rejects fetch without a source using the fetch usage message', () => {
+    const scraper = { scrape: vi.fn() }
+
+    expect(() =>
+      runQuestionCommand(['fetch'], {}, { service: harness.service, scraper }),
+    ).toThrowError(/^用法错误: mi question fetch/)
+  })
+
+  it('rejects an unsupported fetch source and lists leetcode', () => {
+    const scraper = { scrape: vi.fn() }
+
+    expect(() =>
+      runQuestionCommand(['fetch', 'codeforces'], {}, { service: harness.service, scraper }),
+    ).toThrowError('未知 fetch 来源: codeforces; 支持的来源: leetcode')
+  })
+
+  it('rejects a zero fetch limit with the offending value', () => {
+    const scraper = { scrape: vi.fn() }
+
+    expect(() =>
+      runQuestionCommand(['fetch', 'leetcode'], { limit: 0 }, { service: harness.service, scraper }),
+    ).toThrowError('--limit 必须是正整数, 当前值: 0')
+  })
+
+  it('rejects a negative fetch limit', () => {
+    const scraper = { scrape: vi.fn() }
+
+    expect(() =>
+      runQuestionCommand(['fetch', 'leetcode'], { limit: -3 }, { service: harness.service, scraper }),
+    ).toThrow(MiValidationError)
+  })
+
+  it('runs the scraper with the requested limit and prints a Chinese summary', async () => {
+    const fakeResult: QuestionImportResult = {
+      imported: 7,
+      skipped: 3,
+      ids: ['idA', 'idB', 'idC', 'idD', 'idE', 'idF', 'idG'],
+    }
+    const scraper = { scrape: vi.fn().mockResolvedValue(fakeResult) }
+
+    const output = await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['fetch', 'leetcode'],
+        { limit: 10 },
+        { service: harness.service, scraper },
+      ),
+    )
+
+    expect(scraper.scrape).toHaveBeenCalledOnce()
+    expect(scraper.scrape).toHaveBeenCalledWith({ limit: 10 })
+    const text = output.join('\n')
+    expect(text).toContain('抓取完成')
+    expect(text).toContain('新增 7')
+    expect(text).toContain('跳过 3')
+    expect(text).toContain('idA')
+  })
+
+  it('prints only the scrape result object when --json is set', async () => {
+    const fakeResult: QuestionImportResult = {
+      imported: 7,
+      skipped: 3,
+      ids: ['idA', 'idB', 'idC', 'idD', 'idE', 'idF', 'idG'],
+    }
+    const scraper = { scrape: vi.fn().mockResolvedValue(fakeResult) }
+
+    const output = await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['fetch', 'leetcode'],
+        { json: true, limit: 10 },
+        { service: harness.service, scraper },
+      ),
+    )
+
+    const text = output.join('\n')
+    expect(JSON.parse(text)).toEqual(fakeResult)
+    expect(text).not.toContain('抓取完成')
+  })
+})
+
+describe('mi question fetch command (T-12)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('rejects fetch without a source using the fetch usage message', () => {
+    const scraper = { scrape: vi.fn() }
+
+    expect(() =>
+      runQuestionCommand(['fetch'], {}, { service: harness.service, scraper }),
+    ).toThrowError(/^用法错误: mi question fetch/)
   })
 })
 
@@ -435,6 +572,29 @@ describe('mi question error mapping (T-9)', () => {
     return { stderr, exitCode }
   }
 
+  async function runAndCaptureAsync(action: () => void | Promise<void>): Promise<{
+    stderr: string[]
+    exitCode: string | undefined
+  }> {
+    const stderr: string[] = []
+    let exitCode: string | undefined
+    const originalErr = console.error
+    console.error = (message?: unknown) => {
+      stderr.push(String(message ?? ''))
+    }
+    try {
+      await action()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const match = msg.match(/^__exit__:(\d+)$/)
+      if (match) exitCode = match[1]
+      else throw err
+    } finally {
+      console.error = originalErr
+    }
+    return { stderr, exitCode }
+  }
+
   it('validation errors exit with code 1 and print Chinese error to stderr', () => {
     const { stderr, exitCode } = runAndCapture(() =>
       runCommandAction(() => runQuestionCommand(['search'], {}, { service: harness.service })),
@@ -467,6 +627,23 @@ describe('mi question error mapping (T-9)', () => {
     expect(stderr.join('\n')).toContain('查询题目失败')
   })
 
+
+  it('maps a rejected scraper database error to exit code 2', async () => {
+    const scraper = {
+      scrape: vi
+        .fn()
+        .mockRejectedValue(new MiDatabaseError('LeetCode 请求失败: 503 Service Unavailable')),
+    }
+
+    const { exitCode, stderr } = await runAndCaptureAsync(() =>
+      runCommandAction(() =>
+        runQuestionCommand(['fetch', 'leetcode'], {}, { service: harness.service, scraper }),
+      ),
+    )
+
+    expect(exitCode).toBe('2')
+    expect(stderr.join('\n')).toContain('LeetCode 请求失败: 503')
+  })
   it('unknown errors exit with code 2 and print generic system error', () => {
     vi.spyOn(harness.service, 'list').mockImplementation(() => {
       throw new Error('boom')
