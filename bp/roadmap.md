@@ -60,15 +60,14 @@
  
  - **Goal**: 外部题库数据模型、LeetCode / 牛客网自动化采集、题目管理 CLI
  - **Spec domain**: question-bank
- - **Changes**: 1/2
+ - **Changes**: 3/3
  - **Status**: IN_PROGRESS
  
  **Changes**:
  
  - [x] question-bank-schema (archived 2026-07-19)
  - [x] leetcode-scraper (archived 2026-07-19)
- 
- **Next**: leetcode-scraper
+ - [ ] niuke-scraper
 
 ### Phase: P1.4 - Hybrid Interview & Launch [NOT_STARTED]
 
