@@ -7,6 +7,7 @@ import { Database } from '../db/Database.ts'
 import type { QuestionCategory, QuestionDifficulty } from '../db/schema.ts'
 import { MiNotFoundError, MiValidationError } from '../errors.ts'
 import { createQuestionService, type QuestionService } from './question-service.ts'
+import type { QuestionImportRecord } from './question-service.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -416,5 +417,81 @@ describe('QuestionService search and list', () => {
     } finally {
       rmSync(tempDir, { recursive: true, force: true })
     }
+  })
+})
+
+describe('QuestionService.importRecords', () => {
+  let db: Database
+  let service: QuestionService
+
+  beforeEach(() => {
+    db = makeDb()
+    service = createQuestionService(db)
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  function rowCount(sql: string): number {
+    const row: unknown = db.conn.query(sql).get()
+    if (row !== null && typeof row === 'object' && 'count' in row) {
+      const value = row.count
+      if (typeof value === 'number') return value
+    }
+    return 0
+  }
+
+  function rowCounts(): { questions: number; tags: number; links: number } {
+    return {
+      questions: rowCount('SELECT COUNT(*) AS count FROM questions'),
+      tags: rowCount('SELECT COUNT(*) AS count FROM tags'),
+      links: rowCount('SELECT COUNT(*) AS count FROM question_tags'),
+    }
+  }
+
+  function makeRecord(overrides: Partial<QuestionImportRecord> = {}): QuestionImportRecord {
+    return {
+      source: 'leetcode',
+      sourceId: '1',
+      title: 'Default title',
+      content: 'Default content body',
+      difficulty: 'easy',
+      category: 'algorithm',
+      tags: ['array'],
+      ...overrides,
+    }
+  }
+
+  it('persists validated records and dedups existing + repeated source identities (T-10)', () => {
+    const recordA = makeRecord({ sourceId: '101', title: 'A record', tags: ['array', 'new-tag'] })
+    const recordB = makeRecord({ sourceId: '102', title: 'B record', tags: ['array'] })
+    const duplicate = makeRecord({ sourceId: '101', title: 'Duplicate of A', tags: ['array'] })
+
+    const result = service.importRecords([recordA, recordB, duplicate])
+
+    expect(result.imported).toBe(2)
+    expect(result.skipped).toBe(1)
+    expect(result.ids).toHaveLength(2)
+    const persisted = service.list({ source: 'leetcode' })
+    expect(persisted).toHaveLength(2)
+    expect(persisted.map((question) => question.sourceId).sort()).toEqual(['101', '102'])
+    expect(persisted.find((question) => question.sourceId === '101')?.title).toBe('A record')
+    expect(persisted.every((question) => question.tags.includes('array'))).toBe(true)
+  })
+
+  it('rolls back the batch when any record fails validation (T-11)', () => {
+    const valid = makeRecord({ sourceId: 'valid-1', title: 'Valid record' })
+    const invalidCategory = {
+      ...makeRecord({ sourceId: 'invalid-1', title: 'Invalid category' }),
+      category: 'other',
+    } as unknown as QuestionImportRecord
+
+    const before = rowCounts()
+    expect(() => service.importRecords([valid, invalidCategory])).toThrowError(MiValidationError)
+    expect(rowCounts()).toEqual(before)
+    expect(service.list({})).toEqual([])
+    expect(rowCount('SELECT COUNT(*) AS count FROM tags')).toBe(0)
+    expect(rowCount('SELECT COUNT(*) AS count FROM question_tags')).toBe(0)
   })
 })

@@ -409,6 +409,16 @@ export class QuestionService {
     }
   }
 
+  importRecords(records: QuestionImportRecord[]): QuestionImportResult {
+    const normalized = records.map((record, index) => normalizeImportRecord(record, index))
+    try {
+      return this.persistImportRecords(normalized)
+    } catch (err) {
+      if (err instanceof MiValidationError) throw err
+      throw new MiDatabaseError(databaseErrorMessage(err, '导入题目'))
+    }
+  }
+
   private persistImportRecords(records: NormalizedQuestionImportRecord[]): QuestionImportResult {
     const persist = this.db.conn.transaction(() => {
       const ids: string[] = []

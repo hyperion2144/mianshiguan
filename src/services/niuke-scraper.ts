@@ -236,6 +236,16 @@ export class NiukeScraper {
   }
 }
 
+/**
+ * Construct a `NiukeScraper` from the minimal dependency bundle. The CLI
+ * uses this to instantiate the scraper with a fresh `NiukeBrowser` per
+ * `fetch niuke` invocation; tests bypass this by injecting their own
+ * scraper via `QuestionCommandDeps.niukeScraper`.
+ */
+export function createNiukeScraper(deps: NiukeScraperDeps): NiukeScraper {
+  return new NiukeScraper(deps)
+}
+
 function classifyNiukeQuestionType(type: NiukeQuestionType | string): QuestionCategory {
   const normalized = typeof type === 'string' ? type.trim() : ''
   if (normalized === '系统设计' || normalized === 'system-design') return 'system-design'

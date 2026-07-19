@@ -5,18 +5,21 @@ import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
 import {
-  type Question,
-  type QuestionCategory,
-  type QuestionDifficulty,
-  type QuestionFilters,
-  type QuestionService,
-  createQuestionService,
-} from '../services/question-service.ts'
-import {
   LeetCodeApiClient,
   type LeetCodeScraper,
   createLeetCodeScraper,
 } from '../services/leetcode-scraper.ts'
+import { NiukeBrowser } from '../services/niuke-browser.ts'
+import { type NiukeScraper, createNiukeScraper } from '../services/niuke-scraper.ts'
+import {
+  type Question,
+  type QuestionCategory,
+  type QuestionDifficulty,
+  type QuestionFilters,
+  type QuestionImportResult,
+  type QuestionService,
+  createQuestionService,
+} from '../services/question-service.ts'
 
 export interface QuestionCommandOptions {
   dataDir?: string
@@ -36,6 +39,12 @@ export interface QuestionCommandDeps {
    */
   service?: QuestionService
   scraper?: Pick<LeetCodeScraper, 'scrape'>
+  /**
+   * Override the Niuke scraper. Production code lets the handler
+   * construct one via `createNiukeScraper`; tests inject a fake whose
+   * `scrape` returns a canned `QuestionImportResult`.
+   */
+  niukeScraper?: Pick<NiukeScraper, 'scrape'>
 }
 
 const SEARCH_LIST_HEADERS = ['ID', '来源', '来源ID', '标题', '难度', '分类', '标签'] as const
@@ -48,6 +57,8 @@ const USAGE_SHOW_MESSAGE = '用法错误: mi question show <id>'
 const USAGE_IMPORT_MESSAGE = '用法错误: mi question import <文件路径>'
 const USAGE_FETCH_MESSAGE = '用法错误: mi question fetch <来源> [--limit N]'
 const UNKNOWN_SUBCOMMAND_MESSAGE = '未知 question 子命令: '
+const SUPPORTED_FETCH_SOURCES = ['leetcode', 'niuke'] as const
+type SupportedFetchSource = (typeof SUPPORTED_FETCH_SOURCES)[number]
 /**
  * Wrap a command body so `MiError` and unknown throws map to the
  * project-standard exit codes:
@@ -93,6 +104,7 @@ export function registerQuestionCommand(program: CAC): void {
     .example('mi question show 01HQUESTION --json')
     .example('mi question import questions.json')
     .example('mi question fetch leetcode --limit 100')
+    .example('mi question fetch niuke --limit 100')
     .action((args: string[] | undefined, options: QuestionCommandOptions) =>
       runCommandAction(() => runQuestionCommand(args ?? [], options)),
     )
@@ -139,12 +151,12 @@ export function runQuestionCommand(
         if (source === undefined) {
           throw new MiValidationError(USAGE_FETCH_MESSAGE)
         }
-        if (source !== 'leetcode') {
-          throw new MiValidationError(`未知 fetch 来源: ${source}; 支持的来源: leetcode`)
+        if (!isSupportedFetchSource(source)) {
+          throw new MiValidationError(
+            `未知 fetch 来源: ${source}; 支持的来源: ${SUPPORTED_FETCH_SOURCES.join(', ')}`,
+          )
         }
-        const scraper =
-          deps.scraper ?? createLeetCodeScraper({ client: new LeetCodeApiClient(), service })
-        const task = fetchLeetcodeQuestions(scraper, options)
+        const task = dispatchFetchScraper(source, deps, service, options)
         const fetchDb = ownedDb
         ownedDb = null
         return task.finally(() => fetchDb?.close())
@@ -221,16 +233,50 @@ function fetchLeetcodeQuestions(
   options: QuestionCommandOptions,
 ): Promise<void> {
   const limit = parseFetchLimit(options.limit)
-  return scraper.scrape({ limit }).then((result) => {
-    if (options.json) {
-      console.log(JSON.stringify(result, null, 2))
-      return
-    }
-    console.log(success(`抓取完成: 新增 ${result.imported}, 跳过 ${result.skipped}`))
-    if (result.ids.length > 0) {
-      console.log(`新增 ID: ${result.ids.join(', ')}`)
-    }
-  })
+  return scraper
+    .scrape({ limit })
+    .then((result) => renderScrapeResult(result, Boolean(options.json)))
+}
+
+function fetchNiukeQuestions(
+  scraper: Pick<NiukeScraper, 'scrape'>,
+  options: QuestionCommandOptions,
+): Promise<void> {
+  const limit = parseFetchLimit(options.limit)
+  return scraper
+    .scrape({ limit })
+    .then((result) => renderScrapeResult(result, Boolean(options.json)))
+}
+
+function renderScrapeResult(result: QuestionImportResult, asJson: boolean): void {
+  if (asJson) {
+    console.log(JSON.stringify(result, null, 2))
+    return
+  }
+  console.log(success(`抓取完成: 新增 ${result.imported}, 跳过 ${result.skipped}`))
+  if (result.ids.length > 0) {
+    console.log(`新增 ID: ${result.ids.join(', ')}`)
+  }
+}
+
+function dispatchFetchScraper(
+  source: SupportedFetchSource,
+  deps: QuestionCommandDeps,
+  service: QuestionService,
+  options: QuestionCommandOptions,
+): Promise<void> {
+  if (source === 'niuke') {
+    const scraper =
+      deps.niukeScraper ?? createNiukeScraper({ browser: new NiukeBrowser(), service })
+    return fetchNiukeQuestions(scraper, options)
+  }
+  const scraper =
+    deps.scraper ?? createLeetCodeScraper({ client: new LeetCodeApiClient(), service })
+  return fetchLeetcodeQuestions(scraper, options)
+}
+
+function isSupportedFetchSource(source: string): source is SupportedFetchSource {
+  return (SUPPORTED_FETCH_SOURCES as readonly string[]).includes(source)
 }
 
 // ---------------------------------------------------------------------------

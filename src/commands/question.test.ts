@@ -675,3 +675,164 @@ describe('mi question unknown subcommand (T-9)', () => {
     )
   })
 })
+
+
+// ---------------------------------------------------------------------------
+// Wave 2 — T-12..T-16 — `mi question fetch niuke` CLI integration (DS-3)
+// ---------------------------------------------------------------------------
+
+describe('mi question fetch niuke (T-12)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('routes fetch niuke through the injected niukeScraper with the parsed limit', async () => {
+    const niukeScraper = {
+      scrape: vi.fn().mockResolvedValue({ imported: 1, skipped: 0, ids: ['id1'] }),
+    }
+
+    await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['fetch', 'niuke'],
+        { limit: 7 },
+        { service: harness.service, niukeScraper },
+      ),
+    )
+
+    expect(niukeScraper.scrape).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('mi question fetch niuke unsupported source (T-13)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('rejects an unsupported fetch source and lists both leetcode and niuke', () => {
+    const scraper = { scrape: vi.fn() }
+    const niukeScraper = { scrape: vi.fn() }
+
+    expect(() =>
+      runQuestionCommand(
+        ['fetch', 'codeforces'],
+        {},
+        { service: harness.service, scraper, niukeScraper },
+      ),
+    ).toThrowError('未知 fetch 来源: codeforces; 支持的来源: leetcode, niuke')
+  })
+
+  it('still routes fetch leetcode through the leetcode scraper after the niuke update', async () => {
+    const fakeResult: QuestionImportResult = {
+      imported: 2,
+      skipped: 1,
+      ids: ['idL1', 'idL2'],
+    }
+    const scraper = { scrape: vi.fn().mockResolvedValue(fakeResult) }
+    const niukeScraper = { scrape: vi.fn() }
+
+    await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['fetch', 'leetcode'],
+        { limit: 5 },
+        { service: harness.service, scraper, niukeScraper },
+      ),
+    )
+
+    expect(scraper.scrape).toHaveBeenCalledTimes(1)
+    expect(niukeScraper.scrape).not.toHaveBeenCalled()
+})
+
+describe('mi question fetch niuke summary (T-14)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('prints the Chinese scrape summary with imported/skipped counts and new ids', async () => {
+    const niukeScraper = {
+      scrape: vi
+        .fn()
+        .mockResolvedValue({ imported: 4, skipped: 1, ids: ['a', 'b', 'c', 'd'] }),
+    }
+
+    const output = await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['fetch', 'niuke'],
+        {},
+        { service: harness.service, niukeScraper },
+      ),
+    )
+
+    const text = output.join('\n')
+    expect(text).toContain('抓取完成: 新增 4, 跳过 1')
+    expect(text).toContain('新增 ID: a, b, c, d')
+  })
+})
+
+describe('mi question fetch niuke --json (T-15)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('prints only the scrape result JSON object when --json is set', async () => {
+    const fakeResult: QuestionImportResult = {
+      imported: 2,
+      skipped: 0,
+      ids: ['x', 'y'],
+    }
+    const niukeScraper = { scrape: vi.fn().mockResolvedValue(fakeResult) }
+
+    const output = await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['fetch', 'niuke'],
+        { json: true },
+        { service: harness.service, niukeScraper },
+      ),
+    )
+
+    const text = output.join('\n')
+    expect(JSON.parse(text)).toEqual(fakeResult)
+    expect(text).not.toContain('抓取完成')
+    expect(text).not.toContain('新增 ID:')
+  })
+})
+
+describe('registerQuestionCommand niuke help text (T-16)', () => {
+  it('lists the niuke fetch example alongside the leetcode example', () => {
+    const program = cac('mi')
+    registerQuestionCommand(program)
+    const registered = program.commands.find((c) => c.name === 'question')
+
+    expect(registered).toBeDefined()
+    expect(registered?.examples).toContain('mi question fetch niuke --limit 100')
+    expect(registered?.examples).toContain('mi question fetch leetcode --limit 100')
+  })
+})
+})
