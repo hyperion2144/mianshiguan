@@ -65,7 +65,7 @@
  
  **Changes**:
  
- - [ ] question-bank-schema (proposed)
+ - [-] question-bank-schema (planned 2026-07-19)
  
  **Planned changes**:
  
