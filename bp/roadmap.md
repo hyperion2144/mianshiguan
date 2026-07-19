@@ -56,33 +56,38 @@
 
 **Next**: All changes completed
 
-### Phase: P1.3 - External Question Bank [ACTIVE]
+### Phase: P1.3 - External Question Bank [COMPLETED]
  
  - **Goal**: 外部题库数据模型、LeetCode / 牛客网自动化采集、题目管理 CLI
  - **Spec domain**: question-bank
  - **Changes**: 3/3
- - **Status**: IN_PROGRESS
+ - **Status**: COMPLETED
  
  **Changes**:
  
  - [x] question-bank-schema (archived 2026-07-19)
  - [x] leetcode-scraper (archived 2026-07-19)
- - [x] niuke-scraper (implemented 2026-07-19)
-
-### Phase: P1.4 - Hybrid Interview & Launch [NOT_STARTED]
-
-- **Goal**: Agent 主导的混合选题、算法题混合评估（测试用例 + Agent 评分）、文档、CI/CD、发布
-- **Spec domain**: interview, question-bank, cli
-- **Changes**: 0/5
-- **Status**: NOT_STARTED
-
-**Planned changes**:
-
-- Agent-driven hybrid question selection (agent decides when to pull from bank vs generate) (not yet proposed)
-- Code execution sandbox for algorithm verification + scoring (not yet proposed)
-- Auto-evaluation score integration into interview report (not yet proposed)
-- README, LICENSE, CHANGELOG, CI/CD pipeline (not yet proposed)
-- Multi-platform installation polish + npm publish (not yet proposed)
+ - [x] niuke-scraper (archived 2026-07-19)
+ 
+ **Next**: All changes completed
+ 
+ ### Phase: P1.4 - Hybrid Interview & Launch [ACTIVE]
+ 
+ - **Goal**: Agent 主导的混合选题、算法题混合评估（测试用例 + Agent 评分）、文档、CI/CD、发布
+ - **Spec domain**: interview, question-bank, cli
+ - **Changes**: 1/5
+ - **Status**: IN_PROGRESS
+ 
+ **Changes**:
+ 
+ - [ ] hybrid-question-source
+ 
+ **Planned changes**:
+ 
+ - Code execution sandbox for algorithm verification + scoring (not yet proposed)
+ - Auto-evaluation score integration into interview report (not yet proposed)
+ - README, LICENSE, CHANGELOG, CI/CD pipeline (not yet proposed)
+ - Multi-platform installation polish + npm publish (not yet proposed)
 
 ---
 
