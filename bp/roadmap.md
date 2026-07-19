@@ -67,7 +67,7 @@
  
  - [x] question-bank-schema (archived 2026-07-19)
  - [x] leetcode-scraper (archived 2026-07-19)
- - [-] niuke-scraper (planned 2026-07-19)
+ - [x] niuke-scraper (implemented 2026-07-19)
 
 ### Phase: P1.4 - Hybrid Interview & Launch [NOT_STARTED]
 

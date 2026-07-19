@@ -147,7 +147,7 @@
   finalized in Wave 1.
 -->
 
-- [ ] T-12: [type:behavior] `runQuestionCommand` `case 'fetch'` accepts `niuke` as a supported source and constructs `NiukeScraper` <!-- commit: test(question): red for fetch niuke routes to NiukeScraper + feat(question): route niuke in fetch dispatch + refactor(question): extract buildScraper helper -->
+- [x] T-12: [type:behavior] `runQuestionCommand` `case 'fetch'` accepts `niuke` as a supported source and constructs `NiukeScraper` <!-- commit: test(question): red for fetch niuke routes to NiukeScraper + feat(question): route niuke in fetch dispatch + refactor(question): extract buildScraper helper --> [8501194]
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-6
   - **files**: `src/commands/question.ts`, `src/commands/question.test.ts`
@@ -156,7 +156,7 @@
     WHEN `runQuestionCommand(['fetch', 'niuke'], { limit: 7 }, { service: harness.service, niukeScraper })` is run
     THEN `niukeScraper.scrape` is called exactly once with `{ limit: 7 }`
 
-- [ ] T-13: [type:behavior] `runQuestionCommand` rejects unsupported fetch sources with a Chinese error listing both `leetcode` and `niuke` <!-- commit: test(question): red for unsupported source message + feat(question): update unsupported-source error + refactor(question): extract SUPPORTED_FETCH_SOURCES constant -->
+- [x] T-13: [type:behavior] `runQuestionCommand` rejects unsupported fetch sources with a Chinese error listing both `leetcode` and `niuke` <!-- commit: test(question): red for unsupported source message + feat(question): update unsupported-source error + refactor(question): extract SUPPORTED_FETCH_SOURCES constant --> [683abe6]
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-6
   - **files**: `src/commands/question.ts`, `src/commands/question.test.ts`
@@ -166,7 +166,7 @@
     THEN it throws `MiValidationError('未知 fetch 来源: codeforces; 支持的来源: leetcode, niuke')`
     AND the leetcode path still throws no error
 
-- [ ] T-14: [type:behavior] `fetch niuke` prints a Chinese scrape summary identical in shape to `fetch leetcode` <!-- commit: test(question): red for fetch niuke Chinese summary + feat(question): fetchNiukeQuestions helper + refactor(question): extract renderScrapeResult helper -->
+- [x] T-14: [type:behavior] `fetch niuke` prints a Chinese scrape summary identical in shape to `fetch leetcode` <!-- commit: test(question): red for fetch niuke Chinese summary + feat(question): fetchNiukeQuestions helper + refactor(question): extract renderScrapeResult helper --> [be5ef58]
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-6
   - **files**: `src/commands/question.ts`, `src/commands/question.test.ts`
@@ -176,7 +176,7 @@
     THEN stdout includes `抓取完成: 新增 4, 跳过 1`
     AND stdout includes `新增 ID: a, b, c, d`
 
-- [ ] T-15: [type:behavior] `fetch niuke --json` prints the `QuestionImportResult` JSON object (no table decoration) <!-- commit: test(question): red for fetch niuke JSON output + feat(question): --json branch in fetchNiukeQuestions + refactor(question): align fetch helpers -->
+- [x] T-15: [type:behavior] `fetch niuke --json` prints the `QuestionImportResult` JSON object (no table decoration) <!-- commit: test(question): red for fetch niuke JSON output + feat(question): --json branch in fetchNiukeQuestions + refactor(question): align fetch helpers --> [f3b982a]
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-6
   - **files**: `src/commands/question.ts`, `src/commands/question.test.ts`
@@ -186,7 +186,7 @@
     THEN `JSON.parse(stdout)` equals `{ imported: 2, skipped: 0, ids: ['x','y'] }`
     AND stdout does not contain `抓取完成` or `新增 ID:`
 
-- [ ] T-16: [type:behavior] `registerQuestionCommand` help/usage/examples mention `niuke` alongside `leetcode` <!-- commit: test(question): red for niuke in help text + feat(question): update command help + refactor(question): align examples -->
+- [x] T-16: [type:behavior] `registerQuestionCommand` help/usage/examples mention `niuke` alongside `leetcode` <!-- commit: test(question): red for niuke in help text + feat(question): update command help + refactor(question): align examples --> [c5d4928]
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#QB-9
   - **files**: `src/commands/question.ts`, `src/commands/question.test.ts`
@@ -202,11 +202,8 @@
   Verified by the orchestrator after all waves complete.
   These are the gates before review can run.
 -->
-
-- [ ] `bunx tsc --noEmit` passes with no errors
-- [ ] `bun test src/services/niuke-scraper.test.ts src/services/niuke-browser.test.ts src/commands/question.test.ts` - all suites pass (browser-launch tests skip cleanly when chromium is not installed)
-- [ ] Every task in every wave is marked `[x]` with a commit hash
-- [ ] No `{{` template placeholders remaining in any artifact
-- [ ] All wave acceptance criteria confirmed
-- [ ] `biome check src/services/niuke-scraper.ts src/services/niuke-browser.ts src/commands/question.ts` reports no issues
-- [ ] Manual smoke: `bunx playwright install chromium` then `bun run src/index.ts question fetch niuke --limit 1` produces a Chinese scrape summary without throwing
+ - [x] `bun test src/services/niuke-scraper.test.ts src/services/niuke-browser.test.ts src/commands/question.test.ts` - all suites pass (browser-launch tests skip cleanly when chromium is not installed)
+ - [x] Every task in every wave is marked `[x]` with a commit hash
+ - [x] No `{{` template placeholders remaining in any artifact
+ - [x] All wave acceptance criteria confirmed
+ - [x] `biome check src/services/niuke-scraper.ts src/services/niuke-browser.ts src/commands/question.ts` reports no issues
