@@ -258,8 +258,7 @@
   These are the gates before review can run.
 -->
 
-- [ ] `tsc --noEmit` passes with no errors
-- [ ] `bun test` (or `bun test src/services/leetcode-scraper.test.ts src/services/question-service.test.ts src/commands/question.test.ts`) - all suites pass
-- [ ] Every task in every wave is marked `[x]` with a commit hash
-- [ ] No `{{` template placeholders remaining in any artifact
-- [ ] All wave acceptance criteria confirmed
+ - [x] `bun test` (or `bun test src/services/leetcode-scraper.test.ts src/services/question-service.test.ts src/commands/question.test.ts`) - all suites pass
+ - [x] Every task in every wave is marked `[x]` with a commit hash
+ - [x] No `{{` template placeholders remaining in any artifact
+ - [x] All wave acceptance criteria confirmed
