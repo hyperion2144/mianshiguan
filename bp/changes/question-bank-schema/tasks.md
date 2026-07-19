@@ -12,7 +12,7 @@
 
 ## Wave 1: Relational schema and migration
 
-- [ ] T-1: [type:behavior] Create the questions table and typed question row contract <!-- commit: -->
+- [x] T-1: [type:behavior] Create the questions table and typed question row contract <!-- commit: 2ea2ff7 -->
   - **refs**: DS-1
   - **spec_ref**: specs/question-bank/spec.md#qb-1-question-persistence-contract
   - **files**: `src/db/migrations/0003_question_bank.sql`, `src/db/schema.ts`, `src/db/migrate.test.ts`
@@ -21,7 +21,7 @@
     WHEN migration 0003 is applied and the row is inserted/read through `PRAGMA table_info` and SQL
     THEN all documented question columns and defaults SHALL exist in order, the JSON fields SHALL persist, and a duplicate `(source, source_id)` insert SHALL fail.
 
-- [ ] T-2: [type:behavior] Create normalized tags and cascading question-tag links <!-- commit: -->
+- [x] T-2: [type:behavior] Create normalized tags and cascading question-tag links <!-- commit: 0df7cfb -->
   - **refs**: DS-1
   - **spec_ref**: specs/question-bank/spec.md#qb-2-taxonomy-and-tag-associations
   - **files**: `src/db/migrations/0003_question_bank.sql`, `src/db/migrate.test.ts`
@@ -33,7 +33,7 @@
 
 ## Wave 2: Question service and import pipeline
 
-- [ ] T-3: [type:behavior] Search and list questions with combined filters <!-- commit: -->
+- [x] T-3: [type:behavior] Search and list questions with combined filters <!-- commit: 88e5dfe -->
   - **refs**: DS-2
   - **spec_ref**: specs/question-bank/spec.md#qb-4-question-search-and-filtering
   - **files**: `src/services/question-service.ts`, `src/services/question-service.test.ts`
@@ -43,7 +43,7 @@
     THEN only rows satisfying the keyword and every supplied filter SHALL be returned in `createdAt ASC, id ASC` order; an empty keyword SHALL throw `E_VALIDATION`.
   - **depends_on**: T-1, T-2
 
-- [ ] T-4: [type:behavior] Retrieve complete question details <!-- commit: -->
+- [x] T-4: [type:behavior] Retrieve complete question details <!-- commit: 603b42a -->
   - **refs**: DS-2
   - **spec_ref**: specs/question-bank/spec.md#qb-5-question-detail-retrieval
   - **files**: `src/services/question-service.ts`, `src/services/question-service.test.ts`
@@ -53,7 +53,7 @@
     THEN the returned object SHALL include every field with arrays decoded to their original values; calling `get` with an unknown ID SHALL throw `E_NOT_FOUND`.
   - **depends_on**: T-1, T-2
 
-- [ ] T-5: [type:behavior] Import valid JSON and YAML batches <!-- commit: -->
+- [x] T-5: [type:behavior] Import valid JSON and YAML batches <!-- commit: 7fd1afb -->
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#qb-6-json-and-yaml-batch-import
   - **files**: `src/services/question-service.ts`, `src/services/question-service.test.ts`
@@ -63,7 +63,7 @@
     THEN each import SHALL report two new IDs and the persisted question values SHALL be equivalent across formats.
   - **depends_on**: T-3
 
-- [ ] T-6: [type:behavior] Reject invalid imports atomically <!-- commit: -->
+- [x] T-6: [type:behavior] Reject invalid imports atomically <!-- commit: f9be20f -->
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#qb-7-import-validation-and-atomicity
   - **files**: `src/services/question-service.ts`, `src/services/question-service.test.ts`
@@ -73,7 +73,7 @@
     THEN it SHALL throw `E_VALIDATION` and the database SHALL contain zero new questions, tags, or question_tags rows.
   - **depends_on**: T-5
 
-- [ ] T-7: [type:behavior] Skip duplicate source identities during import <!-- commit: -->
+- [x] T-7: [type:behavior] Skip duplicate source identities during import <!-- commit: e8d1258 -->
   - **refs**: DS-3
   - **spec_ref**: specs/question-bank/spec.md#qb-8-import-deduplication
   - **files**: `src/services/question-service.ts`, `src/services/question-service.test.ts`
@@ -85,7 +85,7 @@
 
 ## Wave 3: CLI integration and output
 
-- [ ] T-8: [type:behavior] Register question command and expose query subcommands <!-- commit: -->
+- [x] T-8: [type:behavior] Register question command and expose query subcommands <!-- commit: 7111dab -->
   - **refs**: DS-4, DS-5
   - **spec_ref**: specs/question-bank/spec.md#qb-9-question-cli-query-commands
   - **files**: `src/commands/question.ts`, `src/commands/question.test.ts`, `src/commands/index.ts`
@@ -95,7 +95,7 @@
     THEN help SHALL contain all four subcommands, filter values SHALL reach the service unchanged, and JSON output SHALL parse as an array.
   - **depends_on**: T-3, T-4
 
-- [ ] T-9: [type:behavior] Render detail/import results and map CLI errors <!-- commit: -->
+- [x] T-9: [type:behavior] Render detail/import results and map CLI errors <!-- commit: 7111dab -->
   - **refs**: DS-4
   - **spec_ref**: specs/question-bank/spec.md#qb-10-question-cli-detail-import-and-json-output
   - **files**: `src/commands/question.ts`, `src/commands/question.test.ts`
@@ -112,8 +112,8 @@
   These are the gates before review can run.
 -->
 
-- [ ] `tsc --noEmit` passes with no errors
-- [ ] `vitest run` (or project test command) - all suites pass
-- [ ] Every task in every wave is marked `[x]` with a commit hash
-- [ ] No `{{` template placeholders remaining in any artifact
-- [ ] All wave acceptance criteria confirmed
+ - [x] `tsc --noEmit` passes with no errors
+ - [x] `vitest run` (or project test command) - all suites pass
+ - [x] Every task in every wave is marked `[x]` with a commit hash
+ - [x] No `{{` template placeholders remaining in any artifact
+ - [x] All wave acceptance criteria confirmed

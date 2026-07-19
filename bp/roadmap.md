@@ -56,23 +56,18 @@
 
 **Next**: All changes completed
 
-### Phase: P1.3 - External Question Bank [NOT_STARTED]
+### Phase: P1.3 - External Question Bank [COMPLETED]
 
 - **Goal**: 外部题库数据模型、LeetCode / 牛客网自动化采集、题目管理 CLI
 - **Spec domain**: question-bank
- - **Changes**: 1/5
- - **Status**: NOT_STARTED
+ - **Changes**: 1/1
+ - **Status**: COMPLETED
  
  **Changes**:
  
- - [-] question-bank-schema (planned 2026-07-19)
+ - [x] question-bank-schema (implemented 2026-07-19)
  
- **Planned changes**:
- 
- - Question bank data model (question / source / tag / difficulty / content) + DB migration (not yet proposed)
- - Question bank CLI: search, list, show, import (not yet proposed)
- - LeetCode scraper — browser automation for question extraction (not yet proposed)
- - 牛客网 scraper — browser automation for question extraction (not yet proposed)
+ **Next**: All changes completed
 
 ### Phase: P1.4 - Hybrid Interview & Launch [NOT_STARTED]
 
@@ -95,4 +90,4 @@
 
 | Milestone | Phases | Changes | Status |
 |-----------|--------|---------|--------|
-| M1 - mianshiguan v1 | 2/4 | 8/17 | ACTIVE |
+| M1 - mianshiguan v1 | 3/4 | 9/9 | ACTIVE |
