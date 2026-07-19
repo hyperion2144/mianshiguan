@@ -285,13 +285,15 @@ function coalesceDetail(
   entry: NiukeQuestionListEntry,
   raw: Partial<NiukeQuestionDetail> | undefined | null,
 ): NiukeQuestionDetail {
-  const safe = raw ?? {}
+  if (!raw || typeof raw.content !== 'string' || raw.content.trim().length === 0) {
+    throw new MiNotFoundError(`牛客网题目详情不存在: ${entry.id}`)
+  }
   return {
     ...entry,
-    content: typeof safe.content === 'string' && safe.content.length > 0 ? safe.content : '[未提供正文]',
-    referenceAnswer: typeof safe.referenceAnswer === 'string' ? safe.referenceAnswer : '',
-    knowledgePoints: Array.isArray(safe.knowledgePoints)
-      ? safe.knowledgePoints.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+    content: raw.content,
+    referenceAnswer: typeof raw.referenceAnswer === 'string' ? raw.referenceAnswer : '',
+    knowledgePoints: Array.isArray(raw.knowledgePoints)
+      ? raw.knowledgePoints.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
       : [],
   }
 }

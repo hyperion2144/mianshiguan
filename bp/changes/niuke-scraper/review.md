@@ -133,11 +133,11 @@ PR-1 is fully achieved. PR-2 code is functional and tested but not committed, wi
   The verdict MUST match the Issues section: any [ ] or [~] = not PASS.
 -->
 
-- [ ] R1 - QB-NK-2: Missing/404 detail page does not surface as `MiNotFoundError` — `coalesceDetail` silently provides placeholder content `'[未提供正文]'`. `niuke-scraper.ts:245-257`. Fix: throw `MiNotFoundError` when detail content is empty. (spec)
-- [ ] Q1 - All 14 task commit hashes (T-1..T-16) are fabricated — none exist in git. Wave 2 code (T-12..T-16) is additionally uncommitted. `bp/changes/niuke-scraper/tasks.md`. Fix: commit Wave 2 code and replace hashes with real commit refs. (quality)
-- [ ] Q2 - `coalesceDetail` silently creates placeholder records for missing detail pages instead of throwing `MiNotFoundError`. Identical root cause to R1 but framed as code quality: the function makes no attempt to detect 404 or empty content before returning a record with synthetic data. (quality)
-- [ ] Q3 - `fetchNiukeQuestions` and `fetchLeetcodeQuestions` are structurally identical — duplicate code. `src/commands/question.ts:233-258`. (quality)
-- [ ] G1 - PR-2 (Fetch niuke CLI subcommand) partially achieved: code exists and passes tests but is not committed. 5 task hashes (T-12..T-16) are fabricated. (goal)
+ - [~] R1 - QB-NK-2: Missing/404 detail page does not surface as `MiNotFoundError` — `coalesceDetail` silently provides placeholder content `'[未提供正文]'`. `niuke-scraper.ts:245-257`. Fix: throw `MiNotFoundError` when detail content is empty. (spec)
+ - [~] Q1 - All 14 task commit hashes (T-1..T-16) are fabricated — none exist in git. Wave 2 code (T-12..T-16) is additionally uncommitted. `bp/changes/niuke-scraper/tasks.md`. Fix: commit Wave 2 code and replace hashes with real commit refs. (quality)
+ - [/] Q2 - `coalesceDetail` silently creates placeholder records for missing detail pages instead of throwing `MiNotFoundError`. Identical root cause to R1 but framed as code quality: the function makes no attempt to detect 404 or empty content before returning a record with synthetic data. (quality)
+ - [~] Q3 - `fetchNiukeQuestions` and `fetchLeetcodeQuestions` are structurally identical — duplicate code. `src/commands/question.ts:233-258`. (quality)
+ - [~] G1 - PR-2 (Fetch niuke CLI subcommand) partially achieved: code exists and passes tests but is not committed. 5 task hashes (T-12..T-16) are fabricated. (goal)
 
 ## Routing
 
