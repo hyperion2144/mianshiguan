@@ -16,6 +16,10 @@ export type Platform = (typeof VALID_PLATFORMS)[number]
 export const VALID_STYLES = ['strict', 'coaching', 'friendly'] as const
 export type InterviewerStyle = (typeof VALID_STYLES)[number]
 
+export const VALID_QUESTION_SOURCES = ['agent-first', 'bank-first', 'mixed'] as const
+export type QuestionSource = (typeof VALID_QUESTION_SOURCES)[number]
+
+
 export const DEFAULT_DIMENSIONS = [
   '技术深度',
   '沟通表达',
@@ -37,6 +41,7 @@ export const MI_VERSION = '0.1.0'
 export interface InterviewSkillConfig {
   platform: Platform
   interviewerStyle: InterviewerStyle
+  questionSource?: QuestionSource
   dimensions?: readonly string[]
   defaultProfile?: string
   targetRole?: string
@@ -44,9 +49,8 @@ export interface InterviewSkillConfig {
 }
 
 /**
- * Runtime guard for `InterviewSkillConfig.platform` and
- * `interviewerStyle`. Accepts a wider input shape than the typed
- * config so callers can pass `unknown`, `null`, or `{}` and still
+ * Runtime guard for `InterviewSkillConfig.platform`,
+ * `interviewerStyle`, and `questionSource`.
  * exercise the rejection paths in tests.
  *
  * Performs explicit `typeof` checks before the `includes()` lookup
@@ -54,12 +58,19 @@ export interface InterviewSkillConfig {
  * canonical Chinese "missing field" message rather than leaking
  * the raw `undefined` value into the rendered error string.
  *
- * @throws {MiValidationError} when platform or interviewerStyle is
- *   outside the canonical tuple (or is not a string at all). The
- *   Chinese message lists the legal values verbatim.
+ * @throws {MiValidationError} when platform, interviewerStyle, or
+ *   questionSource is outside the canonical tuple (or is not a string
+ *   at all). The Chinese message lists the legal values verbatim.
  */
 export function validateConfig(
-  config: { platform?: unknown; interviewerStyle?: unknown } | null | undefined,
+  config:
+    | {
+        platform?: unknown
+        interviewerStyle?: unknown
+        questionSource?: unknown
+      }
+    | null
+    | undefined,
 ): void {
   if (
     typeof config !== 'object' ||
@@ -87,6 +98,16 @@ export function validateConfig(
     throw new MiValidationError(
       `无效的面试官风格: ${config.interviewerStyle} (合法: strict, coaching, friendly)`,
     )
+  }
+  if (config.questionSource !== undefined) {
+    if (
+      typeof config.questionSource !== 'string' ||
+      !VALID_QUESTION_SOURCES.includes(config.questionSource as QuestionSource)
+    ) {
+      throw new MiValidationError(
+        `无效的题目来源: ${config.questionSource} (合法: agent-first, bank-first, mixed)`,
+      )
+    }
   }
 }
 
@@ -129,10 +150,31 @@ const STYLE_GUIDANCE: Record<InterviewerStyle, string> = {
 - 即使候选人答错也以建设性的方式给出建议
 - 整体氛围是同事间的技术交流，重点在于发掘候选人的潜力`,
 }
+
+/**
+ * Per-`QuestionSource` directive blocks. Each branch is mutually
+ * exclusive — switching the source on an otherwise-identical config
+ * swaps the entire block but keeps the role / profile / flow / style /
+ * scoring / CLI shell intact. The mixed branch is the default when
+ * the config omits the field, matching the config-service default.
+ */
+const QUESTION_SOURCE_GUIDANCE: Record<QuestionSource, string> = {
+  'agent-first': `## 题目来源：自主优先
+- 默认依赖你自己的知识库出题
+- 仅当候选人明确要求某个领域、你的知识覆盖不足或评分需要参考答案时，才回退到本地题库，使用 \`mi question search <关键字>\` 检索题目`,
+  'bank-first': `## 题目来源：题库优先
+- 优先从本地题库中选题，使用 \`mi question list\` 与 \`mi question search <关键字>\`
+- 仅当题库没有合适的题目时，才回退到依赖你自己的知识出题`,
+  mixed: `## 题目来源：混合
+- 你可以自由混合使用自己的知识与本地题库
+- 把握不准或候选人要求特定领域时，优先从题库中检索题目
+- 评分需要参考答案时，调用 \`mi question search <关键字>\` 找到标准答案`,
+}
 export function buildPromptBody(config: InterviewSkillConfig): string {
   const profile = config.defaultProfile ?? '未指定 profile'
   const role = config.targetRole ?? '未指定 目标岗位'
   const dimensions = config.dimensions ?? DEFAULT_DIMENSIONS
+  const questionSource = config.questionSource ?? 'mixed'
   const styleBlock: string = (() => {
     switch (config.interviewerStyle) {
       case 'strict':
@@ -152,6 +194,26 @@ export function buildPromptBody(config: InterviewSkillConfig): string {
       }
     }
   })()
+  const questionSourceBlock: string = (() => {
+    switch (questionSource) {
+      case 'agent-first':
+        return QUESTION_SOURCE_GUIDANCE['agent-first']
+      case 'bank-first':
+        return QUESTION_SOURCE_GUIDANCE['bank-first']
+      case 'mixed':
+        return QUESTION_SOURCE_GUIDANCE.mixed
+      default: {
+        // Exhaustiveness check — adding a fourth `QuestionSource`
+        // value (e.g. `'hybrid'`) without extending
+        // `QUESTION_SOURCE_GUIDANCE` forces a TS error here
+        // (`Type '...' is not assignable to type 'never'`),
+        // surfacing the omission at the type level before it ever
+        // reaches runtime.
+        const _exhaustive: never = questionSource
+        throw new Error(`Unhandled question source: ${_exhaustive}`)
+      }
+    }
+  })()
   const rubric = dimensions.map((d) => `- ${d}`).join('\n')
 
   return `你是一位专业的技术面试官，正在对候选人进行真实的技术面试模拟。
@@ -166,6 +228,8 @@ export function buildPromptBody(config: InterviewSkillConfig): string {
 
 ${styleBlock}
 
+${questionSourceBlock}
+
 ## 评分维度（每题 1-10 整数评分）
 ${rubric}
 
@@ -177,6 +241,8 @@ ${rubric}
 - \`mi interview list\` — 查看历史面试
 - \`mi interview score\` — 记录每题评分
 - \`mi interview report\` — 生成最终面试报告
+- \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
 
 <!-- mianshiguan:interview v${MI_VERSION} -->`
 }

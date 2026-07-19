@@ -17,6 +17,7 @@ export interface Config {
   readonly dbPath: string
   defaultProfile?: string
   interviewerStyle: 'strict' | 'coaching' | 'friendly'
+  questionSource?: QuestionSource
   dashboardPort: number
 }
 
@@ -26,6 +27,9 @@ type InterviewerStyle = (typeof VALID_STYLES)[number]
 const NOT_FOUND_MESSAGE = '请先运行 mi init 初始化配置'
 const INVALID_STYLE_MESSAGE = 'interviewerStyle 必须是 strict / coaching / friendly'
 
+export const VALID_QUESTION_SOURCES = ['agent-first', 'bank-first', 'mixed'] as const
+export type QuestionSource = (typeof VALID_QUESTION_SOURCES)[number]
+const INVALID_QUESTION_SOURCE_MESSAGE = 'questionSource 必须是 agent-first / bank-first / mixed'
 /**
  * Default config — used by `loadOrInit` to seed a fresh directory.
  * `dbPath` is intentionally omitted here because it is derived in
@@ -33,6 +37,7 @@ const INVALID_STYLE_MESSAGE = 'interviewerStyle 必须是 strict / coaching / fr
  */
 export const DEFAULT_CONFIG: Omit<Config, 'dbPath' | 'dataDir'> = {
   interviewerStyle: 'coaching',
+  questionSource: 'mixed',
   dashboardPort: 3456,
 }
 
@@ -89,6 +94,7 @@ export class ConfigService {
       interviewerStyle: config.interviewerStyle,
       dashboardPort: config.dashboardPort,
       ...(config.defaultProfile !== undefined && { defaultProfile: config.defaultProfile }),
+      ...(config.questionSource !== undefined && { questionSource: config.questionSource }),
     }
     const path = this.configPath()
     const tmp = `${path}.tmp`
@@ -142,11 +148,15 @@ export class ConfigService {
       obj.interviewerStyle !== undefined
         ? this.parseStyle(obj.interviewerStyle)
         : DEFAULT_CONFIG.interviewerStyle
-
+    const questionSource: QuestionSource =
+      obj.questionSource !== undefined
+        ? this.parseQuestionSource(obj.questionSource)
+        : 'mixed'
     const config: Config = {
       dataDir,
       dbPath,
       interviewerStyle,
+      questionSource,
       dashboardPort,
     }
     if (typeof obj.defaultProfile === 'string') {
@@ -161,6 +171,9 @@ export class ConfigService {
   private validate(config: Config): void {
     // Narrow the type so downstream use is sound; throws if invalid.
     this.parseStyle(config.interviewerStyle)
+    if (config.questionSource !== undefined) {
+      this.parseQuestionSource(config.questionSource)
+    }
     if (typeof config.dashboardPort !== 'number' || config.dashboardPort <= 0) {
       throw new MiConfigError('dashboardPort 必须是正整数')
     }
@@ -177,11 +190,23 @@ export class ConfigService {
     throw new MiConfigError(`${INVALID_STYLE_MESSAGE}，当前值: ${String(value)}`)
   }
 
+  /**
+   * Type guard for the questionSource enum. Returns the narrowed value
+   * or throws `MiConfigError` with a Chinese message. Mirrors `parseStyle`.
+   */
+  private parseQuestionSource(value: unknown): QuestionSource {
+    if (VALID_QUESTION_SOURCES.includes(value as QuestionSource)) {
+      return value as QuestionSource
+    }
+    throw new MiConfigError(`${INVALID_QUESTION_SOURCE_MESSAGE}，当前值: ${String(value)}`)
+  }
+
   private defaults(): Config {
     return {
       dataDir: this.dataDir,
       dbPath: join(this.dataDir, 'data.db'),
       interviewerStyle: DEFAULT_CONFIG.interviewerStyle,
+      questionSource: 'mixed',
       dashboardPort: DEFAULT_CONFIG.dashboardPort,
     }
   }

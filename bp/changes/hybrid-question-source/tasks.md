@@ -13,7 +13,7 @@
 ## Wave 1: Config enum and persistence
 
 - [ ] T-1: [type:scaffolding] Add `VALID_QUESTION_SOURCES` tuple, `QuestionSource` type, and `parseQuestionSource` guard in `config-service.ts`
-  - **refs**: DS-1
+- [x] T-1: [type:scaffolding] Add `VALID_QUESTION_SOURCES` tuple, `QuestionSource` type, and `parseQuestionSource` guard in `config-service.ts` (b44c849)
   - **spec_ref**: specs/config/spec.md#config-11-questionsource-enum-validation
   - **files**: `src/services/config-service.ts`
   - **acceptance**: The file exports `VALID_QUESTION_SOURCES` as `['agent-first', 'bank-first', 'mixed'] as const`, exports the `QuestionSource` type, defines `INVALID_QUESTION_SOURCE_MESSAGE`, and has a private `parseQuestionSource` that returns the narrowed value or throws `MiConfigError`. No other behavior changes yet.
@@ -21,7 +21,7 @@
   - **depends_on**: (none)
 
 - [ ] T-2: [type:behavior] `ConfigService.load()` rejects an invalid `questionSource` from YAML with the canonical Chinese message
-  - **refs**: DS-1, DS-2
+- [x] T-2: [type:behavior] `ConfigService.load()` rejects an invalid `questionSource` from YAML with the canonical Chinese message (673edfd)
   - **spec_ref**: specs/config/spec.md#config-11-questionsource-enum-validation
   - **files**: `src/services/config-service.ts`, `src/services/config-service.test.ts`
   - **acceptance**: When `config.yml` contains `questionSource: bogus`, `load()` throws `MiConfigError` with the canonical message listing every legal value and the offending input.
@@ -31,7 +31,7 @@
   - **depends_on**: T-1
 
 - [ ] T-3: [type:behavior] `ConfigService.save()` rejects an invalid `questionSource` without touching disk
-  - **refs**: DS-1, DS-2
+- [x] T-3: [type:behavior] `ConfigService.save()` rejects an invalid `questionSource` without touching disk (8309576)
   - **spec_ref**: specs/config/spec.md#config-11-questionsource-enum-validation
   - **files**: `src/services/config-service.ts`, `src/services/config-service.test.ts`
   - **acceptance**: When `save()` is called with a `Config` whose `questionSource` is not in the canonical tuple, the call throws `MiConfigError` and `config.yml` is not written (or remains at its previous contents).
@@ -41,7 +41,7 @@
   - **depends_on**: T-1
 
 - [ ] T-4: [type:behavior] `ConfigService.load()` backfills `questionSource: 'mixed'` when YAML omits the key
-  - **refs**: DS-2
+- [x] T-4: [type:behavior] `ConfigService.load()` backfills `questionSource: 'mixed'` when YAML omits the key (5979a76; GREEN preempted by T-2/T-3)
   - **spec_ref**: specs/config/spec.md#config-12-questionsource-default-and-round-trip
   - **files**: `src/services/config-service.ts`, `src/services/config-service.test.ts`
   - **acceptance**: A config file with only `dataDir` loads with `questionSource === 'mixed'`; `loadOrInit()` writes `questionSource: mixed` on a fresh install.
@@ -51,7 +51,7 @@
   - **depends_on**: T-2
 
 - [ ] T-5: [type:behavior] `ConfigService` round-trips every valid `questionSource` through `save()` → `load()`
-  - **refs**: DS-2
+- [x] T-5: [type:behavior] `ConfigService` round-trips every valid `questionSource` through `save()` → `load()` (f64b683; GREEN preempted by T-2/T-3)
   - **spec_ref**: specs/config/spec.md#config-12-questionsource-default-and-round-trip
   - **files**: `src/services/config-service.test.ts`
   - **acceptance**: For each member of `VALID_QUESTION_SOURCES`, `save({ questionSource: x })` followed by `load()` returns the same value; the persisted YAML contains the literal string.
@@ -62,7 +62,7 @@
 
 ## Wave 2: Skill prompt question-source section
 
-- [ ] T-6: [type:scaffolding] Add `VALID_QUESTION_SOURCES`, `QuestionSource`, and `questionSource?` to `InterviewSkillConfig` in `interview.ts`
+- [x] T-6: [type:scaffolding] Add `VALID_QUESTION_SOURCES`, `QuestionSource`, and `questionSource?` to `InterviewSkillConfig` in `interview.ts` (d0b5cb2)
   - **refs**: DS-3
   - **spec_ref**: specs/interview/spec.md#int-21-questionsource-config-and-prompt
   - **files**: `src/skill-templates/interview.ts`
@@ -70,17 +70,16 @@
   - **RED**: (n/a — scaffolding; verified by compile and existing tests)
   - **depends_on**: T-1
 
-- [ ] T-7: [type:behavior] `validateConfig` rejects an invalid `questionSource` with the canonical Chinese message and accepts every valid value
+- [x] T-7: [type:behavior] `validateConfig` rejects an invalid `questionSource` with the canonical Chinese message and accepts every valid value (8beb60e test, 4ed3e0f feat)
   - **refs**: DS-3
   - **spec_ref**: specs/interview/spec.md#int-21-questionsource-config-and-prompt
-  - **files**: `src/skill-templates/interview.ts`, `src/skill-templates/__tests__/interview.test.ts`
   - **acceptance**: `validateConfig({ platform, interviewerStyle, questionSource: 'bogus' })` throws `MiValidationError` with a Chinese message listing every legal value; supplying each of the three canonical values does not throw; omitting the field does not throw; the existing order `platform → interviewerStyle → questionSource` is preserved (a bad platform still throws the platform error first).
   - **RED**: GIVEN `validateConfig` with a valid `platform` and `interviewerStyle`
     WHEN it is called with `questionSource: 'bogus'` cast through `unknown`
     THEN it SHALL throw `MiValidationError` matching `/无效的题目来源: bogus \(合法: agent-first, bank-first, mixed\)/`; supplying each valid value SHALL not throw; omitting the field SHALL not throw.
   - **depends_on**: T-6
 
-- [ ] T-8: [type:behavior] `buildPromptBody` renders the `## 题目来源` section with the `'mixed'` branch and the new `mi question search`/`list` CLI references
+- [x] T-8: [type:behavior] `buildPromptBody` renders the `## 题目来源` section with the `'mixed'` branch and the new `mi question search`/`list` CLI references (9fb84b2 test, 2a9dcc8 feat)
   - **refs**: DS-4
   - **spec_ref**: specs/interview/spec.md#int-21-questionsource-config-and-prompt
   - **files**: `src/skill-templates/interview.ts`, `src/skill-templates/__tests__/interview.test.ts`
@@ -90,7 +89,7 @@
     THEN the output SHALL contain the `## 题目来源` section header, the `'mixed'` directive copy, `mi question search <关键字>`, and `mi question list`; the two rendered strings SHALL be byte-identical.
   - **depends_on**: T-6
 
-- [ ] T-9: [type:behavior] `buildPromptBody` selects the `'agent-first'` directive when `questionSource: 'agent-first'`
+- [x] T-9: [type:behavior] `buildPromptBody` selects the `'agent-first'` directive when `questionSource: 'agent-first'` (fb2468d test, 77d5526 feat)
   - **refs**: DS-4
   - **spec_ref**: specs/interview/spec.md#int-21-questionsource-config-and-prompt
   - **files**: `src/skill-templates/interview.ts`, `src/skill-templates/__tests__/interview.test.ts`
@@ -100,7 +99,7 @@
     THEN the output SHALL contain the `'agent-first'` header and its directive, SHALL contain `## 题目来源`, and SHALL NOT contain any phrase unique to `'mixed'` or `'bank-first'`.
   - **depends_on**: T-8
 
-- [ ] T-10: [type:behavior] `buildPromptBody` selects the `'bank-first'` directive when `questionSource: 'bank-first'`
+- [x] T-10: [type:behavior] `buildPromptBody` selects the `'bank-first'` directive when `questionSource: 'bank-first'` (1eb3715 test, 5186ad7 feat)
   - **refs**: DS-4
   - **spec_ref**: specs/interview/spec.md#int-21-questionsource-config-and-prompt
   - **files**: `src/skill-templates/interview.ts`, `src/skill-templates/__tests__/interview.test.ts`
@@ -110,7 +109,7 @@
     THEN the output SHALL contain the `'bank-first'` header and its directive, SHALL contain `## 题目来源`, and SHALL NOT contain any phrase unique to `'mixed'` or `'agent-first'`.
   - **depends_on**: T-8
 
-- [ ] T-11: [type:behavior] Question-source directives are mutually exclusive across the three modes and shared CLI/rubric blocks are stable
+- [x] T-11: [type:behavior] Question-source directives are mutually exclusive across the three modes and shared CLI/rubric blocks are stable (dfcc170)
   - **refs**: DS-4, DS-5
   - **spec_ref**: specs/interview/spec.md#int-21-questionsource-config-and-prompt
   - **files**: `src/skill-templates/__tests__/interview.test.ts`

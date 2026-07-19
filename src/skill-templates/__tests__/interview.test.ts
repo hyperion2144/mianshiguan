@@ -6,7 +6,9 @@ import {
   MI_VERSION,
   MiValidationError,
   type Platform,
+  type QuestionSource,
   VALID_PLATFORMS,
+  VALID_QUESTION_SOURCES,
   VALID_STYLES,
   buildPromptBody,
   renderInterviewSkill,
@@ -29,6 +31,10 @@ describe('module surface (T-1)', () => {
 
   it('exports VALID_STYLES as the canonical style tuple', () => {
     expect(VALID_STYLES).toEqual(['strict', 'coaching', 'friendly'])
+  })
+
+  it('exports VALID_QUESTION_SOURCES as the canonical question-source tuple', () => {
+    expect(VALID_QUESTION_SOURCES).toEqual(['agent-first', 'bank-first', 'mixed'])
   })
 
   it('exports DEFAULT_DIMENSIONS with the 5-dim scoring rubric', () => {
@@ -145,6 +151,76 @@ describe('validateConfig (T-2)', () => {
     ).not.toThrow(TypeError)
   })
 })
+
+// ─── T-7: validateConfig — questionSource validation ───────────────────────
+
+describe('validateConfig questionSource (T-7)', () => {
+  it('rejects an invalid questionSource with the canonical Chinese message', () => {
+    expect(() =>
+      validateConfig({
+        platform: 'omp',
+        interviewerStyle: 'coaching',
+        questionSource: 'bogus' as unknown as QuestionSource,
+      } as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(MiValidationError)
+
+    expect(() =>
+      validateConfig({
+        platform: 'omp',
+        interviewerStyle: 'coaching',
+        questionSource: 'bogus' as unknown as QuestionSource,
+      } as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(/^无效的题目来源: bogus \(合法: agent-first, bank-first, mixed\)/)
+  })
+
+  it('accepts every member of VALID_QUESTION_SOURCES without throwing', () => {
+    for (const questionSource of VALID_QUESTION_SOURCES) {
+      expect(() =>
+        validateConfig({
+          platform: 'omp',
+          interviewerStyle: 'coaching',
+          questionSource,
+        }),
+      ).not.toThrow()
+    }
+  })
+
+  it('accepts a config with questionSource omitted (defaults to mixed)', () => {
+    expect(() =>
+      validateConfig({
+        platform: 'omp',
+        interviewerStyle: 'coaching',
+      }),
+    ).not.toThrow()
+  })
+
+  it('preserves the existing order: bad platform still throws platform error first', () => {
+    expect(() =>
+      validateConfig({
+        platform: 'unknown' as unknown as Platform,
+        interviewerStyle: 'coaching',
+        questionSource: 'bogus' as unknown as QuestionSource,
+      } as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(/^无效的平台/)
+  })
+
+  it('preserves the existing order: bad interviewerStyle throws before bad questionSource', () => {
+    expect(() =>
+      validateConfig({
+        platform: 'omp',
+        interviewerStyle: 'casual' as unknown as InterviewerStyle,
+        questionSource: 'bogus' as unknown as QuestionSource,
+      } as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(/^无效的面试官风格/)
+  })
+
+  it('rejects null input even when questionSource is also missing/null', () => {
+    expect(() =>
+      validateConfig(null as unknown as Parameters<typeof validateConfig>[0]),
+    ).toThrow(MiValidationError)
+  })
+})
+
 
 // ─── T-3: buildPromptBody — shared prompt body ──────────────────────────────
 
@@ -297,6 +373,257 @@ describe('buildPromptBody style guidance (T-4)', () => {
     }
   })
 })
+
+// ─── T-8: buildPromptBody — questionSource 'mixed' branch + CLI references ─
+
+describe('buildPromptBody questionSource mixed branch (T-8)', () => {
+  const base = {
+    platform: 'omp' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('renders the `## 题目来源` section header when questionSource="mixed"', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('## 题目来源')
+  })
+
+  it('renders the `## 题目来源` section header when questionSource is omitted (defaults to mixed)', () => {
+    const body = buildPromptBody(base)
+    expect(body).toContain('## 题目来源')
+  })
+
+  it('mixed branch contains a directive copy unique to the mixed mode', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('混合')
+    expect(body).toContain('题库')
+  })
+
+  it('CLI reference includes `mi question search <关键字>` for the mixed branch', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('mi question search <关键字>')
+  })
+
+  it('CLI reference includes `mi question list` for the mixed branch', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('mi question list')
+  })
+
+  it('omitted questionSource renders byte-identical to explicit questionSource="mixed"', () => {
+    const omitted = buildPromptBody(base)
+    const explicit = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(omitted).toBe(explicit)
+  })
+
+  it('omitted questionSource does not leak "undefined" anywhere in the body', () => {
+    const body = buildPromptBody(base)
+    expect(body).not.toContain('undefined')
+  })
+
+  it('CLI references appear alongside the existing mi interview start line (shared block)', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('mi interview start')
+    expect(body).toContain('mi question search <关键字>')
+    expect(body).toContain('mi question list')
+  })
+})
+
+// ─── T-9: buildPromptBody — questionSource 'agent-first' branch ─────────────
+
+describe('buildPromptBody agent-first branch (T-9)', () => {
+  const base = {
+    platform: 'omp' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('renders the agent-first section header when questionSource="agent-first"', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'agent-first' })
+    expect(body).toContain('## 题目来源：自主优先')
+  })
+
+  it('directive copy mentions candidates explicitly requesting a topic (spec-aligned)', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'agent-first' })
+    expect(body).toContain('候选人明确要求')
+  })
+
+  it('directive copy mentions reference answer for scoring (spec-aligned)', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'agent-first' })
+    expect(body).toContain('评分需要参考答案')
+  })
+
+  it('agent-first body does NOT contain any phrase unique to mixed', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'agent-first' })
+    expect(body).not.toContain('你可以自由混合使用自己的知识与本地题库')
+  })
+
+  it('agent-first body does NOT contain any phrase unique to bank-first', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'agent-first' })
+    expect(body).not.toContain('默认从本地题库中选题')
+  })
+})
+
+
+
+
+// ─── T-10: buildPromptBody — questionSource 'bank-first' branch ─────────────
+
+describe('buildPromptBody bank-first branch (T-10)', () => {
+  const base = {
+    platform: 'omp' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('renders the bank-first section header when questionSource="bank-first"', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'bank-first' })
+    expect(body).toContain('## 题目来源：题库优先')
+  })
+
+  it('directive copy mentions the bank having no suitable question (spec-aligned)', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'bank-first' })
+    expect(body).toContain('题库没有合适的题目')
+  })
+
+  it('directive copy mentions falling back to the agent\'s own knowledge', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'bank-first' })
+    expect(body).toContain('依赖你自己的知识')
+  })
+
+  it('bank-first body does NOT contain any phrase unique to mixed', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'bank-first' })
+    expect(body).not.toContain('你可以自由混合使用自己的知识与本地题库')
+  })
+
+  it('bank-first body does NOT contain any phrase unique to agent-first', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'bank-first' })
+    expect(body).not.toContain('默认依赖你自己的知识库出题')
+  })
+})
+
+// ─── T-11: question-source mutual exclusivity + shared blocks + snapshots ──
+
+describe('questionSource mutual exclusivity and shared blocks (T-11)', () => {
+  const base = {
+    platform: 'omp' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  const bodies = {
+    'agent-first': buildPromptBody({ ...base, questionSource: 'agent-first' }),
+    'bank-first': buildPromptBody({ ...base, questionSource: 'bank-first' }),
+    mixed: buildPromptBody({ ...base, questionSource: 'mixed' }),
+  } as const
+
+  // ── shared blocks: every body carries the canonical scaffolding ──
+  for (const [mode, body] of Object.entries(bodies)) {
+    it(`${mode} body contains the canonical role header`, () => {
+      expect(body).toContain('你是一位专业的技术面试官')
+    })
+
+    it(`${mode} body contains the scoring rubric header`, () => {
+      expect(body).toContain('评分维度')
+    })
+
+    it(`${mode} body contains mi interview start CLI line`, () => {
+      expect(body).toContain('mi interview start')
+    })
+
+    it(`${mode} body contains mi question search <关键字> CLI line`, () => {
+      expect(body).toContain('mi question search <关键字>')
+    })
+
+    it(`${mode} body contains mi question list CLI line`, () => {
+      expect(body).toContain('mi question list')
+    })
+  }
+
+  // ── mutual exclusivity: each directive phrase is unique to its body ──
+  it('agent-first directive copy appears only in the agent-first body', () => {
+    expect(bodies['agent-first']).toContain('## 题目来源：自主优先')
+    expect(bodies['bank-first']).not.toContain('## 题目来源：自主优先')
+    expect(bodies.mixed).not.toContain('## 题目来源：自主优先')
+  })
+
+  it('bank-first directive copy appears only in the bank-first body', () => {
+    expect(bodies['bank-first']).toContain('## 题目来源：题库优先')
+    expect(bodies['agent-first']).not.toContain('## 题目来源：题库优先')
+    expect(bodies.mixed).not.toContain('## 题目来源：题库优先')
+  })
+
+  it('mixed directive copy appears only in the mixed body', () => {
+    expect(bodies.mixed).toContain('## 题目来源：混合')
+    expect(bodies['agent-first']).not.toContain('## 题目来源：混合')
+    expect(bodies['bank-first']).not.toContain('## 题目来源：混合')
+  })
+
+  // ── exactly one directive per body ──
+  it('agent-first body contains EXACTLY ONE of the three directive headers', () => {
+    const a = bodies['agent-first']
+    const headerCount =
+      Number(a.includes('## 题目来源：自主优先')) +
+      Number(a.includes('## 题目来源：题库优先')) +
+      Number(a.includes('## 题目来源：混合'))
+    expect(headerCount).toBe(1)
+  })
+
+  it('bank-first body contains EXACTLY ONE of the three directive headers', () => {
+    const b = bodies['bank-first']
+    const headerCount =
+      Number(b.includes('## 题目来源：自主优先')) +
+      Number(b.includes('## 题目来源：题库优先')) +
+      Number(b.includes('## 题目来源：混合'))
+    expect(headerCount).toBe(1)
+  })
+
+  it('mixed body contains EXACTLY ONE of the three directive headers', () => {
+    const m = bodies.mixed
+    const headerCount =
+      Number(m.includes('## 题目来源：自主优先')) +
+      Number(m.includes('## 题目来源：题库优先')) +
+      Number(m.includes('## 题目来源：混合'))
+    expect(headerCount).toBe(1)
+  })
+
+  // ── determinism — every body is byte-identical across calls ──
+  it('every questionSource value produces byte-identical output across calls', () => {
+    for (const questionSource of VALID_QUESTION_SOURCES) {
+      const a = buildPromptBody({ ...base, questionSource })
+      const b = buildPromptBody({ ...base, questionSource })
+      expect(a).toBe(b)
+    }
+  })
+
+  // ── CLI references are stable across modes (D-5: not gated by source) ──
+  it('CLI reference block is byte-identical across all three modes', () => {
+    function extractCliBlock(body: string): string {
+      const start = body.indexOf('## CLI 命令参考')
+      const end = body.indexOf('<!-- mianshiguan:interview')
+      return body.slice(start, end)
+    }
+    expect(extractCliBlock(bodies['agent-first'])).toBe(extractCliBlock(bodies['bank-first']))
+    expect(extractCliBlock(bodies['agent-first'])).toBe(extractCliBlock(bodies.mixed))
+  })
+
+  // ── snapshot baselines for all three modes ──
+  it('snapshot for questionSource=agent-first', () => {
+    expect(bodies['agent-first']).toMatchSnapshot('questionSource=agent-first')
+  })
+
+  it('snapshot for questionSource=bank-first', () => {
+    expect(bodies['bank-first']).toMatchSnapshot('questionSource=bank-first')
+  })
+
+  it('snapshot for questionSource=mixed', () => {
+    expect(bodies.mixed).toMatchSnapshot('questionSource=mixed')
+  })
+})
+
 
 // ─── T-5: wrapForOmp + omp dispatch ─────────────────────────────────────────
 
