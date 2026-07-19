@@ -66,7 +66,7 @@
  **Changes**:
  
  - [x] question-bank-schema (archived 2026-07-19)
- - [ ] leetcode-scraper
+ - [-] leetcode-scraper (planned 2026-07-19)
  
  **Next**: leetcode-scraper
 
