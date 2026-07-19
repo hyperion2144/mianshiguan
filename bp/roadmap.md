@@ -81,7 +81,7 @@
  **Changes**:
  
  
- - [x] hybrid-question-source (implemented 2026-07-19)
+ - [x] hybrid-question-source (archived 2026-07-19)
  
  - Code execution sandbox for algorithm verification + scoring (not yet proposed)
  - Auto-evaluation score integration into interview report (not yet proposed)
