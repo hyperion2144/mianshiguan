@@ -25,13 +25,13 @@
   consumer of the real Chromium and is gated by hasChromium.
 -->
 
-- [ ] T-1: [type:config] Add `playwright` to package.json dependencies <!-- commit: chore(deps): add playwright for niuke scraper -->
+- [x] T-1: [type:config] Add `playwright` to package.json dependencies <!-- commit: chore(deps): add playwright for niuke scraper --> [b7a5b54] 
   - **refs**: DS-1, D-9
   - **files**: `package.json`
   - **acceptance**: `bun pm ls playwright` reports `playwright@*` as a runtime dependency; no other dependency changes; `package.json` JSON is valid; `biome check package.json` exits 0
   - **notes**: do NOT add `devDependencies`; do NOT run `playwright install` from this task (deferred to T-2 so it can be skipped in CI without playwright)
 
-- [ ] T-2: [type:behavior] `NiukeBrowser.launch` returns a `BrowserHandle` that can open pages <!-- commit: test(niuke-browser): red for launch returns BrowserHandle + feat(niuke-browser): launch chromium + refactor(niuke-browser): extract launch options -->
+- [x] T-2: [type:behavior] `NiukeBrowser.launch` returns a `BrowserHandle` that can open pages <!-- commit: test(niuke-browser): red for launch returns BrowserHandle + feat(niuke-browser): launch chromium + refactor(niuke-browser): extract launch options --> [f79b0e6] 
   - **refs**: DS-1, D-2
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-1
   - **files**: `src/services/niuke-browser.ts`, `src/services/niuke-browser.test.ts`
@@ -41,7 +41,7 @@
     THEN the returned `BrowserHandle` and `PageHandle` expose `close()` methods
     AND `browser.close()` resolves without throwing
 
-- [ ] T-3: [type:behavior] `PageHandle.goto` navigates and waits for a CSS selector <!-- commit: test(niuke-browser): red for goto + waitForSelector + feat(niuke-browser): goto waits for selector + refactor(niuke-browser): split waitForSelector timeout -->
+- [x] T-3: [type:behavior] `PageHandle.goto` navigates and waits for a CSS selector <!-- commit: test(niuke-browser): red for goto + waitForSelector + feat(niuke-browser): goto waits for selector + refactor(niuke-browser): split waitForSelector timeout --> [8287412] 
   - **refs**: DS-1, D-3
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-1
   - **files**: `src/services/niuke-browser.ts`, `src/services/niuke-browser.test.ts`
@@ -52,7 +52,7 @@
     AND when the same call is made against a page that never renders the selector
     THEN it rejects with `MiDatabaseError` whose message contains "超时" or "timeout"
 
-- [ ] T-4: [type:behavior] `PageHandle.evaluate` executes a function in the page context and returns its value <!-- commit: test(niuke-browser): red for evaluate returns page value + feat(niuke-browser): page.evaluate + refactor(niuke-browser): extract evaluation error mapping -->
+- [x] T-4: [type:behavior] `PageHandle.evaluate` executes a function in the page context and returns its value <!-- commit: test(niuke-browser): red for evaluate returns page value + feat(niuke-browser): page.evaluate + refactor(niuke-browser): extract evaluation error mapping --> [4af1100] 
   - **refs**: DS-1, D-3
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-2
   - **files**: `src/services/niuke-browser.ts`, `src/services/niuke-browser.test.ts`
@@ -63,7 +63,7 @@
     AND when the evaluator throws inside the page
     THEN the promise rejects with `MiDatabaseError` whose message contains "页面脚本异常"
 
-- [ ] T-5: [type:behavior] `BrowserHandle.close` runs in `finally` even when page operations throw <!-- commit: test(niuke-browser): red for close in finally + feat(niuke-browser): finally-guard close + refactor(niuke-browser): extract NiukeBrowser.withFake helper -->
+- [x] T-5: [type:behavior] `BrowserHandle.close` runs in `finally` even when page operations throw <!-- commit: test(niuke-browser): red for close in finally + feat(niuke-browser): finally-guard close + refactor(niuke-browser): extract NiukeBrowser.withFake helper --> [4af1100] 
   - **refs**: DS-1, D-8
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-1
   - **files**: `src/services/niuke-browser.ts`, `src/services/niuke-browser.test.ts`
@@ -74,7 +74,7 @@
     AND `browser.close` is called exactly once
     AND `page.close` is called exactly once
 
-- [ ] T-6: [type:behavior] `mapNiukeListEntry` validates and trims a raw list entry <!-- commit: test(niuke-scraper): red for mapNiukeListEntry + feat(niuke-scraper): mapNiukeListEntry + refactor(niuke-scraper): extract shared trim helpers -->
+- [x] T-6: [type:behavior] `mapNiukeListEntry` validates and trims a raw list entry <!-- commit: test(niuke-scraper): red for mapNiukeListEntry + feat(niuke-scraper): mapNiukeListEntry + refactor(niuke-scraper): extract shared trim helpers --> [01f8868] 
   - **refs**: DS-2, D-5, D-6
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-3
   - **files**: `src/services/niuke-scraper.ts`, `src/services/niuke-scraper.test.ts`
@@ -84,7 +84,7 @@
     THEN it returns `{ id: 'abc-123', title: '两数之和', url: 'https://…', type: 'algorithm', company: ['字节跳动'], position: ['前端'] }`
     AND when called with `id: ''` it throws `MiValidationError`
 
-- [ ] T-7: [type:behavior] `mapNiukeDetailToImportRecord` produces a `QuestionImportRecord` with all required fields <!-- commit: test(niuke-scraper): red for mapNiukeDetailToImportRecord + feat(niuke-scraper): mapNiukeDetailToImportRecord + refactor(niuke-scraper): extract niuke type classifier -->
+- [x] T-7: [type:behavior] `mapNiukeDetailToImportRecord` produces a `QuestionImportRecord` with all required fields <!-- commit: test(niuke-scraper): red for mapNiukeDetailToImportRecord + feat(niuke-scraper): mapNiukeDetailToImportRecord + refactor(niuke-scraper): extract niuke type classifier --> [bb7cd08] 
   - **refs**: DS-2, D-5, D-6
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-3
   - **files**: `src/services/niuke-scraper.ts`, `src/services/niuke-scraper.test.ts`
@@ -95,7 +95,7 @@
     AND `url` equals `detail.url`
     AND `referenceAnswer` equals `detail.referenceAnswer`
 
-- [ ] T-8: [type:behavior] `NiukeScraper.scrape` fetches the list page, opens detail pages, maps records, and persists via `QuestionService.importRecords` <!-- commit: test(niuke-scraper): red for scrape happy path + feat(niuke-scraper): scrape happy path + refactor(niuke-scraper): extract page navigation helper -->
+- [x] T-8: [type:behavior] `NiukeScraper.scrape` fetches the list page, opens detail pages, maps records, and persists via `QuestionService.importRecords` <!-- commit: test(niuke-scraper): red for scrape happy path + feat(niuke-scraper): scrape happy path + refactor(niuke-scraper): extract page navigation helper --> [01f8868] 
   - **refs**: DS-2, D-3, D-4, D-8
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-4
   - **files**: `src/services/niuke-scraper.ts`, `src/services/niuke-scraper.test.ts`
@@ -107,7 +107,7 @@
     AND the result is `{ imported: 3, skipped: 0, ids: <three ids> }`
     AND `browser.close` is called exactly once even on success
 
-- [ ] T-9: [type:behavior] `NiukeScraper.scrape` skips questions whose `(source='niuke', sourceId)` is already in the database <!-- commit: test(niuke-scraper): red for scrape dedup + feat(niuke-scraper): pre-seed existing sourceIds + refactor(niuke-scraper): extract dedup helper -->
+- [x] T-9: [type:behavior] `NiukeScraper.scrape` skips questions whose `(source='niuke', sourceId)` is already in the database <!-- commit: test(niuke-scraper): red for scrape dedup + feat(niuke-scraper): pre-seed existing sourceIds + refactor(niuke-scraper): extract dedup helper --> [21a2d4d] 
   - **refs**: DS-2, D-8
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-5
   - **files**: `src/services/niuke-scraper.ts`, `src/services/niuke-scraper.test.ts`
@@ -118,7 +118,7 @@
     THEN `service.importRecords` receives exactly one record (for id `c`)
     AND the result `skipped` is `2`
 
-- [ ] T-10: [type:behavior] `NiukeScraper.scrape` honours `limit` by capping the number of detail pages fetched <!-- commit: test(niuke-scraper): red for scrape honours limit + feat(niuke-scraper): honour limit + refactor(niuke-scraper): extract take N helper -->
+- [x] T-10: [type:behavior] `NiukeScraper.scrape` honours `limit` by capping the number of detail pages fetched <!-- commit: test(niuke-scraper): red for scrape honours limit + feat(niuke-scraper): honour limit + refactor(niuke-scraper): extract take N helper --> [ec0496c] 
   - **refs**: DS-2, D-4
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-4
   - **files**: `src/services/niuke-scraper.ts`, `src/services/niuke-scraper.test.ts`
@@ -128,7 +128,7 @@
     THEN exactly 2 detail pages are opened
     AND `service.importRecords` receives exactly 2 records (the first two ids)
 
-- [ ] T-11: [type:behavior] `NiukeScraper.scrape` surfaces browser errors and still closes the browser <!-- commit: test(niuke-scraper): red for scrape propagates MiError + feat(niuke-scraper): translate browser errors + refactor(niuke-scraper): extract error mapping -->
+- [x] T-11: [type:behavior] `NiukeScraper.scrape` surfaces browser errors and still closes the browser <!-- commit: test(niuke-scraper): red for scrape propagates MiError + feat(niuke-scraper): translate browser errors + refactor(niuke-scraper): extract error mapping --> [1df0870] 
   - **refs**: DS-1, DS-2, D-8
   - **spec_ref**: specs/question-bank/spec.md#QB-NK-1, specs/question-bank/spec.md#QB-NK-2
   - **files**: `src/services/niuke-scraper.ts`, `src/services/niuke-scraper.test.ts`

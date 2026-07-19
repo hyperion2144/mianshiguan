@@ -22,13 +22,15 @@
     "nanospinner": "^1.2.2",
     "pdf-parse": "^1.1.1",
     "picocolors": "^1.1.1",
+    "playwright": "^1.61.1",
     "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
     "@types/js-yaml": "^4.0.9",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "bun": ">=1.2.0"
