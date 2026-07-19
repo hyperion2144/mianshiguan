@@ -12,7 +12,6 @@
 
 ## Wave 1: Config enum and persistence
 
-- [ ] T-1: [type:scaffolding] Add `VALID_QUESTION_SOURCES` tuple, `QuestionSource` type, and `parseQuestionSource` guard in `config-service.ts`
 - [x] T-1: [type:scaffolding] Add `VALID_QUESTION_SOURCES` tuple, `QuestionSource` type, and `parseQuestionSource` guard in `config-service.ts` (b44c849)
   - **spec_ref**: specs/config/spec.md#config-11-questionsource-enum-validation
   - **files**: `src/services/config-service.ts`
@@ -20,7 +19,6 @@
   - **RED**: (n/a — scaffolding; verified by compile and re-export surface test)
   - **depends_on**: (none)
 
-- [ ] T-2: [type:behavior] `ConfigService.load()` rejects an invalid `questionSource` from YAML with the canonical Chinese message
 - [x] T-2: [type:behavior] `ConfigService.load()` rejects an invalid `questionSource` from YAML with the canonical Chinese message (673edfd)
   - **spec_ref**: specs/config/spec.md#config-11-questionsource-enum-validation
   - **files**: `src/services/config-service.ts`, `src/services/config-service.test.ts`
@@ -30,7 +28,6 @@
     THEN it SHALL throw `MiConfigError` with a message matching `/questionSource 必须是 agent-first \/ bank-first \/ mixed/` and including the offending value.
   - **depends_on**: T-1
 
-- [ ] T-3: [type:behavior] `ConfigService.save()` rejects an invalid `questionSource` without touching disk
 - [x] T-3: [type:behavior] `ConfigService.save()` rejects an invalid `questionSource` without touching disk (8309576)
   - **spec_ref**: specs/config/spec.md#config-11-questionsource-enum-validation
   - **files**: `src/services/config-service.ts`, `src/services/config-service.test.ts`
@@ -40,7 +37,6 @@
     THEN it SHALL throw `MiConfigError` matching the canonical message and `config.yml` SHALL NOT exist on disk.
   - **depends_on**: T-1
 
-- [ ] T-4: [type:behavior] `ConfigService.load()` backfills `questionSource: 'mixed'` when YAML omits the key
 - [x] T-4: [type:behavior] `ConfigService.load()` backfills `questionSource: 'mixed'` when YAML omits the key (5979a76; GREEN preempted by T-2/T-3)
   - **spec_ref**: specs/config/spec.md#config-12-questionsource-default-and-round-trip
   - **files**: `src/services/config-service.ts`, `src/services/config-service.test.ts`
@@ -50,7 +46,6 @@
     THEN the returned `Config.questionSource` SHALL be `'mixed'`; calling `loadOrInit()` on an empty data directory SHALL create `config.yml` containing the `questionSource: mixed` line.
   - **depends_on**: T-2
 
-- [ ] T-5: [type:behavior] `ConfigService` round-trips every valid `questionSource` through `save()` → `load()`
 - [x] T-5: [type:behavior] `ConfigService` round-trips every valid `questionSource` through `save()` → `load()` (f64b683; GREEN preempted by T-2/T-3)
   - **spec_ref**: specs/config/spec.md#config-12-questionsource-default-and-round-trip
   - **files**: `src/services/config-service.test.ts`
@@ -116,19 +111,11 @@
   - **acceptance**: For all three `questionSource` values, the body contains the canonical role header, the scoring rubric, the `mi interview start` CLI line, the `mi question search` and `mi question list` lines, and exactly one of the three directive phrases. Each directive phrase appears in exactly one body.
   - **RED**: GIVEN the three `questionSource` values `'agent-first'`, `'bank-first'`, `'mixed'` with the same `platform` and `interviewerStyle`
     WHEN `buildPromptBody` is called for each
-    THEN every body SHALL contain `你是一位专业的技术面试官`, `评分维度`, `mi interview start`, `mi question search <关键字>`, and `mi question list`; each body's directive copy SHALL be unique to its mode (no overlap between the three directive phrases).
-  - **depends_on**: T-9, T-10
-
 ## Pre-Archive Checklist
-
-<!--
-  Verified by the orchestrator after all waves complete.
-  These are the gates before review can run.
--->
-
- - [ ] `tsc --noEmit` passes with no errors
- - [ ] `vitest run` (or project test command) - all suites pass
- - [ ] `bun test src/skill-templates/__tests__/interview.test.ts` passes
- - [ ] Every task in every wave is marked `[x]` with a commit hash
- - [ ] No `{{` template placeholders remaining in any artifact
- - [ ] All wave acceptance criteria confirmed
+ 
+ - [x] `tsc --noEmit` passes with no errors
+ - [x] `vitest run` (or project test command) - all suites pass
+ - [x] `bun test src/skill-templates/__tests__/interview.test.ts` passes
+ - [x] Every task in every wave is marked `[x]` with a commit hash
+ - [x] No `{{` template placeholders remaining in any artifact
+ - [x] All wave acceptance criteria confirmed
