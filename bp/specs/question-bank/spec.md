@@ -201,34 +201,35 @@ The system SHALL detect duplicate source identities both against existing rows a
 - AND its tag links SHALL not be duplicated
 
 ### Requirement: QB-9 — Question CLI query commands
-
-The system SHALL expose `mi question search <keyword>` and `mi question list` commands with `--source`, `--difficulty`, `--category`, `--tag`, and `--json` options. Search SHALL require a keyword; list SHALL allow no filters. The root help and `mi question --help` output SHALL list the question command and its four subcommands.
-
-#### Scenario: Search command returns matching questions
-
-- GIVEN the database contains a question matching `two sum`
-- WHEN a user runs `mi question search "two sum"`
-- THEN the command SHALL return the matching result in the existing table style
-- AND it SHALL exit successfully
-
-#### Scenario: List command applies filters
-
-- GIVEN questions with different source, difficulty, category, and tags
-- WHEN a user runs `mi question list --source leetcode --difficulty easy --category algorithm --tag array`
-- THEN only questions matching every flag SHALL be displayed
-
-#### Scenario: Query command JSON output
-
-- GIVEN a successful search or list request with `--json`
-- WHEN the command completes
-- THEN stdout SHALL contain valid JSON representing an array of question summaries
-- AND no table decoration SHALL be included in stdout
-
-#### Scenario: Query command input error
-
-- GIVEN a user runs search without a keyword or supplies an unsupported filter value
-- WHEN the command dispatches
-- THEN it SHALL print a Chinese validation error and exit with code 1
+ 
+ The system SHALL expose `mi question search <keyword>`, `mi question list`, and `mi question fetch <来源>` commands with `--source`, `--difficulty`, `--category`, `--tag`, `--limit`, and `--json` options. Search SHALL require a keyword; list SHALL allow no filters; fetch SHALL require a supported source argument and SHALL honour `--limit`. The root help and `mi question --help` output SHALL list the question command and its five subcommands (`search`, `list`, `show`, `import`, `fetch`).
+ (was: enumerated only `search` and `list`; documented four subcommands.)
+ 
+ #### Scenario: Search command returns matching questions
+ 
+ - GIVEN the database contains a question matching `two sum`
+ - WHEN a user runs `mi question search "two sum"`
+ - THEN the command SHALL return the matching result in the existing table style
+ - AND it SHALL exit successfully
+ 
+ #### Scenario: List command applies filters
+ 
+ - GIVEN questions with different source, difficulty, category, and tags
+ - WHEN a user runs `mi question list --source leetcode --difficulty easy --category algorithm --tag array`
+ - THEN only questions matching every flag SHALL be displayed
+ 
+ #### Scenario: Query command JSON output
+ 
+ - GIVEN a successful search or list request with `--json`
+ - WHEN the command completes
+ - THEN stdout SHALL contain valid JSON representing an array of question summaries
+ - AND no table decoration SHALL be included in stdout
+ 
+ #### Scenario: Query command input error
+ 
+ - GIVEN a user runs search without a keyword or supplies an unsupported filter value
+ - WHEN the command dispatches
+ - THEN it SHALL print a Chinese validation error and exit with code 1
 
 ### Requirement: QB-10 — Question CLI detail, import, and JSON output
 
@@ -259,6 +260,30 @@ The system SHALL expose `mi question show <id>` and `mi question import <filepat
 - WHEN the command error handler runs
 - THEN it SHALL print the existing Chinese system error format
 - AND it SHALL exit with code 2
+ 
+ ### Requirement: QB-LC-1 — LeetCode question list retrieval
+ 
+ The system SHALL retrieve a paginated list of LeetCode questions from the public LeetCode GraphQL endpoint without authentication. The list SHALL be addressable by `limit` (page size) and `skip` (offset), and SHALL return the total number of available questions for the same filter set. Non-2xx HTTP responses SHALL surface as a user-facing validation error; transport failures and GraphQL error payloads SHALL surface as a system error.
+ ...
+ ### Requirement: QB-LC-2 — LeetCode question detail retrieval
+ 
+ The system SHALL retrieve the full detail of a LeetCode question by `titleSlug` from the public LeetCode GraphQL endpoint without authentication. The detail SHALL include the frontend ID, title, content body, difficulty, topic tags, code snippets, hints, sample test case, and example test cases. Non-2xx HTTP responses, transport failures, and GraphQL error payloads SHALL follow the same error-mapping rules as the list endpoint.
+ ...
+ ### Requirement: QB-LC-3 — LeetCode batch scraping pipeline
+ 
+ The system SHALL paginate the LeetCode list query, fetch each detail in turn, map the combined data into question-bank import records, and persist the records into the question bank. The pipeline SHALL honour a caller-supplied total limit. A run that completes successfully SHALL report the number of records imported, the number skipped, and the IDs of newly-inserted records.
+ ...
+ ### Requirement: QB-LC-4 — Direct batch import of in-memory records
+ 
+ The system SHALL accept a batch of already-decoded question records and persist them with the same validation, atomicity, dedup, and tag-linking semantics as the existing JSON/YAML file import.
+ ...
+ ### Requirement: QB-LC-5 — LeetCode scraping deduplication
+ 
+ The system SHALL skip LeetCode questions whose `(source, sourceId)` is already present in the question bank. Paid-only entries from the upstream list SHALL also be skipped. Skipped records SHALL be reflected in the run's reported `skipped` count.
+ ...
+ ### Requirement: QB-LC-6 — `mi question fetch leetcode` CLI subcommand
+ 
+ The system SHALL expose `mi question fetch <来源>` as a CLI subcommand under `mi question`. In v1, the only supported source is `leetcode`. The subcommand SHALL accept a `--limit <N>` flag (default `100`) and a `--json` flag. On success, the subcommand SHALL either print a Chinese scrape summary or — when `--json` is set — print a JSON object.
 
 ## Error Handling
 
@@ -335,7 +360,7 @@ CLI command contracts:
 
 - `mi question search <keyword> [--source <source>] [--difficulty <easy|medium|hard>] [--category <algorithm|system-design|behavioral>] [--tag <tag>] [--json] [--data-dir <path>]`
 - `mi question list [--source <source>] [--difficulty <easy|medium|hard>] [--category <algorithm|system-design|behavioral>] [--tag <tag>] [--json] [--data-dir <path>]`
-- `mi question show <id> [--json] [--data-dir <path>]`
-- `mi question import <filepath> [--json] [--data-dir <path>]`
+ - `mi question import <filepath> [--json] [--data-dir <path>]`
+ - `mi question fetch leetcode [--limit <N>] [--json] [--data-dir <path>]`
 
 All command interfaces return through stdout on success, write formatted errors to stderr, and map user errors to exit 1 and database/system errors to exit 2.
