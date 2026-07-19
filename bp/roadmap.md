@@ -65,7 +65,7 @@
  
  **Changes**:
  
- - [x] question-bank-schema (implemented 2026-07-19)
+ - [x] question-bank-schema (archived 2026-07-19)
  
  **Next**: All changes completed
 
