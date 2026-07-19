@@ -60,15 +60,19 @@
 
 - **Goal**: 外部题库数据模型、LeetCode / 牛客网自动化采集、题目管理 CLI
 - **Spec domain**: question-bank
-- **Changes**: 0/4
-- **Status**: NOT_STARTED
-
-**Planned changes**:
-
-- Question bank data model (question / source / tag / difficulty / content) + DB migration (not yet proposed)
-- Question bank CLI: search, list, show, import (not yet proposed)
-- LeetCode scraper — browser automation for question extraction (not yet proposed)
-- 牛客网 scraper — browser automation for question extraction (not yet proposed)
+ - **Changes**: 1/5
+ - **Status**: NOT_STARTED
+ 
+ **Changes**:
+ 
+ - [ ] question-bank-schema (proposed)
+ 
+ **Planned changes**:
+ 
+ - Question bank data model (question / source / tag / difficulty / content) + DB migration (not yet proposed)
+ - Question bank CLI: search, list, show, import (not yet proposed)
+ - LeetCode scraper — browser automation for question extraction (not yet proposed)
+ - 牛客网 scraper — browser automation for question extraction (not yet proposed)
 
 ### Phase: P1.4 - Hybrid Interview & Launch [NOT_STARTED]
 
