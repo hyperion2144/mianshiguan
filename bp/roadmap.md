@@ -56,18 +56,19 @@
 
 **Next**: All changes completed
 
-### Phase: P1.3 - External Question Bank [COMPLETED]
-
-- **Goal**: 外部题库数据模型、LeetCode / 牛客网自动化采集、题目管理 CLI
-- **Spec domain**: question-bank
- - **Changes**: 1/1
- - **Status**: COMPLETED
+### Phase: P1.3 - External Question Bank [ACTIVE]
+ 
+ - **Goal**: 外部题库数据模型、LeetCode / 牛客网自动化采集、题目管理 CLI
+ - **Spec domain**: question-bank
+ - **Changes**: 1/2
+ - **Status**: IN_PROGRESS
  
  **Changes**:
  
  - [x] question-bank-schema (archived 2026-07-19)
+ - [ ] leetcode-scraper
  
- **Next**: All changes completed
+ **Next**: leetcode-scraper
 
 ### Phase: P1.4 - Hybrid Interview & Launch [NOT_STARTED]
 
