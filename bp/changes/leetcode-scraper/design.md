@@ -339,7 +339,7 @@ export function createLeetCodeScraper(deps: {
   - `LeetCode 请求失败: <status> <reason>` (5xx)
   - `LeetCode 请求网络异常: <detail>` (transport failure)
   - `LeetCode 返回格式异常: <detail>` (malformed JSON or GraphQL `errors[]`)
-- **Source**: `change_specs/question-bank/spec.md#QB-LC-6`
+- **Source**: `specs/question-bank/spec.md#QB-LC-6`
 
 #### Public method `QuestionService.importRecords(records)`
 
@@ -347,7 +347,7 @@ export function createLeetCodeScraper(deps: {
 - **Output**: `QuestionImportResult = { imported, skipped, ids }` — `ids` lists ULIDs of newly-inserted questions in insertion order.
 - **Error: `MiValidationError`** — any record fails `normalizeImportRecord` validation (invalid category/difficulty, empty required fields, empty tags). Thrown before any DB write; nothing is persisted.
 - **Error: `MiDatabaseError`** — SQL transaction fails after validation succeeds. The transaction rolls back so no partial writes survive.
-- **Source**: `change_specs/question-bank/spec.md#QB-LC-4`
+- **Source**: `specs/question-bank/spec.md#QB-LC-4`
 
 #### Internal HTTP contract `LeetCodeApiClient.fetchQuestionList`
 
@@ -373,7 +373,7 @@ export function createLeetCodeScraper(deps: {
 - **Response 4xx**: client throws `MiValidationError('LeetCode 请求失败: <status> <statusText>')`.
 - **Response 5xx / network**: client throws `MiDatabaseError('LeetCode 请求失败: <status>')` or `MiDatabaseError('LeetCode 请求网络异常: <detail>')`.
 - **Response with GraphQL `errors[]`**: client throws `MiDatabaseError('LeetCode 返回格式异常: <message>')`.
-- **Source**: `change_specs/question-bank/spec.md#QB-LC-1`
+- **Source**: `specs/question-bank/spec.md#QB-LC-1`
 
 #### Internal HTTP contract `LeetCodeApiClient.fetchQuestionDetail`
 
@@ -387,7 +387,7 @@ export function createLeetCodeScraper(deps: {
   ```
 - **Response 200** (abridged): `data.question.{questionFrontendId, title, content, difficulty, topicTags, codeSnippets, hints, sampleTestCase, exampleTestcases}`.
 - **Error responses**: same mapping as the list endpoint (`MiValidationError` for 4xx, `MiDatabaseError` for 5xx/network/GraphQL errors, missing `data.question` field).
-- **Source**: `change_specs/question-bank/spec.md#QB-LC-2`
+- **Source**: `specs/question-bank/spec.md#QB-LC-2`
 
 ## External Dependencies
 
@@ -420,7 +420,7 @@ No new npm dependencies are added. `fetch` is provided by the Bun runtime alread
 | `src/services/question-service.test.ts` | Tests for `importRecords` (happy path, dedup, atomic rollback on validation error) | Modify | DS-3 |
 | `src/commands/question.ts` | Register `fetch` subcommand with `--limit` flag; route `fetch leetcode` to a scraper runner; print scrape summary; handle `--json` and unknown source | Modify | DS-4 |
 | `src/commands/question.test.ts` | Behaviour tests for `mi question fetch leetcode` (happy path, limit validation, --json, unknown source, error mapping) | Modify | DS-4 |
-| `change_specs/question-bank/spec.md` | Delta spec: ADDED QB-LC-1..6, MODIFIED QB-9 (subcommand count + examples) | Create | DS-1..DS-4 |
+| `specs/question-bank/spec.md` | Delta spec: ADDED QB-LC-1..6, MODIFIED QB-9 (subcommand count + examples) | Create | DS-1..DS-4 |
 
 ## TDD Strategy
 

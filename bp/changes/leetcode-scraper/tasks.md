@@ -34,7 +34,7 @@
 
 - [ ] T-1: [type:behavior] LeetCodeApiClient posts a GraphQL query to the configured endpoint <!-- commit: -->
   - **refs**: DS-1
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-1
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-1
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: `new LeetCodeApiClient().fetchQuestionList({ limit: 100, skip: 0 })` calls `fetcher` exactly once with `POST https://leetcode.com/graphql`, `Content-Type: application/json`, body `{"operationName":"problemsetQuestionList","variables":{"limit":100,"skip":0,...}}`, and returns the `data.problemsetQuestionList` object from the stubbed 200 response.
   - **RED**: GIVEN a `LeetCodeApiClient` constructed with a stub `fetcher` that returns `{ data: { problemsetQuestionList: { total: 1, questions: [...] } } }` with HTTP 200
@@ -45,7 +45,7 @@
 
 - [ ] T-2: [type:behavior] LeetCodeApiClient maps non-2xx responses to MiValidationError <!-- commit: -->
   - **refs**: DS-1
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-1
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-1
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: A stubbed `fetcher` that returns HTTP 404 causes `fetchQuestionList` to throw `MiValidationError` whose message contains `LeetCode 请求失败` and the status code; CLI exits 1.
   - **RED**: GIVEN a stub `fetcher` that returns `{ status: 404, statusText: 'Not Found', body: '{}' }`
@@ -55,7 +55,7 @@
 
 - [ ] T-3: [type:behavior] LeetCodeApiClient maps transport failures and GraphQL errors to MiDatabaseError <!-- commit: -->
   - **refs**: DS-1
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-1
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-1
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: `fetcher` that rejects with `Error('ECONNREFUSED')` causes the call to throw `MiDatabaseError('LeetCode 请求网络异常: ECONNREFUSED')`. A response containing `errors[0].message` causes the call to throw `MiDatabaseError('LeetCode 返回格式异常: <message>')`. CLI exits 2.
   - **RED**: GIVEN a stub `fetcher` that rejects with `Error('ECONNREFUSED')`
@@ -69,7 +69,7 @@
 
 - [ ] T-4: [type:behavior] LeetCodeApiClient.fetchQuestionDetail posts the titleSlug and returns the question object <!-- commit: -->
   - **refs**: DS-1
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-2
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-2
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: `fetchQuestionDetail('two-sum')` issues a single POST whose `variables.titleSlug` is `'two-sum'` and whose `operationName` is `'questionData'`; the returned object equals `data.question` from the stubbed response.
   - **RED**: GIVEN a stub `fetcher` that returns `{ data: { question: { questionFrontendId: '1', title: 'Two Sum', ... } } }`
@@ -79,7 +79,7 @@
 
 - [ ] T-5: [type:behavior] LeetCodeScraper.scrape paginates the list query until limit is reached <!-- commit: -->
   - **refs**: DS-2
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-3
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-3
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: Given a stub client whose `fetchQuestionList` returns 3 pages of 50 (`total: 150`) and whose `fetchQuestionDetail` returns a unique question per titleSlug, `scrape({ limit: 120 })` issues exactly 3 list calls (`skip: 0, 50, 100`) and 120 detail calls; the resulting `QuestionImportResult.imported === 120` and `skipped === 0`.
   - **RED**: GIVEN a stub `LeetCodeApiClient` whose `fetchQuestionList` returns `{ total: 150, questions: [50 entries] }` for each page and `fetchQuestionDetail` returns one detail record per call, all tagged `source: 'leetcode'`
@@ -91,7 +91,7 @@
 
 - [ ] T-6: [type:behavior] LeetCodeScraper skips questions whose sourceId already exists in the database <!-- commit: -->
   - **refs**: DS-2
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-5
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-5
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: When the DB already contains `source='leetcode', sourceId='1'`, the scraper's `fetchQuestionDetail` is **not** called for `questionFrontendId === '1'`, and `result.skipped` increments by 1 without calling detail.
   - **RED**: GIVEN a question bank that already contains `{ source: 'leetcode', sourceId: '1', title: 'Two Sum', ... }`
@@ -102,7 +102,7 @@
 
 - [ ] T-7: [type:behavior] LeetCodeScraper maps a list entry + detail into a complete QuestionImportRecord <!-- commit: -->
   - **refs**: DS-2
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-3
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-3
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: Given a canned fixture of a list entry and a matching detail entry, the resulting record has `source='leetcode'`, `sourceId='1'`, `title='Two Sum'`, `category='algorithm'`, `difficulty='easy'`, non-empty `content` (HTML stripped), `tags=['Array', 'Hash Table']`, `url='https://leetcode.com/problems/two-sum/'`, a non-empty `referenceAnswer` derived from `codeSnippets`, `testCases` containing the `sampleTestCase`, and `knowledgePoints=[]`.
   - **RED**: GIVEN the canonical "two-sum" list + detail fixtures
@@ -120,7 +120,7 @@
 
 - [ ] T-8: [type:behavior] LeetCodeScraper filters paid-only questions from the list response <!-- commit: -->
   - **refs**: DS-2
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-5
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-5
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: Given a list page that includes a `isPaidOnly: true` entry, the scraper does not call `fetchQuestionDetail` for that titleSlug and increments `skipped` (or otherwise removes it from the import count).
   - **RED**: GIVEN a stub list response containing one entry with `isPaidOnly: true` and one with `isPaidOnly: false`
@@ -131,7 +131,7 @@
 
 - [ ] T-9: [type:behavior] LeetCodeScraper surfaces client errors as MiError rather than swallowing them <!-- commit: -->
   - **refs**: DS-2
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-3
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-3
   - **files**: src/services/leetcode-scraper.ts, src/services/leetcode-scraper.test.ts
   - **acceptance**: When `fetchQuestionDetail` rejects with `MiDatabaseError`, `scrape` rejects with the same `MiDatabaseError` and no rows are imported (the import transaction is not entered).
   - **RED**: GIVEN a stub `LeetCodeApiClient` whose `fetchQuestionDetail` rejects with `new MiDatabaseError('boom')`
@@ -141,7 +141,7 @@
 
 - [ ] T-10: [type:behavior] QuestionService.importRecords persists validated records atomically <!-- commit: -->
   - **refs**: DS-3
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-4
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-4
   - **files**: src/services/question-service.ts, src/services/question-service.test.ts
   - **acceptance**: A new public `importRecords(records)` method on `QuestionService` accepts `QuestionImportRecord[]`, runs them through `normalizeImportRecord`, and persists exactly as `importFile` does — same dedup, same tag linking, same atomicity. Test: feeding two valid records + one duplicate returns `{ imported: 2, skipped: 1, ids: [...] }` and a subsequent `list({ source: 'leetcode' })` returns the two new rows plus no extra.
   - **RED**: GIVEN an empty question bank
@@ -151,7 +151,7 @@
 
 - [ ] T-11: [type:behavior] QuestionService.importRecords rolls back on a validation error <!-- commit: -->
   - **refs**: DS-3
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-4
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-4
   - **files**: src/services/question-service.ts, src/services/question-service.test.ts
   - **acceptance**: When the input array contains one valid record and one with `category: 'other'`, `importRecords` throws `MiValidationError`, no rows are written, and the question bank is unchanged.
   - **RED**: GIVEN an empty question bank
@@ -170,7 +170,7 @@
 
 - [ ] T-12: [type:behavior] `mi question fetch` without a source reports a Chinese validation error <!-- commit: -->
   - **refs**: DS-4
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-6
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
   - **acceptance**: `runQuestionCommand(['fetch'])` throws `MiValidationError` whose message starts with `用法错误: mi question fetch <来源>`. After running through `runCommandAction`, exit code is 1 and stderr contains the Chinese error.
   - **RED**: GIVEN a `runQuestionCommand` call with args `['fetch']` and a stubbed scraper in deps
@@ -181,7 +181,7 @@
 
 - [ ] T-13: [type:behavior] `mi question fetch unknown-source` reports a validation error listing the supported sources <!-- commit: -->
   - **refs**: DS-4
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-6
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
   - **acceptance**: `runQuestionCommand(['fetch', 'codeforces'])` throws `MiValidationError('未知 fetch 来源: codeforces; 支持的来源: leetcode')`. Exit 1.
   - **RED**: GIVEN `runQuestionCommand(['fetch', 'codeforces'])`
@@ -192,7 +192,7 @@
 
 - [ ] T-14: [type:behavior] `mi question fetch leetcode` validates `--limit` and rejects non-positive integers <!-- commit: -->
   - **refs**: DS-4
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-6
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
   - **acceptance**: `runQuestionCommand(['fetch', 'leetcode'], { limit: 0 })` throws `MiValidationError('--limit 必须是正整数, 当前值: 0')`. Same for negative and non-integer values.
   - **RED**: GIVEN `runQuestionCommand(['fetch', 'leetcode'], { limit: 0 })`
@@ -206,7 +206,7 @@
 
 - [ ] T-15: [type:behavior] `mi question fetch leetcode` runs the scraper and prints a Chinese scrape summary <!-- commit: -->
   - **refs**: DS-4
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-6
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
   - **acceptance**: Given a stubbed scraper in `deps.scraper` that returns `{ imported: 7, skipped: 3, ids: ['idA','idB','idC','idD','idE','idF','idG'] }`, `runQuestionCommand(['fetch', 'leetcode'], { limit: 10 })` calls `scraper.scrape({ limit: 10 })` exactly once and prints `抓取完成: 新增 7, 跳过 3` followed by `新增 ID: idA, idB, ...` on stdout.
   - **RED**: GIVEN a stubbed scraper returning `{ imported: 7, skipped: 3, ids: ['idA','idB','idC','idD','idE','idF','idG'] }`
@@ -220,7 +220,7 @@
 
 - [ ] T-16: [type:behavior] `mi question fetch leetcode --json` prints a single QuestionImportResult JSON object on stdout <!-- commit: -->
   - **refs**: DS-4
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-6
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
   - **acceptance**: With the same stubbed scraper as T-15 and `--json: true`, stdout contains exactly one valid JSON object equal to the stubbed `QuestionImportResult` and does **not** contain the human-readable summary line.
   - **RED**: GIVEN the same stub scraper and `{ json: true }`
@@ -231,7 +231,7 @@
 
 - [ ] T-17: [type:behavior] `mi question fetch leetcode` maps a scraper MiDatabaseError to exit code 2 with a Chinese system-error message <!-- commit: -->
   - **refs**: DS-4
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-6
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
   - **acceptance**: A stubbed scraper that rejects with `MiDatabaseError('LeetCode 请求失败: 503 Service Unavailable')` causes `runCommandAction` to exit with code 2 and print a Chinese-formatted error to stderr.
   - **RED**: GIVEN a stubbed scraper that rejects with `MiDatabaseError('LeetCode 请求失败: 503 Service Unavailable')`
@@ -242,7 +242,7 @@
 
 - [ ] T-18: [type:behavior] `registerQuestionCommand` advertises the `fetch` subcommand in help text and examples <!-- commit: -->
   - **refs**: DS-4
-  - **spec_ref**: change_specs/question-bank/spec.md#QB-LC-6
+  - **spec_ref**: specs/question-bank/spec.md#QB-LC-6
   - **files**: src/commands/question.ts, src/commands/question.test.ts
   - **acceptance**: After `registerQuestionCommand(program)`, the registered command's description contains `抓取` and its `.example()` list contains `mi question fetch leetcode`. The existing `it('exposes the documented flags on the question command', ...)` continues to pass.
   - **RED**: GIVEN a CAC program with `registerQuestionCommand` applied
