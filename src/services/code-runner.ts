@@ -297,8 +297,8 @@ export function normalizeTestCases(raw: unknown[]): NormalizedTestCase[] {
     if (!isPlainObject(entry)) {
       throw new MiValidationError(`第 ${index} 条: 测试用例必须是对象`)
     }
-    const input = entry['input']
-    const output = entry['output'] !== undefined ? entry['output'] : entry['expectedOutput']
+    const input = entry.input
+    const output = entry.output !== undefined ? entry.output : entry.expectedOutput
     if (output === undefined) {
       throw new MiValidationError(`第 ${index} 条: 缺少 output 或 expectedOutput 字段`)
     }
