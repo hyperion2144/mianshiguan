@@ -28,9 +28,3 @@ The CLI command reference SHALL include `mi question run` alongside the existing
 - WHEN inspected
 - THEN it SHALL contain `mi question run`
 
-## MODIFIED Requirements
-
-### Requirement: INT-15 — CLI start (modified)
-
-The system SHALL start an interview with `mi interview start --role <role> [--style <style>]` (unchanged).
-(was: no change — code execution is a prompt-level addition, not a CLI change.)
