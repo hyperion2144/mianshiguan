@@ -6,6 +6,24 @@ argument-hint: "[change-name]"
 
 **You are the orchestrator — dispatch sub-agents; do not do their work yourself.**
 
+### Context injection (OMP Extension)
+
+Context is auto-injected by the OMP Extension at session_start. Do NOT call `bp context <step>` yourself — the extension already provides the same material at every turn.
+
+When reading `bp/changes/<name>/context.jsonl`, every row follows the schema:
+
+```json
+{ "file": "<path>", "reason": "<why>", "phase": "plan|apply|review|archive|all", "tag": "<label>", "read": "full|range", "range": [<start>, <end>] }
+```
+
+Row fields:
+
+- `file:` repository-relative path the change depends on. Required.
+- `reason:` short invariant or invariant-style reason the file exists in the change. Required, ≤ 200 chars.
+- `phase:` one of `plan`, `apply`, `review`, `archive`, or `all`. Optional, default `all`.
+- `tag:` free-form label such as `guard-rail`, `invariant`, `spec`, `convention`, or `config`. Optional.
+- `read:` either `full` (default) or `range`. When `range`, the row must include `range:` as `[start, end]` line numbers.
+
 ## Input
 
 - **`$ARGUMENTS`** (optional): change name. If empty, use most recently proposed change.
@@ -98,6 +116,7 @@ Planner completed for $1
 
 ## Guardrails
 
+- **Context is auto-injected by the OMP Extension.** Do NOT call `bp context plan`; the extension already supplies the same material at every turn.
 - **Full mode: MUST dispatch sub-agent.** Do NOT write design/tasks/specs yourself.
 - Lightweight mode: write templates directly (no sub-agent needed)
 - tasks.md boxes must remain UNCHECKED

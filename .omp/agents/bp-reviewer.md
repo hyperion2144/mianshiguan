@@ -48,6 +48,14 @@ In `--fix` mode:
 
 ## Output
 
+## Context Re-validation
+
+Read `bp/changes/<name>/context.jsonl` alongside the source diff. For every row, check every row's `reason` is still satisfied by the current code state:
+
+- If the cited file was deleted or refactored, the reason is no longer satisfied — emit a Q-N finding naming the row and the obsolete claim.
+- If the file still exists but no longer encodes the invariant the reason described (different logic, regression, or scope drift), the reason is not satisfied — same finding path.
+- Phase matching against the current step is the validator's job (see `validateContextJsonl`); do not re-emit a phase mismatch as a review finding.
+
 Single file: `review.md` containing three review sections + issue list + routing recommendation.
 
 ## Execution Flow
@@ -110,12 +118,11 @@ Every finding gets a prefix + number:
 | Q1, Q2 | Quality Review | Code quality issue | reapply |
 | G1, G2 | Goal Review | Goal not achieved | reapply |
 | D1, D2 | Any review | Design/architecture flaw | replan |
-
-D-prefix criteria: problem CANNOT be fixed by modifying code alone.
-
 ### Step 6: Write review.md
 
-Get the review template: `bp template review --stdout`. Then fill it following these rules:
+**HARD RULE: You MUST fetch the review template by running `bp template review --stdout` BEFORE writing `review.md`.** The template defines the Issues format (`- [ ] R/Q/G/D`), Overall Verdict placement, and all three review gates. Writing from memory will produce an unparseable review that blocks archive.
+
+After fetching the template, fill it following these rules:
 
 **Issues section format — EVERY issue gets its own checkbox line:**
 ```

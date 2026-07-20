@@ -7,12 +7,10 @@ argument-hint: "[change-name]"
 ## Input
 
 - **`$ARGUMENTS`** (optional): change name. If empty, use the most recently reviewed change.
-- **`--force`** (optional): skip review check (use with caution).
-
 ## Prerequisites
 
-- `review.md` exists and Overall Verdict is PASS (or `--force` is used)
-- No unresolved issues in review.md `## Issues` section (or `--force`)
+- `review.md` exists and Overall Verdict is PASS
+- No unresolved issues in review.md `## Issues` section
 
 ## Steps
 
@@ -20,20 +18,19 @@ argument-hint: "[change-name]"
 
 Same as plan workflow Step 1.
 
-### Step 2: Verify review status (unless --force)
+### Step 2: Verify review status
 
 Read `bp/changes/$1/review.md`:
 - Check Overall Verdict is PASS
 - Check `## Issues` section has no `- [ ]` entries (all should be [x] or empty)
 
-If review is not PASS and `--force` is not used:
+If review is not PASS:
 ```
 Cannot archive: review not passed
   Verdict: FAIL/NEEDS_REVISION
   Unresolved issues: N
 
   Fix issues first: bp apply --fix $1
-  Or force archive: bp archive $1 --force
 ```
 
 ### Step 3: Merge delta specs
@@ -82,7 +79,7 @@ bp commit "archive: $1 - specs merged, roadmap updated" --files bp/specs/ bp/roa
 
 ## Guardrails
 
-- **Review must PASS before archive** (unless --force).
+- **Review must PASS before archive**.
 - **Delta spec merge is the critical operation.** If a MODIFIED requirement header doesn't match the global spec, flag it.
 - **Archive preserves full context.** All artifacts (proposal, design, tasks, specs, review) move to archive together.
 - **Roadmap update is automatic.** Don't ask the user to manually update it.

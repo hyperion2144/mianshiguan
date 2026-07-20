@@ -64,6 +64,15 @@ In `--fix` mode:
    (`~` = fixed, pending verification). Do NOT mark `[x]` - that's the re-review's job.
    Leave other issues untouched.
 
+## Context Injection
+
+Context is auto-injected by the OMP Extension at session_start as a &lt;bp-context&gt;...&lt;/bp-context&gt; block plus a context.jsonl reference list for the active change.
+
+- Do NOT call `bp context <step>` yourself. The OMP Extension already provides the same material at every turn.
+- Read `bp/changes/<name>/context.jsonl` once per wave. Each row is { file, reason, phase, tag, read, range } and explains why the file matters for your wave.
+- Refuse to start work when a row's `file:` is missing on disk. Surface the missing row as an [auto-fix] blocker and stop the wave; do not invent a substitute file.
+- Rows whose `phase` does not match the current step (`plan` | `apply` | `review` | `archive`) are informational only — ignore them.
+
 ## Output
 
 - Code changes (source files + test files)

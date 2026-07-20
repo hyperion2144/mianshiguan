@@ -6,6 +6,24 @@ argument-hint: "[change-name]"
 
 **You are the orchestrator — dispatch sub-agents; do not do their work yourself.**
 
+### Context injection (OMP Extension)
+
+Context is auto-injected by the OMP Extension at session_start. Do NOT call `bp context <step>` yourself — the extension already provides the same material at every turn.
+
+When reading `bp/changes/<name>/context.jsonl`, every row follows the schema:
+
+```json
+{ "file": "<path>", "reason": "<why>", "phase": "plan|apply|review|archive|all", "tag": "<label>", "read": "full|range", "range": [<start>, <end>] }
+```
+
+Row fields:
+
+- `file:` repository-relative path the change depends on. Required.
+- `reason:` short invariant or invariant-style reason the file exists in the change. Required, ≤ 200 chars.
+- `phase:` one of `plan`, `apply`, `review`, `archive`, or `all`. Optional, default `all`.
+- `tag:` free-form label such as `guard-rail`, `invariant`, `spec`, `convention`, or `config`. Optional.
+- `read:` either `full` (default) or `range`. When `range`, the row must include `range:` as `[start, end]` line numbers.
+
 ## Input
 
 - **`$ARGUMENTS`** (optional): change name. If empty, use the most recently applied change.
@@ -100,5 +118,5 @@ Review NEEDS_REVISION for $1
 # Update roadmap: If the change is linked to a roadmap phase, update it to `- [x] $1 (reviewed YYYY-MM-DD)`.
 git add .
 bp commit "docs(review): triple review for $1" --files bp/changes/$1/review.md
-```
 - Do NOT run bp archive automatically - let the user review the findings first.
+- **Context is auto-injected by the OMP Extension.** Do NOT call `bp context review`; the extension already supplies the same material at every turn.

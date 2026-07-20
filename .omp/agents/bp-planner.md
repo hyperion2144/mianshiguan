@@ -52,15 +52,31 @@ In `--fix` mode, you also receive:
 
 ## Output
 
-Produce three files in the change directory:
+Produce four files in the change directory:
 
 | File | Purpose |
 |------|---------|
 | `design.md` | Structured technical design (DS-N components, D-N decisions, data flow, file manifest) |
 | `tasks.md` | Structured task checklist (waves, TDD types, RED tests, dependency graph) |
 | `specs/<domain>/spec.md` | Delta specs (ADDED/MODIFIED/REMOVED requirements with scenarios) |
+| `context.jsonl` | Reference list of every spec / convention / artifact path the change depends on |
 
 ## Execution Flow
+
+### Step 0: Write `context.jsonl` covering every reference
+
+Before returning, write `bp/changes/<name>/context.jsonl`. The file lists every spec / convention / artifact path the change touches, one row per line, using the schema:
+
+```json
+{ "file": "bp/specs/auth/spec.md#login", "reason": "Authentication invariant", "phase": "all", "tag": "spec", "read": "full" }
+```
+
+Required coverage:
+- Every spec path referenced from `design.md` and `tasks.md` (delta + global specs).
+- Every convention path under `bp/conventions/`.
+- Every artifact path listed in the design's File Manifest that the executors will read.
+
+Set `phase` to `plan` for design-only context, `apply` for code reference, `review` for review-only, or `all` when the row applies to every step. Use `tag` to label rows (`spec`, `convention`, `guard-rail`, etc.) and a short `reason` naming the invariant or invariant-style reason the file exists in the change.
 
 ### Step 1: Read context and quality-gate the proposal
 
@@ -109,7 +125,9 @@ A domain is a logical grouping of related behaviors - think "chapter" of the sys
 
 ### Step 3: Design technical solution
 
-Get the design template: `bp template design`. Fill it following these principles:
+**HARD RULE: You MUST fetch the design template by running `bp template design --stdout` BEFORE writing `design.md`.** The template defines required sections: Design Items (DS-N), Architecture Decisions (D-N), Technical Approach, File Manifest, TDD Strategy. Writing from memory will miss required sections.
+
+After fetching the template, fill it following these principles:
 
 #### Component Decomposition (DS-N)
 
@@ -135,6 +153,8 @@ DS-3: Add tests (tests are per-task, not per-component)
 - Multiple PRs may map to the same DS if they share a module.
 - Every PR must be referenced by at least one DS.
 - Each DS gets `refs: PR-{id}` and `Source: PR-{id} (proposal.md)`.
+
+**关键:每个 DS-N 的「详细设计」段必须填充到 executor 可以直接实现的程度。** 只写接口签名不够——必须包含状态迁移、错误处理、副作用等实现细节。根据组件类型选择合适的内容(数据组件写数据流,UI 组件写 Props/事件/状态,API 写校验规则和错误码)。
 
 #### Architecture Decisions (D-N)
 
@@ -176,28 +196,32 @@ List EVERY file that will be created or modified. No "and other files" or "etc."
 
 ### Step 4: Break down into tasks
 
-Get the tasks template: `bp template tasks`. Fill it following these principles:
+**HARD RULE: You MUST fetch the tasks template by running `bp template tasks --stdout` BEFORE writing `tasks.md`.** The template defines the exact format including:
+- `- [ ]` checkboxes per task
+- `<!-- commit: -->` placeholders (for the executor to fill with commit hashes)
+- `type:` annotations (`behavior` / `config` / `refactor` / `docs` / `scaffolding`)
+- `spec_ref` field linking to delta spec requirements
+- RED test descriptions (GIVEN/WHEN/THEN format)
+- `## TDD Type Annotations` table
+- `## Pre-Archive Checklist` section
+
+Do NOT write `tasks.md` from memory. Tasks written without the template will miss required sections and fail review.
+
+After fetching the template, fill it following these principles:
 
 #### Task Decomposition
 
 Each task (T-N) is **one independently testable behavioral path**.
 
-**Good tasks:**
+**Examples:**
 ```
 - [ ] T-1: [type:behavior] ThemeContext provides current theme <!-- commit: -->
 - [ ] T-2: [type:behavior] ThemeContext toggles theme on call <!-- commit: -->
 - [ ] T-3: [type:behavior] ThemeToggle renders current theme <!-- commit: -->
 - [ ] T-4: [type:behavior] ThemeToggle calls toggle on click <!-- commit: -->
 - [ ] T-5: [type:scaffolding] Create ThemeToggle component shell <!-- commit: -->
-
 ```
 
-**Bad tasks:**
-```
-T-1: Implement ThemeContext (too broad - multiple behaviors)
-T-2: Write tests for ThemeContext (tests are part of TDD, not separate tasks)
-T-3: Add theme support (too vague)
-```
 
 **Rules:**
 - Each public behavior path of a DS gets its own task.
@@ -228,13 +252,14 @@ The RED field describes the **observable behavior** the test verifies, not the t
 
 #### Dependency Graph (depends_on)
 
-Only use `depends_on` when task B literally cannot compile/test without task A being done.
-
 ### Step 5: Write delta specs
 
-Get the spec template: `bp template spec`. For each affected domain, create `specs/<domain>/spec.md`.
+**HARD RULE: You MUST fetch the spec template by running `bp template spec --stdout` BEFORE writing `specs/<domain>/spec.md`.** The template defines the ADDED / MODIFIED / REMOVED requirement sections and scenario format. Writing from memory will produce incorrectly structured specs.
+
+For each affected domain, create `specs/<domain>/spec.md` using the template.
 
 #### Writing Requirements
+
 
 Requirements describe **what the system does**, not how.
 

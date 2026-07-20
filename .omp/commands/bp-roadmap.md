@@ -65,7 +65,9 @@ Use `ask` to determine the planning mode:
 
 ### Step 5: Define Milestones
 
-Get the roadmap template: `bp template roadmap`. Fill with milestones and phases.
+**HARD RULE: You MUST fetch the roadmap template by running `bp template roadmap --stdout` BEFORE writing `bp/roadmap.md`.** The template defines milestone and phase section structure, status tags, and progress summary format. Writing from memory will produce an unparesable roadmap.
+
+Fill the template with milestones and phases based on project requirements.
 
 **Default: 1 milestone = the entire project.** Milestones are product releases, NOT development phases.
 
