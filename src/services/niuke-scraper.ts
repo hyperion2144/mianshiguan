@@ -333,13 +333,13 @@ function defaultExtractListFn(): NiukeQuestionListEntry[] {
   const items = Array.from(document.querySelectorAll('.question-list-item')) as Element[]
   return items.map((item) => {
     const dataset = (item as unknown as { dataset?: Record<string, string> }).dataset ?? {}
-    const id = dataset['id'] ?? item.getAttribute('data-id') ?? ''
+    const id = dataset.id ?? item.getAttribute('data-id') ?? ''
     const titleLink = item.querySelector('a.title') ?? item.querySelector('a')
     const title = titleLink?.textContent?.trim() ?? ''
     const url = titleLink?.getAttribute('href') ?? ''
     const companyText = item.querySelector('.company')?.textContent ?? ''
     const positionText = item.querySelector('.position')?.textContent ?? ''
-    const type = (dataset['type'] ?? '算法') as NiukeQuestionType
+    const type = (dataset.type ?? '算法') as NiukeQuestionType
     return {
       id,
       title,

@@ -670,7 +670,7 @@ export class InterviewService {
    */
   private computeAggregateScores(id: string, supplied: ScoreMap): ScoreMap {
     const rows = this.db.conn
-      .query(`SELECT scores FROM interview_answers WHERE interview_id = ?`)
+      .query('SELECT scores FROM interview_answers WHERE interview_id = ?')
       .all(id) as { scores: string | null }[]
     const scored = rows
       .map((r) => (r.scores === null ? null : safeParseScores(r.scores)))
