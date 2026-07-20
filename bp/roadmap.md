@@ -82,7 +82,7 @@
  
  - [x] hybrid-question-source (archived 2026-07-19)
  - [x] code-execution-sandbox (archived 2026-07-20)
- - [ ] auto-score-integration
+ - [-] auto-score-integration (planned 2026-07-20)
  
  **Planned changes**:
  
