@@ -83,7 +83,7 @@
  - [x] hybrid-question-source (archived 2026-07-19)
  - [x] code-execution-sandbox (archived 2026-07-20)
  - [x] auto-score-integration (archived 2026-07-20)
- - [ ] release-prep
+ - [-] release-prep (planned 2026-07-20)
  
 
 ---
