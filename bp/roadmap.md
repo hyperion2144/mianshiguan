@@ -75,7 +75,7 @@
  
  - **Goal**: Agent 主导的混合选题、算法题混合评估（测试用例 + Agent 评分）、文档、CI/CD、发布
  - **Spec domain**: interview, question-bank, cli
- - **Changes**: 3/5
+ - **Changes**: 5/5
  - **Status**: IN_PROGRESS
  
  **Changes**:
@@ -83,11 +83,7 @@
  - [x] hybrid-question-source (archived 2026-07-19)
  - [x] code-execution-sandbox (archived 2026-07-20)
  - [x] auto-score-integration (archived 2026-07-20)
- 
- **Planned changes**:
- 
- - README, LICENSE, CHANGELOG, CI/CD pipeline (not yet proposed)
- - Multi-platform installation polish + npm publish (not yet proposed)
+ - [ ] release-prep
  
 
 ---
