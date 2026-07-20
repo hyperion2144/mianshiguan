@@ -20,11 +20,33 @@ const MIGRATION_0002 = readFileSync(
   join(__dirname, '..', '..', 'db', 'migrations', '0002_add_interviews.sql'),
   'utf8',
 )
+const MIGRATION_0004 = readFileSync(
+  join(__dirname, '..', '..', 'db', 'migrations', '0004_add_interview_auto_score.sql'),
+  'utf8',
+)
 
+/**
+ * Build an in-memory DB with the `interviews` table only (migrations
+ * 0001 + 0002). Used by every test that does not need the new
+ * `auto_score` column.
+ */
 function makeDb(): Database {
   const db = new Database(':memory:')
   db.conn.exec(MIGRATION_0001)
   db.conn.exec(MIGRATION_0002)
+  return db
+}
+
+/**
+ * Build an in-memory DB with the `auto_score` column present
+ * (migrations 0001 + 0002 + 0004). Used by T-17..T-19 — the
+ * autoScore schema / persistence / report tests.
+ */
+function makeDbWithAutoScore(): Database {
+  const db = new Database(':memory:')
+  db.conn.exec(MIGRATION_0001)
+  db.conn.exec(MIGRATION_0002)
+  db.conn.exec(MIGRATION_0004)
   return db
 }
 
@@ -1069,5 +1091,276 @@ describe('InterviewService getReport (T-7)', () => {
     const r = service.getReport(a.id)
     // Same reference, same null-ness — both fields are aliases.
     expect(r.perDimensionAverages).toBe(r.aggregateScores)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-17 — autoScore schema wiring on Interview / InterviewReport
+// ---------------------------------------------------------------------------
+
+describe('InterviewService autoScore schema wiring (T-17)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDbWithAutoScore()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  // RED for T-17: rowToInterview must map `auto_score = 0.75` to
+  // `interview.autoScore === 0.75` and `getReport(...).autoScore === 0.75`.
+  it('get(id) maps a non-null auto_score column to Interview.autoScore (number)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    db.conn.query('UPDATE interviews SET auto_score = ? WHERE id = ?').run(0.75, a.id)
+
+    const fetched = service.get(a.id)
+    expect(fetched.autoScore).toBe(0.75)
+  })
+
+  it('get(id) maps a NULL auto_score column to Interview.autoScore === null', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(service.get(a.id).autoScore).toBeNull()
+  })
+
+  it('getReport(id) always exposes autoScore (number when written, null otherwise)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+
+    // Before any write — null
+    const r0 = service.getReport(a.id)
+    expect(r0.autoScore).toBeNull()
+
+    db.conn.query('UPDATE interviews SET auto_score = ? WHERE id = ?').run(0.5, a.id)
+    const r1 = service.getReport(a.id)
+    expect(r1.autoScore).toBe(0.5)
+
+    // Report shape includes the new top-level field.
+    expect('autoScore' in r1).toBe(true)
+  })
+
+  it('JSON.stringify(report) round-trips autoScore unchanged', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    db.conn.query('UPDATE interviews SET auto_score = ? WHERE id = ?').run(0.75, a.id)
+
+    const r = service.getReport(a.id)
+    const parsed = JSON.parse(JSON.stringify(r)) as { autoScore: number | null }
+    expect(parsed.autoScore).toBe(0.75)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-18 — InterviewService.recordAutoScore validation
+// ---------------------------------------------------------------------------
+
+describe('InterviewService.recordAutoScore validation (T-18)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDbWithAutoScore()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('throws MiValidationError when id is empty', () => {
+    const { service } = makeService(db)
+    expect(() => service.recordAutoScore('', 0.5)).toThrow(/id 不能为空/)
+  })
+
+  it('throws MiValidationError naming the 0-1 range when passRate is NaN', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() => service.recordAutoScore(a.id, Number.NaN)).toThrow(/passRate.*0.*1/)
+
+    // No row was updated
+    const row = db.conn.query('SELECT auto_score FROM interviews WHERE id = ?').get(a.id) as {
+      auto_score: number | null
+    }
+    expect(row.auto_score).toBeNull()
+  })
+
+  it('rejects +Infinity and -Infinity as non-finite', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() => service.recordAutoScore(a.id, Number.POSITIVE_INFINITY)).toThrow(/passRate/)
+    expect(() => service.recordAutoScore(a.id, Number.NEGATIVE_INFINITY)).toThrow(/passRate/)
+  })
+
+  it('rejects negative passRate with the offending value in the message', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() => service.recordAutoScore(a.id, -0.1)).toThrow(/0-1/)
+  })
+
+  it('rejects passRate > 1 with the offending value in the message', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() => service.recordAutoScore(a.id, 1.5)).toThrow(/0-1/)
+  })
+
+  it('throws MiNotFoundError when the interview id does not exist', () => {
+    const { service } = makeService(db)
+    expect(() => service.recordAutoScore('01J00000000000000000000099', 0.5)).toThrow(/面试不存在/)
+  })
+
+  it('accepts passRate = 0 and passRate = 1 as inclusive endpoints', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    expect(() => service.recordAutoScore(a.id, 0)).not.toThrow()
+    expect(() => service.recordAutoScore(a.id, 1)).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-19 — InterviewService.recordAutoScore persistence + last-write-wins
+// ---------------------------------------------------------------------------
+
+describe('InterviewService.recordAutoScore persistence (T-19)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDbWithAutoScore()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('writes the scalar pass-rate, refreshes updated_at, returns the refreshed interview', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    // Pin updated_at to a known past value so the refresh is
+    // observable without sleeping on a real wall-clock timer.
+    db.conn.query("UPDATE interviews SET updated_at = '2000-01-01 00:00:00' WHERE id = ?").run(a.id)
+    const originalUpdated = service.get(a.id).updatedAt
+    expect(originalUpdated).toBe('2000-01-01 00:00:00')
+
+    const updated = service.recordAutoScore(a.id, 0.5)
+
+    expect(updated.autoScore).toBe(0.5)
+    expect(updated.id).toBe(a.id)
+    const row = db.conn
+      .query('SELECT auto_score, updated_at FROM interviews WHERE id = ?')
+      .get(a.id) as { auto_score: number; updated_at: string }
+    expect(row.auto_score).toBe(0.5)
+    expect(row.updated_at).not.toBe(originalUpdated)
+  })
+  it('last-write-wins: writing 0.5 then 0.75 leaves the column at 0.75', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.recordAutoScore(a.id, 0.5)
+    expect(service.get(a.id).autoScore).toBe(0.5)
+    service.recordAutoScore(a.id, 0.75)
+    expect(service.get(a.id).autoScore).toBe(0.75)
+  })
+
+  it('writing the same value twice is idempotent (column stays the same)', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.recordAutoScore(a.id, 0.42)
+    service.recordAutoScore(a.id, 0.42)
+    const row = db.conn.query('SELECT auto_score FROM interviews WHERE id = ?').get(a.id) as {
+      auto_score: number
+    }
+    expect(row.auto_score).toBe(0.42)
+  })
+
+  it('NO interview-status gate: writing to a completed interview succeeds', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    expect(service.get(a.id).status).toBe('completed')
+    expect(() => service.recordAutoScore(a.id, 0.8)).not.toThrow()
+    expect(service.get(a.id).autoScore).toBe(0.8)
+  })
+
+  it('NO interview-status gate: writing to an archived interview succeeds', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    service.start(a.id)
+    service.complete(a.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    service.archive(a.id)
+    expect(() => service.recordAutoScore(a.id, 0.2)).not.toThrow()
+    expect(service.get(a.id).autoScore).toBe(0.2)
+  })
+
+  it('NO interview-status gate: writing to a created / in_progress / paused row succeeds', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    // created
+    expect(() => service.recordAutoScore(a.id, 0.1)).not.toThrow()
+    // in_progress
+    service.start(a.id)
+    expect(() => service.recordAutoScore(a.id, 0.2)).not.toThrow()
+    // paused
+    service.pause(a.id)
+    expect(() => service.recordAutoScore(a.id, 0.3)).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-20 — getReport end-to-end autoScore round-trip (DS-4 integration)
+// ---------------------------------------------------------------------------
+
+describe('InterviewService getReport end-to-end autoScore (T-20)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = makeDbWithAutoScore()
+    insertProfile(db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('round-trips a written pass-rate through write → get → getReport unchanged', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+
+    // write path
+    const written = service.recordAutoScore(a.id, 0.42)
+    expect(written.autoScore).toBe(0.42)
+
+    // read paths
+    const fetched = service.get(a.id)
+    expect(fetched.autoScore).toBe(0.42)
+    const report = service.getReport(a.id)
+    expect(report.autoScore).toBe(0.42)
+
+    // JSON contract
+    const json = JSON.parse(JSON.stringify(report)) as { autoScore: number | null }
+    expect(json.autoScore).toBe(0.42)
+  })
+
+  it('getReport returns autoScore=null when no recordAutoScore has been called', () => {
+    const { service } = makeService(db)
+    const a = service.create({ profileId: 'P1', targetRole: 'FE' })
+    const report = service.getReport(a.id)
+    expect(report.autoScore).toBeNull()
+    // autoScore is a top-level field on the report (NOT nested)
+    expect(Object.prototype.hasOwnProperty.call(report, 'autoScore')).toBe(true)
   })
 })

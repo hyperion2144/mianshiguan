@@ -81,6 +81,7 @@ export interface InterviewRow {
   startedAt: string | null
   completedAt: string | null
   pausedAt: string | null
+  autoScore: number | null
   createdAt: string
   updatedAt: string
 }

@@ -412,6 +412,14 @@ function reportInterview(
     console.log(warning(REPORT_INCOMPLETE_WARNING))
   }
 
+  // T-25 / CE-14: render a single 自动评分: NN.NN% line ONLY when
+  // the scalar autoScore is non-null. When null, the line is omitted
+  // entirely (no empty-history placeholder, no autoScores table).
+  if (report.autoScore !== null) {
+    const percent = (report.autoScore * 100).toFixed(2)
+    console.log(`自动评分: ${percent}%`)
+  }
+
   if (report.answers.length === 0) {
     console.log(`汇总: ${NO_SCORES_FOOTER}`)
     return
@@ -431,7 +439,6 @@ function reportInterview(
   console.log(table.toString())
   console.log(`汇总: ${formatScoresInline(report.aggregateScores)}`)
 }
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

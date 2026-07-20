@@ -928,3 +928,122 @@ describe('MigrationRunner — 0003_question_bank (per-contract coverage)', () =>
     db.close()
   })
 })
+
+describe('MigrationRunner — 0004_add_interview_auto_score (per-contract coverage)', () => {
+  let tmpDir: string
+  let migrationsDir: string
+  let srcMigrationsDir: string
+
+  /**
+   * Stage all four migrations from `src/db/migrations/` into a fresh
+   * tmpDir so each test exercises the canonical on-disk SQL contract
+   * in isolation. Mirrors the 0002 / 0003 per-contract harness.
+   */
+  function stageAllMigrations(): Database {
+    tmpDir = mkdtempSync(join(tmpdir(), 'mi-migrate-0004-coverage-'))
+    migrationsDir = join(tmpDir, 'migrations')
+    mkdirSync(migrationsDir, { recursive: true })
+    for (const name of [
+      '0001_initial.sql',
+      '0002_add_interviews.sql',
+      '0003_question_bank.sql',
+      '0004_add_interview_auto_score.sql',
+    ]) {
+      const sql = readFileSync(join(srcMigrationsDir, name), 'utf8')
+      writeFileSync(join(migrationsDir, name), sql)
+    }
+    return new Database(':memory:')
+  }
+
+  function stageMigrationsUpTo0003(): Database {
+    tmpDir = mkdtempSync(join(tmpdir(), 'mi-migrate-0004-setup-'))
+    migrationsDir = join(tmpDir, 'migrations')
+    mkdirSync(migrationsDir, { recursive: true })
+    for (const name of ['0001_initial.sql', '0002_add_interviews.sql', '0003_question_bank.sql']) {
+      const sql = readFileSync(join(srcMigrationsDir, name), 'utf8')
+      writeFileSync(join(migrationsDir, name), sql)
+    }
+    return new Database(':memory:')
+  }
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  beforeEach(() => {
+    srcMigrationsDir = join(import.meta.dirname, 'migrations')
+  })
+
+  // 1. RED (T-16): on a clean DB at version 3 the runner applies v4
+  // and the resulting `interviews` schema includes `auto_score`.
+  it('applies 0004 to a DB at version 3: _schema_version=4 and auto_score column exists', () => {
+    const db = stageMigrationsUpTo0003()
+    let runner = new MigrationRunner(db, migrationsDir)
+    expect(runner.run()).toEqual([1, 2, 3])
+
+    // Stage 0004 into the dir and re-run — only v4 should land.
+    const sql0004 = readFileSync(
+      join(srcMigrationsDir, '0004_add_interview_auto_score.sql'),
+      'utf8',
+    )
+    writeFileSync(join(migrationsDir, '0004_add_interview_auto_score.sql'), sql0004)
+    runner = new MigrationRunner(db, migrationsDir)
+    expect(runner.run()).toEqual([4])
+
+    const versionRow = db.conn
+      .query('SELECT version FROM _schema_version WHERE version = 4')
+      .get() as { version: number } | undefined
+    expect(versionRow?.version).toBe(4)
+
+    const cols = db.conn.query("PRAGMA table_info('interviews')").all() as Array<{ name: string }>
+    const colNames = cols.map((c) => c.name)
+    expect(colNames).toContain('auto_score')
+
+    db.close()
+  })
+
+  // 2. Idempotent re-run: re-running after 0004 applies nothing.
+  it('idempotent re-run: re-running after 0004 applies zero migrations', () => {
+    const db = stageAllMigrations()
+    const runner = new MigrationRunner(db, migrationsDir)
+
+    expect(runner.run()).toEqual([1, 2, 3, 4])
+    expect(runner.run()).toEqual([])
+
+    const versions = db.conn
+      .query('SELECT version FROM _schema_version ORDER BY version')
+      .all() as Array<{ version: number }>
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4])
+
+    db.close()
+  })
+
+  // 3. Existing rows map to NULL: pre-0004 rows surface auto_score=NULL
+  // after the migration runs (SQLite's ALTER TABLE ADD COLUMN default).
+  it('existing interview rows map to auto_score = NULL after 0004', () => {
+    const db = stageMigrationsUpTo0003()
+    let runner = new MigrationRunner(db, migrationsDir)
+    runner.run()
+
+    // Seed a profile and an interview before applying 0004.
+    db.conn.query("INSERT INTO profiles (id, name) VALUES ('p1', 'Alice')").run()
+    db.conn
+      .query("INSERT INTO interviews (id, profile_id, target_role) VALUES ('i1', 'p1', 'SWE')")
+      .run()
+
+    const sql0004 = readFileSync(
+      join(srcMigrationsDir, '0004_add_interview_auto_score.sql'),
+      'utf8',
+    )
+    writeFileSync(join(migrationsDir, '0004_add_interview_auto_score.sql'), sql0004)
+    runner = new MigrationRunner(db, migrationsDir)
+    expect(runner.run()).toEqual([4])
+
+    const row = db.conn.query('SELECT auto_score FROM interviews WHERE id = ?').get('i1') as {
+      auto_score: number | null
+    }
+    expect(row.auto_score).toBeNull()
+
+    db.close()
+  })
+})

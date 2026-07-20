@@ -29,6 +29,10 @@ const MIGRATION_0002 = readFileSync(
   join(__dirname, '..', '..', 'db', 'migrations', '0002_add_interviews.sql'),
   'utf8',
 )
+const MIGRATION_0004 = readFileSync(
+  join(__dirname, '..', '..', 'db', 'migrations', '0004_add_interview_auto_score.sql'),
+  'utf8',
+)
 
 function stripAnsi(input: string): string {
   const ESC = String.fromCharCode(0x1b)
@@ -62,6 +66,19 @@ function makeDb(): Database {
   return db
 }
 
+/**
+ * Build an in-memory DB with the `auto_score` column present
+ * (migrations 0001 + 0002 + 0004). Used by T-25 — the autoScore
+ * report-render tests.
+ */
+function makeDbWithAutoScore(): Database {
+  const db = new Database(':memory:')
+  db.conn.exec(MIGRATION_0001)
+  db.conn.exec(MIGRATION_0002)
+  db.conn.exec(MIGRATION_0004)
+  return db
+}
+
 function seedConfig(dataDir: string, defaultProfile?: string, style = 'coaching'): void {
   const configService = new ConfigService(dataDir)
   configService.save({
@@ -83,6 +100,21 @@ interface Harness {
 function setupHarness(defaultProfile?: string, style = 'coaching'): Harness {
   const dataDir = mkdtempSync(join(tmpdir(), 'mi-interview-cmd-test-'))
   const db = makeDb()
+  seedConfig(dataDir, defaultProfile, style)
+  const configService = new ConfigService(dataDir)
+  const built = createInterviewService(db, configService)
+  const service = built as unknown as InterviewService & CliInterviewService
+  return { db, service, configService, dataDir }
+}
+
+/**
+ * Variant of `setupHarness` that runs the auto_score migration
+ * (0004) so the report render can surface an `自动评分:` line.
+ * Used by T-25.
+ */
+function setupHarnessWithAutoScore(defaultProfile?: string, style = 'coaching'): Harness {
+  const dataDir = mkdtempSync(join(tmpdir(), 'mi-interview-cmd-test-'))
+  const db = makeDbWithAutoScore()
   seedConfig(dataDir, defaultProfile, style)
   const configService = new ConfigService(dataDir)
   const built = createInterviewService(db, configService)
@@ -864,5 +896,142 @@ describe('mi interview report command (T-15)', () => {
         { service: harness.service, configService: harness.configService },
       ),
     ).toThrow(MiNotFoundError)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-25 — `mi interview report` renders 自动评分: NN.NN% line
+// ---------------------------------------------------------------------------
+
+describe('mi interview report autoScore line (T-25)', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarnessWithAutoScore()
+    insertProfile(harness.db, 'P1', 'Senior FE')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('renders 自动评分: 75.00% when autoScore = 0.75', () => {
+    saveDefaultProfile(harness)
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    harness.service.recordAnswer({
+      interviewId: started.id,
+      questionText: 'Q1',
+      answerText: 'A1',
+    })
+    harness.service.complete(started.id, {
+      技术深度: 8,
+      沟通表达: 7,
+      项目能力: 9,
+      系统思维: 7,
+      岗位匹配度: 8,
+    })
+    harness.service.recordAutoScore(started.id, 0.75)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['report', started.id],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('自动评分: 75.00%')
+  })
+
+  it('renders 自动评分: 50.00% when autoScore = 0.5', () => {
+    saveDefaultProfile(harness)
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    harness.service.complete(started.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    harness.service.recordAutoScore(started.id, 0.5)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['report', started.id],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+    const text = stripAnsi(output.join('\n'))
+    expect(text).toContain('自动评分: 50.00%')
+  })
+
+  it('OMITS the line when autoScore is null (no empty-history placeholder)', () => {
+    saveDefaultProfile(harness)
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    harness.service.complete(started.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    // No recordAutoScore call — column stays NULL.
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['report', started.id],
+        {},
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+    const text = stripAnsi(output.join('\n'))
+    expect(text).not.toContain('自动评分')
+    expect(text).not.toContain('本次面试暂无自动评分')
+    expect(text).not.toContain('autoScores')
+  })
+
+  it('--json mode retains the autoScore scalar in the report payload', () => {
+    saveDefaultProfile(harness)
+    const created = harness.service.create({
+      profileId: 'P1',
+      targetRole: 'FE',
+      interviewerStyle: 'coaching',
+    })
+    const started = harness.service.start(created.id)
+    harness.service.complete(started.id, {
+      技术深度: 7,
+      沟通表达: 7,
+      项目能力: 7,
+      系统思维: 7,
+      岗位匹配度: 7,
+    })
+    harness.service.recordAutoScore(started.id, 0.75)
+
+    const output = captureStdout(() =>
+      runInterviewCommand(
+        ['report', started.id],
+        { json: true },
+        { service: harness.service, configService: harness.configService },
+      ),
+    )
+    const parsed = JSON.parse(output.join('\n')) as { autoScore: number | null }
+    expect(parsed.autoScore).toBe(0.75)
   })
 })

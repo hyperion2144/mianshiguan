@@ -78,6 +78,7 @@ export interface Interview {
   startedAt: string | null
   completedAt: string | null
   pausedAt: string | null
+  autoScore: number | null
   createdAt: string
   updatedAt: string
 }
@@ -111,6 +112,7 @@ export interface InterviewReport {
   perDimensionAverages: ScoreMap | null
   durationSeconds: number | null
   isComplete: boolean
+  autoScore: number | null
 }
 
 /** Input for `service.create`. `interviewerStyle` defaults to `coaching`. */
@@ -149,10 +151,10 @@ interface InterviewRowRaw {
   started_at: string | null
   completed_at: string | null
   paused_at: string | null
+  auto_score: number | null
   created_at: string
   updated_at: string
 }
-
 /**
  * Snake-case row shape for `interview_answers`. Mirrors the SQL
  * columns; `rowToAnswer` maps it to the camelCase `InterviewAnswer`
@@ -337,7 +339,7 @@ export class InterviewService {
       )
       .get(profileId) as InterviewRowRaw | null
     return row ? rowToInterview(row) : null
-}
+  }
 
   /**
    * Transition an interview from `created` to `in_progress`. Sets
@@ -565,6 +567,7 @@ export class InterviewService {
       perDimensionAverages: aggregateScores,
       durationSeconds: computeDurationSeconds(session.startedAt, session.completedAt),
       isComplete: session.status === 'completed' || session.status === 'archived',
+      autoScore: session.autoScore,
     }
   }
 
@@ -596,6 +599,47 @@ export class InterviewService {
         .run(serialized, id)
     } catch (err) {
       throw new MiDatabaseError(toMessage(err, 'record score'))
+    }
+    return this.get(id)
+  }
+
+  /**
+   * Persist the auto-grader scalar pass-rate (last-write-wins) and
+   * refresh `updated_at`. There is NO interview-status gate —
+   * `created` / `in_progress` / `paused` / `completed` / `archived`
+   * are all writable. The single integration point for the auto
+   * grader. `recordAnswer` is never overloaded with auto-score
+   * semantics.
+   *
+   * Validates `id` (non-empty) and `passRate` (finite number in
+   * `[0, 1]` inclusive) BEFORE any write. Throws `MiNotFoundError`
+   * via `get(id)` when the id is unknown. Boundary values `0` and
+   * `1` are accepted.
+   */
+  recordAutoScore(id: string, passRate: number): Interview {
+    if (typeof id !== 'string' || id.length === 0) {
+      throw new MiValidationError('id 不能为空')
+    }
+    if (
+      typeof passRate !== 'number' ||
+      !Number.isFinite(passRate) ||
+      passRate < 0 ||
+      passRate > 1
+    ) {
+      throw new MiValidationError(`passRate 必须是 0-1 之间的有限数字, 当前值: ${String(passRate)}`)
+    }
+    // Existence check — throws MiNotFoundError on unknown id.
+    this.get(id)
+    try {
+      this.db.conn
+        .query(
+          `UPDATE interviews
+             SET auto_score = ?, updated_at = datetime('now')
+             WHERE id = ?`,
+        )
+        .run(passRate, id)
+    } catch (err) {
+      throw new MiDatabaseError(toMessage(err, 'record auto score'))
     }
     return this.get(id)
   }
@@ -691,6 +735,7 @@ function rowToInterview(row: InterviewRowRaw): Interview {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     pausedAt: row.paused_at,
+    autoScore: row.auto_score,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

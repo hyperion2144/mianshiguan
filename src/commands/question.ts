@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs'
 import type { CAC } from 'cac'
 import Table from 'cli-table3'
 import { Database } from '../db/Database.ts'
 import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
 import { ConfigService } from '../services/config-service.ts'
+import { type CodeRunner, normalizeLanguage } from '../services/code-runner.ts'
+import { createCodeRunner } from '../services/docker-runner.ts'
 import {
   LeetCodeApiClient,
   type LeetCodeScraper,
@@ -20,7 +23,6 @@ import {
   type QuestionService,
   createQuestionService,
 } from '../services/question-service.ts'
-
 export interface QuestionCommandOptions {
   dataDir?: string
   json?: boolean
@@ -29,6 +31,9 @@ export interface QuestionCommandOptions {
   category?: string
   tag?: string
   limit?: number | string
+  code?: string
+  language?: string
+  timeout?: number | string
 }
 
 export interface QuestionCommandDeps {
@@ -45,8 +50,18 @@ export interface QuestionCommandDeps {
    * `scrape` returns a canned `QuestionImportResult`.
    */
   niukeScraper?: Pick<NiukeScraper, 'scrape'>
+  /**
+   * Override the code runner for the `mi question run` subcommand.
+   * Production code lets the handler call `createCodeRunner()` from
+   * `../services/docker-runner.ts` when no runner is supplied; tests
+   * inject a `Pick<CodeRunner, 'run'>` so the suite stays hermetic
+   * (no real Docker daemon).
+   */
+  runner?: Pick<CodeRunner, 'run'>
 }
 
+const USAGE_RUN_MESSAGE =
+  '用法错误: mi question run <id> --code <file> --language <lang> [--timeout 30] [--json]'
 const SEARCH_LIST_HEADERS = ['ID', '来源', '来源ID', '标题', '难度', '分类', '标签'] as const
 const SHOW_HEADERS = ['字段', '值'] as const
 const VALID_DIFFICULTIES: readonly QuestionDifficulty[] = ['easy', 'medium', 'hard']
@@ -90,8 +105,8 @@ export function runCommandAction(action: () => void | Promise<void>): void | Pro
 
 export function registerQuestionCommand(program: CAC): void {
   program
-    .command('question [...args]', '题库管理：搜索 / 列表 / 详情 / 导入 / 抓取')
-    .usage('question <search|list|show|import|fetch> ...')
+    .command('question [...args]', '题库管理：搜索 / 列表 / 详情 / 导入 / 抓取 / 评测')
+    .usage('question <search|list|show|import|fetch|run> ...')
     .option('--json', '以 JSON 格式输出', { default: false })
     .option('--data-dir <path>', '自定义数据目录（覆盖 $MIANSHIGUAN_HOME）')
     .option('--source <source>', '按来源过滤（search/list）')
@@ -99,17 +114,20 @@ export function registerQuestionCommand(program: CAC): void {
     .option('--category <name>', '按分类过滤（algorithm|system-design|behavioral）')
     .option('--tag <tag>', '按标签过滤（search/list）')
     .option('--limit <n>', '最大抓取数量')
+    .option('--code <file>', '源代码文件路径（用于 `run` 子命令）')
+    .option('--language <lang>', '语言（js|ts|py|javascript|typescript|python，用于 `run` 子命令）')
+    .option('--timeout <n>', '执行超时秒数（1-600，用于 `run` 子命令）')
     .example('mi question search "two sum"')
     .example('mi question list --source leetcode --difficulty easy')
     .example('mi question show 01HQUESTION --json')
     .example('mi question import questions.json')
     .example('mi question fetch leetcode --limit 100')
     .example('mi question fetch niuke --limit 100')
+    .example('mi question run 01HQUESTION --code /tmp/sol.py --language py')
     .action((args: string[] | undefined, options: QuestionCommandOptions) =>
       runCommandAction(() => runQuestionCommand(args ?? [], options)),
     )
 }
-
 export function runQuestionCommand(
   args: string[],
   options: QuestionCommandOptions = {},
@@ -161,6 +179,21 @@ export function runQuestionCommand(
         ownedDb = null
         return task.finally(() => fetchDb?.close())
       }
+      case 'run': {
+        // Validate args synchronously so the caller sees a sync
+        // MiValidationError (per CE-12). T-22 expects a sync throw
+        // for missing --code / --language / positional id.
+        if ((args[1] ?? '').trim().length === 0) {
+          throw new MiValidationError(USAGE_RUN_MESSAGE)
+        }
+        if ((options.code ?? '').trim().length === 0) {
+          throw new MiValidationError(USAGE_RUN_MESSAGE)
+        }
+        if ((options.language ?? '').trim().length === 0) {
+          throw new MiValidationError(USAGE_RUN_MESSAGE)
+        }
+        return runQuestion(service, args, options, deps)
+      }
       case undefined:
         throw new MiValidationError(USAGE_SEARCH_MESSAGE)
       default:
@@ -171,6 +204,55 @@ export function runQuestionCommand(
   }
 }
 
+// ---------------------------------------------------------------------------
+
+async function runQuestion(
+  service: QuestionService,
+  args: string[],
+  options: QuestionCommandOptions,
+  deps: QuestionCommandDeps,
+): Promise<void> {
+  const id = (args[1] ?? '').trim()
+  const code = (options.code ?? '').trim()
+  const language = (options.language ?? '').trim()
+  if (id.length === 0 || code.length === 0 || language.length === 0) {
+    throw new MiValidationError(USAGE_RUN_MESSAGE)
+  }
+  // Production path: wire createCodeRunner() once when the test seam
+  // is empty. Tests inject `deps.runner` and never hit the factory.
+  const runner = deps.runner ?? createCodeRunner()
+  const source = readFileSync(code, 'utf8')
+  const question = service.get(id)
+  const canonicalLanguage = normalizeLanguage(language)
+  const timeout = parseRunTimeout(options.timeout)
+  const result = await runner.run({
+    source,
+    language: canonicalLanguage,
+    testCases: question.testCases,
+    ...(timeout === undefined ? {} : { timeoutSeconds: timeout }),
+  })
+  if (options.json) {
+    console.log(
+      JSON.stringify(
+        {
+          questionId: id,
+          language: result.language,
+          totalTests: result.totalTests,
+          passedTests: result.passedTests,
+          passRate: result.passRate,
+          totalDurationMs: result.totalDurationMs,
+          perTest: result.perTest,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+  console.log(
+    `运行 ${id} (${result.language}): 通过 ${result.passedTests}/${result.totalTests} (${(result.passRate * 100).toFixed(2)}%)`,
+  )
+}
 // ---------------------------------------------------------------------------
 // Subcommand handlers
 // ---------------------------------------------------------------------------
@@ -288,6 +370,15 @@ function parseFetchLimit(value: number | string | undefined): number {
   const parsed = typeof value === 'number' ? value : Number(value)
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new MiValidationError(`--limit 必须是正整数, 当前值: ${value}`)
+  }
+  return parsed
+}
+
+function parseRunTimeout(value: number | string | undefined): number | undefined {
+  if (value === undefined) return undefined
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 600) {
+    throw new MiValidationError(`--timeout 必须是 1-600 之间的整数, 当前值: ${value}`)
   }
   return parsed
 }

@@ -1,11 +1,11 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cac } from 'cac'
 import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Database } from '../db/Database.ts'
-import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
+import { MiConfigError, MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
 import {
   type Question,
   type QuestionFilters,
@@ -184,7 +184,11 @@ describe('mi question fetch command (T-12)', () => {
     const scraper = { scrape: vi.fn() }
 
     expect(() =>
-      runQuestionCommand(['fetch', 'leetcode'], { limit: 0 }, { service: harness.service, scraper }),
+      runQuestionCommand(
+        ['fetch', 'leetcode'],
+        { limit: 0 },
+        { service: harness.service, scraper },
+      ),
     ).toThrowError('--limit 必须是正整数, 当前值: 0')
   })
 
@@ -192,7 +196,11 @@ describe('mi question fetch command (T-12)', () => {
     const scraper = { scrape: vi.fn() }
 
     expect(() =>
-      runQuestionCommand(['fetch', 'leetcode'], { limit: -3 }, { service: harness.service, scraper }),
+      runQuestionCommand(
+        ['fetch', 'leetcode'],
+        { limit: -3 },
+        { service: harness.service, scraper },
+      ),
     ).toThrow(MiValidationError)
   })
 
@@ -627,7 +635,6 @@ describe('mi question error mapping (T-9)', () => {
     expect(stderr.join('\n')).toContain('查询题目失败')
   })
 
-
   it('maps a rejected scraper database error to exit code 2', async () => {
     const scraper = {
       scrape: vi
@@ -675,7 +682,6 @@ describe('mi question unknown subcommand (T-9)', () => {
     )
   })
 })
-
 
 // ---------------------------------------------------------------------------
 // Wave 2 — T-12..T-16 — `mi question fetch niuke` CLI integration (DS-3)
@@ -754,8 +760,8 @@ describe('mi question fetch niuke unsupported source (T-13)', () => {
 
     expect(scraper.scrape).toHaveBeenCalledTimes(1)
     expect(niukeScraper.scrape).not.toHaveBeenCalled()
+  })
 })
-
 describe('mi question fetch niuke summary (T-14)', () => {
   let harness: Harness
 
@@ -770,17 +776,11 @@ describe('mi question fetch niuke summary (T-14)', () => {
 
   it('prints the Chinese scrape summary with imported/skipped counts and new ids', async () => {
     const niukeScraper = {
-      scrape: vi
-        .fn()
-        .mockResolvedValue({ imported: 4, skipped: 1, ids: ['a', 'b', 'c', 'd'] }),
+      scrape: vi.fn().mockResolvedValue({ imported: 4, skipped: 1, ids: ['a', 'b', 'c', 'd'] }),
     }
 
     const output = await captureStdoutAsync(() =>
-      runQuestionCommand(
-        ['fetch', 'niuke'],
-        {},
-        { service: harness.service, niukeScraper },
-      ),
+      runQuestionCommand(['fetch', 'niuke'], {}, { service: harness.service, niukeScraper }),
     )
 
     const text = output.join('\n')
@@ -835,4 +835,350 @@ describe('registerQuestionCommand niuke help text (T-16)', () => {
     expect(registered?.examples).toContain('mi question fetch leetcode --limit 100')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Wave 2 — T-21..T-24 — `mi question run` subcommand integration (DS-3)
+// ---------------------------------------------------------------------------
+
+describe('registerQuestionCommand (T-21) — run subcommand options + help text', () => {
+  it('registers --code, --language, and --timeout on the question command', () => {
+    const program = cac('mi')
+    registerQuestionCommand(program)
+    const registered = program.commands.find((c) => c.name === 'question')
+
+    const optionNames = registered?.options.map((o) => o.name) ?? []
+    expect(optionNames).toContain('code')
+    expect(optionNames).toContain('language')
+    expect(optionNames).toContain('timeout')
+  })
+
+  it('preserves every pre-existing option alongside the new flags', () => {
+    const program = cac('mi')
+    registerQuestionCommand(program)
+    const registered = program.commands.find((c) => c.name === 'question')
+    const optionNames = registered?.options.map((o) => o.name) ?? []
+    const expected = ['json', 'dataDir', 'source', 'difficulty', 'category', 'tag', 'limit']
+    for (const flag of expected) {
+      expect(optionNames).toContain(flag)
+    }
+  })
+
+  it('usage text advertises the `run` subcommand', () => {
+    const program = cac('mi')
+    registerQuestionCommand(program)
+    const registered = program.commands.find((c) => c.name === 'question')
+    expect(registered?.usageText).toContain('run')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-22 — `mi question run` usage validation (USAGE_RUN_MESSAGE on missing args)
+// ---------------------------------------------------------------------------
+
+describe('mi question run command (T-22) — usage validation', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setupHarness()
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+  })
+
+  it('throws USAGE_RUN_MESSAGE when called as `run` with no args', () => {
+    const runner = { run: vi.fn() }
+    expect(() => runQuestionCommand(['run'], {}, { service: harness.service, runner })).toThrow(
+      MiValidationError,
+    )
+    expect(() => runQuestionCommand(['run'], {}, { service: harness.service, runner })).toThrow(
+      /用法错误: mi question run/,
+    )
+    expect(runner.run).not.toHaveBeenCalled()
+  })
+
+  it('throws USAGE_RUN_MESSAGE when missing --code and --language', () => {
+    const runner = { run: vi.fn() }
+    expect(() =>
+      runQuestionCommand(['run', 'q-1'], {}, { service: harness.service, runner }),
+    ).toThrow(/用法错误: mi question run/)
+    expect(runner.run).not.toHaveBeenCalled()
+  })
+
+  it('throws USAGE_RUN_MESSAGE when missing --language', () => {
+    const runner = { run: vi.fn() }
+    expect(() =>
+      runQuestionCommand(
+        ['run', 'q-1'],
+        { code: '/tmp/x.py' },
+        { service: harness.service, runner },
+      ),
+    ).toThrow(/用法错误: mi question run/)
+    expect(runner.run).not.toHaveBeenCalled()
+  })
+
+  it('throws USAGE_RUN_MESSAGE when --code is empty string', () => {
+    const runner = { run: vi.fn() }
+    expect(() =>
+      runQuestionCommand(
+        ['run', 'q-1'],
+        { code: '', language: 'python' },
+        { service: harness.service, runner },
+      ),
+    ).toThrow(/用法错误: mi question run/)
+    expect(runner.run).not.toHaveBeenCalled()
+  })
+
+  it('throws USAGE_RUN_MESSAGE when --language is empty string', () => {
+    const runner = { run: vi.fn() }
+    expect(() =>
+      runQuestionCommand(
+        ['run', 'q-1'],
+        { code: '/tmp/x.py', language: '' },
+        { service: harness.service, runner },
+      ),
+    ).toThrow(/用法错误: mi question run/)
+    expect(runner.run).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-23 — `mi question run` full integration: readFileSync, runner.run, render
+// ---------------------------------------------------------------------------
+
+describe('mi question run command (T-23) — full integration', () => {
+  let harness: Harness
+  let tmpDir: string
+  let sourcePath: string
+
+  beforeEach(() => {
+    harness = setupHarness()
+    tmpDir = mkdtempSync(join(tmpdir(), 'mi-question-run-cmd-test-'))
+    sourcePath = join(tmpDir, 'solution.py')
+    writeFileSync(sourcePath, 'print("hello")', 'utf8')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+  it('human mode prints a Chinese summary including 通过 N/M', async () => {
+    seed(harness.db, {
+      id: 'q-1',
+      source: 'leetcode',
+      sourceId: '1',
+      title: 'Two Sum',
+      content: 'Find two numbers',
+      difficulty: 'easy',
+      category: 'algorithm',
+      testCases: [{ input: '1', output: '1' }],
+    })
+    const runner = {
+      run: vi.fn().mockResolvedValue({
+        language: 'python',
+        totalTests: 2,
+        passedTests: 1,
+        passRate: 0.5,
+        totalDurationMs: 12,
+        perTest: [
+          {
+            index: 0,
+            status: 'passed',
+            passed: true,
+            actualOutput: '1',
+            expectedOutput: '1',
+            durationMs: 6,
+          },
+          {
+            index: 1,
+            status: 'failed',
+            passed: false,
+            actualOutput: '2',
+            expectedOutput: '4',
+            durationMs: 6,
+          },
+        ],
+      }),
+    }
+
+    const output = await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['run', 'q-1'],
+        { code: sourcePath, language: 'python' },
+        { service: harness.service, runner },
+      ),
+    )
+
+    const text = output.join('\n')
+    expect(text).toContain('通过 1/2')
+    expect(runner.run).toHaveBeenCalledTimes(1)
+  })
+
+  it('passes RAW question.testCases to runner.run (no double-normalization)', async () => {
+    const raw = [
+      { input: '1', output: '1' },
+      { input: '2', output: '4' },
+    ]
+    seed(harness.db, {
+      id: 'q-1',
+      source: 'leetcode',
+      sourceId: '1',
+      title: 'Two Sum',
+      content: 'Find two numbers',
+      difficulty: 'easy',
+      category: 'algorithm',
+      testCases: raw,
+    })
+    const runner = {
+      run: vi.fn().mockResolvedValue({
+        language: 'python',
+        totalTests: 1,
+        passedTests: 1,
+        passRate: 1,
+        totalDurationMs: 1,
+        perTest: [],
+      }),
+    }
+
+    await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['run', 'q-1'],
+        { code: sourcePath, language: 'python' },
+        { service: harness.service, runner },
+      ),
+    )
+
+    expect(runner.run).toHaveBeenCalledTimes(1)
+    const calls = (runner.run as { mock: { calls: unknown[][] } }).mock.calls
+    const callArg = calls[0]?.[0] as { testCases: unknown[]; language: string } | undefined
+    expect(callArg?.testCases).toEqual(raw)
+    expect(callArg?.language).toBe('python')
+  })
+
+  it('--json mode prints a single parseable JSON object with documented keys', async () => {
+    seed(harness.db, {
+      id: 'q-1',
+      source: 'leetcode',
+      sourceId: '1',
+      title: 'Two Sum',
+      content: 'Find two numbers',
+      difficulty: 'easy',
+      category: 'algorithm',
+      testCases: [{ input: '1', output: '1' }],
+    })
+    const runner = {
+      run: vi.fn().mockResolvedValue({
+        language: 'python',
+        totalTests: 2,
+        passedTests: 1,
+        passRate: 0.5,
+        totalDurationMs: 12,
+        perTest: [
+          {
+            index: 0,
+            status: 'passed',
+            passed: true,
+            actualOutput: '1',
+            expectedOutput: '1',
+            durationMs: 6,
+          },
+        ],
+      }),
+    }
+
+    const output = await captureStdoutAsync(() =>
+      runQuestionCommand(
+        ['run', 'q-1'],
+        { code: sourcePath, language: 'python', json: true },
+        { service: harness.service, runner },
+      ),
+    )
+
+    const text = output.join('\n')
+    const parsed = JSON.parse(text) as Record<string, unknown>
+    expect(parsed.questionId).toBe('q-1')
+    expect(parsed.language).toBe('python')
+    expect(parsed.totalTests).toBe(2)
+    expect(parsed.passedTests).toBe(1)
+    expect(parsed.passRate).toBe(0.5)
+    expect(parsed.totalDurationMs).toBe(12)
+    expect(Array.isArray(parsed.perTest)).toBe(true)
+    // Persistence-inert: no autoScore / attachedTo / autoScores fields
+    expect('autoScore' in parsed).toBe(false)
+    expect('attachedTo' in parsed).toBe(false)
+    expect('autoScores' in parsed).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// T-24 — `mi question run` propagates MiConfigError(DOCKER_NOT_INSTALLED_MESSAGE)
+// ---------------------------------------------------------------------------
+
+describe('mi question run command (T-24) — MiConfigError propagation', () => {
+  let harness: Harness
+  let tmpDir: string
+  let sourcePath: string
+
+  beforeEach(() => {
+    harness = setupHarness()
+    tmpDir = mkdtempSync(join(tmpdir(), 'mi-question-run-cmd-test-'))
+    sourcePath = join(tmpDir, 'solution.py')
+    writeFileSync(sourcePath, 'print("hello")', 'utf8')
+  })
+
+  afterEach(() => {
+    harness.db.close()
+    rmSync(harness.dataDir, { recursive: true, force: true })
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('process.exit(1) is called when the runner throws MiConfigError(DOCKER_NOT_INSTALLED_MESSAGE)', async () => {
+    seed(harness.db, {
+      id: 'q-1',
+      source: 'leetcode',
+      sourceId: '1',
+      title: 'Two Sum',
+      content: 'Find two numbers',
+      difficulty: 'easy',
+      category: 'algorithm',
+      testCases: [{ input: '1', output: '1' }],
+    })
+    const runner = {
+      run: vi
+        .fn()
+        .mockRejectedValue(
+          new MiConfigError('请先安装 Docker (https://www.docker.com/get-started)'),
+        ),
+    }
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
+    const stderrLines: string[] = []
+    const originalError = console.error
+    console.error = (message?: unknown) => {
+      stderrLines.push(String(message ?? ''))
+    }
+    const stdoutLines: string[] = []
+    const originalLog = console.log
+    console.log = (message?: unknown) => {
+      stdoutLines.push(String(message ?? ''))
+    }
+    try {
+      await runCommandAction(() =>
+        runQuestionCommand(
+          ['run', 'q-1'],
+          { code: sourcePath, language: 'python' },
+          { service: harness.service, runner },
+        ),
+      )
+      expect(exitSpy).toHaveBeenCalledWith(1)
+      const stderrText = stderrLines.join('\n')
+      expect(stderrText).toContain('请先安装 Docker')
+      expect(stdoutLines.join('\n')).not.toContain('通过')
+    } finally {
+      exitSpy.mockRestore()
+      console.error = originalError
+      console.log = originalLog
+    }
+  })
 })
