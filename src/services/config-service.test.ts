@@ -1,4 +1,12 @@
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -87,7 +95,7 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
       expect(msg).toMatch(/questionSource 必须是 agent-first \/ bank-first \/ mixed/)
       expect(msg).toContain('bogus')
     })
-   })
+  })
 
   describe('save()', () => {
     it('writes config.yml atomically (tmp file is replaced)', () => {
@@ -184,7 +192,7 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
         expect(cfg.questionSource).toBe(value)
       })
     }
-   })
+  })
 
   describe('loadOrInit()', () => {
     it('creates config.yml with defaults when missing; returns the Config', () => {
@@ -204,7 +212,7 @@ describe('ConfigService — YAML read/write/atomic/enum validation', () => {
       const written = readFileSync(join(tmpDir, 'config.yml'), 'utf8')
       expect(written).toContain('questionSource: mixed')
     })
-   })
+  })
 
   describe('resolveDataDir()', () => {
     it('explicit argument wins over env and default', () => {

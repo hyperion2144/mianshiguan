@@ -94,8 +94,16 @@ const DUPLICATE_NAME_MESSAGE = (name: string) => `name 已存在: ${name}`
 function rowToProfile(row: ProfileRowRaw): Profile {
   let skills: string[] = []
   let targetCompanies: string[] = []
-  try { skills = JSON.parse(row.skills) as string[] } catch { /* corrupted data */ }
-  try { targetCompanies = JSON.parse(row.target_companies) as string[] } catch { /* corrupted data */ }
+  try {
+    skills = JSON.parse(row.skills) as string[]
+  } catch {
+    /* corrupted data */
+  }
+  try {
+    targetCompanies = JSON.parse(row.target_companies) as string[]
+  } catch {
+    /* corrupted data */
+  }
   return {
     id: row.id,
     name: row.name,

@@ -14,16 +14,16 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { MiValidationError } from '../errors.ts'
 import {
+  type CodeExecutionResult,
   CodeRunner,
   DEFAULT_TIMEOUT_SECONDS,
   DOCKER_NOT_INSTALLED_MESSAGE,
   DOCKER_TIMEOUT_MESSAGE_PREFIX,
-  MAX_TIMEOUT_SECONDS,
-  MIN_TIMEOUT_SECONDS,
-  type CodeExecutionResult,
   type DockerAvailabilityProbe,
   type DockerExecutor,
   type DockerExecutorResult,
+  MAX_TIMEOUT_SECONDS,
+  MIN_TIMEOUT_SECONDS,
   type RunCodeInput,
   normalizeLanguage,
   normalizeTestCases,

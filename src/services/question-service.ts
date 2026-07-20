@@ -3,11 +3,8 @@ import { extname } from 'node:path'
 import yaml from 'js-yaml'
 import { ulid } from 'ulid'
 
-import { Database } from '../db/Database.ts'
-import type {
-  QuestionCategory,
-  QuestionDifficulty,
-} from '../db/schema.ts'
+import type { Database } from '../db/Database.ts'
+import type { QuestionCategory, QuestionDifficulty } from '../db/schema.ts'
 import { MiDatabaseError, MiNotFoundError, MiValidationError } from '../errors.ts'
 
 export type { QuestionCategory, QuestionDifficulty } from '../db/schema.ts'
@@ -281,7 +278,6 @@ function decodeAndValidateImportFile(filePath: string): NormalizedQuestionImport
   return parsed.map((record, index) => normalizeImportRecord(record, index))
 }
 
-
 function sourceIdentityKey(source: string, sourceId: string): string {
   return JSON.stringify([source, sourceId])
 }
@@ -307,7 +303,9 @@ export class QuestionService {
     const params: string[] = []
 
     if (keyword !== undefined) {
-      conditions.push('(instr(lower(q.title), lower(?)) > 0 OR instr(lower(q.content), lower(?)) > 0)')
+      conditions.push(
+        '(instr(lower(q.title), lower(?)) > 0 OR instr(lower(q.content), lower(?)) > 0)',
+      )
       params.push(keyword, keyword)
     }
     if (filters?.source !== undefined) {
@@ -384,7 +382,9 @@ export class QuestionService {
     }
     let row: QuestionRowRaw | null
     try {
-      row = this.db.conn.query('SELECT * FROM questions WHERE id = ?').get(id) as QuestionRowRaw | null
+      row = this.db.conn
+        .query('SELECT * FROM questions WHERE id = ?')
+        .get(id) as QuestionRowRaw | null
     } catch (err) {
       throw new MiDatabaseError(databaseErrorMessage(err, '查询题目详情'))
     }
@@ -397,7 +397,6 @@ export class QuestionService {
     }
     return question
   }
-
 
   importFile(filePath: string): QuestionImportResult {
     const records = decodeAndValidateImportFile(filePath)
@@ -475,7 +474,6 @@ export class QuestionService {
     })
     return persist()
   }
-
 }
 
 export function createQuestionService(db: Database): QuestionService {

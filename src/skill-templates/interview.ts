@@ -1,4 +1,3 @@
-
 import { MiValidationError } from '../errors.ts'
 /**
  * Skill template renderer for the mianshiguan mock-interview CLI.
@@ -18,7 +17,6 @@ export type InterviewerStyle = (typeof VALID_STYLES)[number]
 
 export const VALID_QUESTION_SOURCES = ['agent-first', 'bank-first', 'mixed'] as const
 export type QuestionSource = (typeof VALID_QUESTION_SOURCES)[number]
-
 
 export const DEFAULT_DIMENSIONS = [
   '技术深度',
@@ -45,7 +43,6 @@ export interface InterviewSkillConfig {
   dimensions?: readonly string[]
   defaultProfile?: string
   targetRole?: string
-
 }
 
 /**
@@ -72,27 +69,14 @@ export function validateConfig(
     | null
     | undefined,
 ): void {
-  if (
-    typeof config !== 'object' ||
-    config === null ||
-    typeof config.platform !== 'string'
-  ) {
-    throw new MiValidationError(
-      '无效的平台: 缺失 (合法: omp, claude-code, opencode)',
-    )
+  if (typeof config !== 'object' || config === null || typeof config.platform !== 'string') {
+    throw new MiValidationError('无效的平台: 缺失 (合法: omp, claude-code, opencode)')
   }
   if (!VALID_PLATFORMS.includes(config.platform as Platform)) {
-    throw new MiValidationError(
-      `无效的平台: ${config.platform} (合法: omp, claude-code, opencode)`,
-    )
+    throw new MiValidationError(`无效的平台: ${config.platform} (合法: omp, claude-code, opencode)`)
   }
-  if (
-    typeof config.interviewerStyle !== 'string' ||
-    config.interviewerStyle === undefined
-  ) {
-    throw new MiValidationError(
-      '无效的面试官风格: 缺失 (合法: strict, coaching, friendly)',
-    )
+  if (typeof config.interviewerStyle !== 'string' || config.interviewerStyle === undefined) {
+    throw new MiValidationError('无效的面试官风格: 缺失 (合法: strict, coaching, friendly)')
   }
   if (!VALID_STYLES.includes(config.interviewerStyle as InterviewerStyle)) {
     throw new MiValidationError(
@@ -318,7 +302,7 @@ export function wrapForClaudeCode(body: string): string {
  */
 export function wrapForOpencode(body: string): string {
   const promptLines = body
-  .split('\n')
+    .split('\n')
     .map((line) => (line.length === 0 ? line : `  ${line}`))
     .join('\n')
 
@@ -365,5 +349,3 @@ export function renderInterviewSkill(config: InterviewSkillConfig): string {
 // Re-export so external callers can `import { MiValidationError } from
 // '../skill-templates/interview.ts'` without reaching into src/errors.ts.
 export { MiValidationError }
-
-

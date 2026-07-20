@@ -1,7 +1,7 @@
 // niuke-scraper.ts — DS-2 (T-6..T-11: NiukeScraper + mapNiukeListEntry + mapNiukeDetailToImportRecord).
 import { MiDatabaseError, MiError, MiNotFoundError, MiValidationError } from '../errors.ts'
 
-import { type BrowserHandle, type NiukeBrowser, type PageHandle } from './niuke-browser.ts'
+import type { BrowserHandle, NiukeBrowser, PageHandle } from './niuke-browser.ts'
 import type {
   QuestionCategory,
   QuestionImportRecord,
@@ -102,14 +102,8 @@ export function mapNiukeListEntry(raw: NiukeQuestionListEntry): NiukeQuestionLis
  * - `difficulty` defaults to `'medium'` when upstream does not provide one.
  * - `tags` combine company names, positions, and knowledge points (deduped).
  */
-export function mapNiukeDetailToImportRecord(
-  detail: NiukeQuestionDetail,
-): QuestionImportRecord {
-  const tags = dedupeStrings([
-    ...detail.company,
-    ...detail.position,
-    ...detail.knowledgePoints,
-  ])
+export function mapNiukeDetailToImportRecord(detail: NiukeQuestionDetail): QuestionImportRecord {
+  const tags = dedupeStrings([...detail.company, ...detail.position, ...detail.knowledgePoints])
   return {
     source: 'niuke',
     sourceId: detail.id,
@@ -133,7 +127,10 @@ export class NiukeScraper {
   private readonly detailBaseUrl: string
   private readonly delayMs: number
   private readonly sleep: (ms: number) => Promise<void>
-  private readonly fetchList: (page: PageHandle, listUrl: string) => Promise<NiukeQuestionListEntry[]>
+  private readonly fetchList: (
+    page: PageHandle,
+    listUrl: string,
+  ) => Promise<NiukeQuestionListEntry[]>
   private readonly fetchDetail: (
     page: PageHandle,
     entry: NiukeQuestionListEntry,
@@ -219,7 +216,10 @@ export class NiukeScraper {
     listUrl: string,
   ): Promise<NiukeQuestionListEntry[]> {
     await this.navigateToListPage(page, listUrl)
-    const raw = (await page.evaluate(defaultExtractListFn)) as NiukeQuestionListEntry[] | null | undefined
+    const raw = (await page.evaluate(defaultExtractListFn)) as
+      | NiukeQuestionListEntry[]
+      | null
+      | undefined
     return Array.isArray(raw) ? raw : []
   }
 
@@ -356,9 +356,10 @@ function defaultExtractDetailFn(): Partial<NiukeQuestionDetail> {
   const root = document.querySelector('.question-detail')
   const content = root?.querySelector('.content')?.textContent?.trim() ?? ''
   const referenceAnswer = root?.querySelector('.reference-answer')?.textContent?.trim() ?? ''
-  const knowledgePoints = Array.from(root?.querySelectorAll('.knowledge-point') ?? []).map((node) =>
-    // @ts-expect-error -- browser-only DOM access; runs in the Playwright page context.
-    node.textContent?.trim() ?? '',
+  const knowledgePoints = Array.from(root?.querySelectorAll('.knowledge-point') ?? []).map(
+    (node) =>
+      // @ts-expect-error -- browser-only DOM access; runs in the Playwright page context.
+      node.textContent?.trim() ?? '',
   )
   return { content, referenceAnswer, knowledgePoints }
 }

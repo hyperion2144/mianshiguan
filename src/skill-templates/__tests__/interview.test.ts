@@ -143,9 +143,9 @@ describe('validateConfig (T-2)', () => {
   })
 
   it('rejects null input without leaking a TypeError', () => {
-    expect(() =>
-      validateConfig(null as unknown as Parameters<typeof validateConfig>[0]),
-    ).toThrow(MiValidationError)
+    expect(() => validateConfig(null as unknown as Parameters<typeof validateConfig>[0])).toThrow(
+      MiValidationError,
+    )
     expect(() =>
       validateConfig(null as unknown as Parameters<typeof validateConfig>[0]),
     ).not.toThrow(TypeError)
@@ -215,12 +215,11 @@ describe('validateConfig questionSource (T-7)', () => {
   })
 
   it('rejects null input even when questionSource is also missing/null', () => {
-    expect(() =>
-      validateConfig(null as unknown as Parameters<typeof validateConfig>[0]),
-    ).toThrow(MiValidationError)
+    expect(() => validateConfig(null as unknown as Parameters<typeof validateConfig>[0])).toThrow(
+      MiValidationError,
+    )
   })
 })
-
 
 // ─── T-3: buildPromptBody — shared prompt body ──────────────────────────────
 
@@ -465,9 +464,6 @@ describe('buildPromptBody agent-first branch (T-9)', () => {
   })
 })
 
-
-
-
 // ─── T-10: buildPromptBody — questionSource 'bank-first' branch ─────────────
 
 describe('buildPromptBody bank-first branch (T-10)', () => {
@@ -488,7 +484,7 @@ describe('buildPromptBody bank-first branch (T-10)', () => {
     expect(body).toContain('题库没有合适的题目')
   })
 
-  it('directive copy mentions falling back to the agent\'s own knowledge', () => {
+  it("directive copy mentions falling back to the agent's own knowledge", () => {
     const body = buildPromptBody({ ...base, questionSource: 'bank-first' })
     expect(body).toContain('依赖你自己的知识')
   })
@@ -623,7 +619,6 @@ describe('questionSource mutual exclusivity and shared blocks (T-11)', () => {
     expect(bodies.mixed).toMatchSnapshot('questionSource=mixed')
   })
 })
-
 
 // ─── T-5: wrapForOmp + omp dispatch ─────────────────────────────────────────
 

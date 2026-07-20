@@ -6,9 +6,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Database } from '../../db/Database.ts'
+import { MiValidationError } from '../../errors.ts'
 import { ConfigService } from '../config-service.ts'
 import { type InterviewService, type ScoreMap, createInterviewService } from '../interview.ts'
-import { MiValidationError } from '../../errors.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)

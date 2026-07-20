@@ -8,9 +8,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MiDatabaseError } from '../errors.ts'
 import {
   type BrowserHandle,
+  NiukeBrowser,
   type PageGotoOptions,
   type PageHandle,
-  NiukeBrowser,
 } from './niuke-browser.ts'
 
 // Best-effort probe for an installed Chromium. CI without `bunx playwright install chromium`

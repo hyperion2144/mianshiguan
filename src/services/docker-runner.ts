@@ -113,11 +113,11 @@ export interface DockerProbeResult {
  */
 export class DockerProbe implements DockerAvailabilityProbe {
   private readonly _spawn: SpawnFn
- 
+
   constructor(spawn: SpawnFn = bunSpawn) {
     this._spawn = spawn
   }
- 
+
   async check(): Promise<DockerProbeResult> {
     try {
       const controller = new AbortController()

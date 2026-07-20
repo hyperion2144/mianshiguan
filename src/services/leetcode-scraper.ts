@@ -2,7 +2,11 @@
 // LeetCodeScraper + mapLeetCodeListEntry + mapLeetCodeDetailToImportRecord).
 import type { QuestionDifficulty } from '../db/schema.ts'
 import { MiDatabaseError, MiValidationError } from '../errors.ts'
-import type { QuestionImportRecord, QuestionImportResult, QuestionService } from './question-service.ts'
+import type {
+  QuestionImportRecord,
+  QuestionImportResult,
+  QuestionService,
+} from './question-service.ts'
 
 const DEFAULT_LEETCODE_GRAPHQL_ENDPOINT = 'https://leetcode.com/graphql'
 
@@ -112,16 +116,16 @@ export class LeetCodeApiClient {
     this.delayMs = options.delayMs ?? 0
   }
 
-  async fetchQuestionList(input: { limit: number; skip: number }): Promise<LeetCodeQuestionListPage | null> {
+  async fetchQuestionList(input: {
+    limit: number
+    skip: number
+  }): Promise<LeetCodeQuestionListPage | null> {
     const body = JSON.stringify({
       operationName: 'problemsetQuestionList',
       query: PROBLEMSET_LIST_QUERY,
       variables: { limit: input.limit, skip: input.skip },
     })
-    return this.executeGraphQL<LeetCodeQuestionListPage>(
-      body,
-      'problemsetQuestionList',
-    )
+    return this.executeGraphQL<LeetCodeQuestionListPage>(body, 'problemsetQuestionList')
   }
 
   async fetchQuestionDetail(titleSlug: string): Promise<LeetCodeQuestionDetail | null> {
@@ -284,9 +288,7 @@ export class LeetCodeScraper {
   }
 
   async scrape(options: LeetCodeScrapeOptions): Promise<QuestionImportResult> {
-    const existing = new Set(
-      this.service.list({ source: 'leetcode' }).map((q) => q.sourceId),
-    )
+    const existing = new Set(this.service.list({ source: 'leetcode' }).map((q) => q.sourceId))
 
     // Paginate until we have enough importable candidates (free + unseen) to honour
     // `options.limit`, OR until the upstream reports nothing left. Paid-only and

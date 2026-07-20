@@ -1,12 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Database } from '../db/Database.ts'
 import type { QuestionCategory, QuestionDifficulty } from '../db/schema.ts'
 import { MiNotFoundError, MiValidationError } from '../errors.ts'
-import { createQuestionService, type QuestionService } from './question-service.ts'
+import { type QuestionService, createQuestionService } from './question-service.ts'
 import type { QuestionImportRecord } from './question-service.ts'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -183,7 +183,10 @@ describe('QuestionService search and list', () => {
         'Use a broker with backpressure',
         'Discuss ordering and retries',
         JSON.stringify(['backpressure', 'ordering']),
-        JSON.stringify([{ input: 'a', output: 'b' }, { input: 'c', output: 'd' }]),
+        JSON.stringify([
+          { input: 'a', output: 'b' },
+          { input: 'c', output: 'd' },
+        ]),
         'q-detail',
       )
 
@@ -202,7 +205,10 @@ describe('QuestionService search and list', () => {
       referenceAnswer: 'Use a broker with backpressure',
       explanation: 'Discuss ordering and retries',
       knowledgePoints: ['backpressure', 'ordering'],
-      testCases: [{ input: 'a', output: 'b' }, { input: 'c', output: 'd' }],
+      testCases: [
+        { input: 'a', output: 'b' },
+        { input: 'c', output: 'd' },
+      ],
       createdAt: '2024-02-01T00:00:00Z',
       updatedAt: '2024-02-01T00:00:00Z',
     })
@@ -306,11 +312,13 @@ describe('QuestionService search and list', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'mi-question-invalid-'))
     const path = join(tempDir, 'invalid.json')
     const counts = (): Record<string, number> => ({
-      questions: (db.conn.query('SELECT COUNT(*) AS count FROM questions').get() as { count: number })
-        .count,
+      questions: (
+        db.conn.query('SELECT COUNT(*) AS count FROM questions').get() as { count: number }
+      ).count,
       tags: (db.conn.query('SELECT COUNT(*) AS count FROM tags').get() as { count: number }).count,
-      links: (db.conn.query('SELECT COUNT(*) AS count FROM question_tags').get() as { count: number })
-        .count,
+      links: (
+        db.conn.query('SELECT COUNT(*) AS count FROM question_tags').get() as { count: number }
+      ).count,
     })
     const before = counts()
     const valid = {
@@ -393,12 +401,12 @@ describe('QuestionService search and list', () => {
       expect(result.skipped).toBe(2)
       expect(result.ids).toHaveLength(1)
       expect(db.conn.query('SELECT COUNT(*) AS count FROM questions').get()).toEqual({ count: 6 })
-      expect(db.conn.query("SELECT COUNT(*) AS count FROM tags WHERE name = 'existing-only'").get()).toEqual(
-        { count: 0 },
-      )
-      expect(db.conn.query("SELECT COUNT(*) AS count FROM tags WHERE name = 'new-tag'").get()).toEqual(
-        { count: 1 },
-      )
+      expect(
+        db.conn.query("SELECT COUNT(*) AS count FROM tags WHERE name = 'existing-only'").get(),
+      ).toEqual({ count: 0 })
+      expect(
+        db.conn.query("SELECT COUNT(*) AS count FROM tags WHERE name = 'new-tag'").get(),
+      ).toEqual({ count: 1 })
       expect(
         db.conn
           .query("SELECT COUNT(*) AS count FROM question_tags WHERE question_id = 'q-early'")

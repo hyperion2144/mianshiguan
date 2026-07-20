@@ -4,13 +4,18 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Database } from '../db/Database.ts'
 import { MiDatabaseError, MiValidationError } from '../errors.ts'
-import { LeetCodeApiClient, LeetCodeScraper, mapLeetCodeDetailToImportRecord, mapLeetCodeListEntry } from './leetcode-scraper.ts'
+import {
+  LeetCodeApiClient,
+  LeetCodeScraper,
+  mapLeetCodeDetailToImportRecord,
+  mapLeetCodeListEntry,
+} from './leetcode-scraper.ts'
 import type {
   LeetCodeQuestionDetail,
   LeetCodeQuestionListEntry,
   LeetCodeQuestionListPage,
 } from './leetcode-scraper.ts'
-import { createQuestionService, type QuestionService } from './question-service.ts'
+import { type QuestionService, createQuestionService } from './question-service.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -123,7 +128,9 @@ describe('LeetCodeApiClient.fetchQuestionList (T-1)', () => {
     expect(calls).toHaveLength(1)
     expect(calls[0]?.url).toBe('https://leetcode.com/graphql')
     expect(calls[0]?.init.method).toBe('POST')
-    expect((calls[0]?.init.headers as Record<string, string>)['Content-Type']).toBe('application/json')
+    expect((calls[0]?.init.headers as Record<string, string>)['Content-Type']).toBe(
+      'application/json',
+    )
     const body = JSON.parse(String(calls[0]?.init.body)) as {
       operationName: string
       variables: Record<string, unknown>
@@ -140,7 +147,9 @@ describe('LeetCodeApiClient non-2xx mapping (T-2)', () => {
     )
     const client = new LeetCodeApiClient({ fetcher })
 
-    await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toBeInstanceOf(MiValidationError)
+    await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toBeInstanceOf(
+      MiValidationError,
+    )
     await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toMatchObject({
       code: 'E_VALIDATION',
       message: expect.stringContaining('LeetCode 请求失败'),
@@ -158,7 +167,9 @@ describe('LeetCodeApiClient transport and GraphQL error mapping (T-3)', () => {
     }) as unknown as typeof fetch
     const client = new LeetCodeApiClient({ fetcher })
 
-    await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toBeInstanceOf(MiDatabaseError)
+    await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toBeInstanceOf(
+      MiDatabaseError,
+    )
     await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toMatchObject({
       code: 'E_DATABASE',
       message: expect.stringContaining('网络异常'),
@@ -178,7 +189,9 @@ describe('LeetCodeApiClient transport and GraphQL error mapping (T-3)', () => {
     )
     const client = new LeetCodeApiClient({ fetcher })
 
-    await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toBeInstanceOf(MiDatabaseError)
+    await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toBeInstanceOf(
+      MiDatabaseError,
+    )
     await expect(client.fetchQuestionList({ limit: 100, skip: 0 })).rejects.toMatchObject({
       code: 'E_DATABASE',
       message: expect.stringContaining('Rate limit exceeded'),
@@ -262,7 +275,10 @@ describe('LeetCodeScraper.scrape (T-5)', () => {
         return makeDetail(Number.parseInt(idMatch[1] ?? '0', 10), slug)
       }),
     }
-    const scraper = new LeetCodeScraper({ client: stubClient as unknown as LeetCodeApiClient, service })
+    const scraper = new LeetCodeScraper({
+      client: stubClient as unknown as LeetCodeApiClient,
+      service,
+    })
 
     const result = await scraper.scrape({ limit: 120 })
 
@@ -318,7 +334,10 @@ describe('LeetCodeScraper.scrape skips existing sourceIds (T-6)', () => {
         return makeDetail(Number.parseInt(idMatch[1] ?? '0', 10), slug)
       }),
     }
-    const scraper = new LeetCodeScraper({ client: stubClient as unknown as LeetCodeApiClient, service })
+    const scraper = new LeetCodeScraper({
+      client: stubClient as unknown as LeetCodeApiClient,
+      service,
+    })
 
     const result = await scraper.scrape({ limit: 5 })
 
@@ -362,8 +381,16 @@ describe('LeetCodeScraper mapping helpers (T-7)', () => {
       { name: 'Hash Table', slug: 'hash-table' },
     ],
     codeSnippets: [
-      { lang: 'JavaScript', langSlug: 'javascript', code: 'var twoSum = function(nums, target) { ... }' },
-      { lang: 'Python', langSlug: 'python', code: 'class Solution:\n    def twoSum(self, nums, target): ...' },
+      {
+        lang: 'JavaScript',
+        langSlug: 'javascript',
+        code: 'var twoSum = function(nums, target) { ... }',
+      },
+      {
+        lang: 'Python',
+        langSlug: 'python',
+        code: 'class Solution:\n    def twoSum(self, nums, target): ...',
+      },
     ],
     hints: ['Try using a hash map.'],
     sampleTestCase: '[2,7,11,15]\n9',
@@ -448,7 +475,10 @@ describe('LeetCodeScraper.scrape filters paid-only entries (T-8)', () => {
         return null
       }),
     }
-    const scraper = new LeetCodeScraper({ client: stubClient as unknown as LeetCodeApiClient, service })
+    const scraper = new LeetCodeScraper({
+      client: stubClient as unknown as LeetCodeApiClient,
+      service,
+    })
 
     const result = await scraper.scrape({ limit: 10 })
 
@@ -482,7 +512,10 @@ describe('LeetCodeScraper.scrape surfaces client MiError (T-9)', () => {
         throw new MiDatabaseError('boom')
       }),
     }
-    const scraper = new LeetCodeScraper({ client: stubClient as unknown as LeetCodeApiClient, service })
+    const scraper = new LeetCodeScraper({
+      client: stubClient as unknown as LeetCodeApiClient,
+      service,
+    })
 
     await expect(scraper.scrape({ limit: 5 })).rejects.toBeInstanceOf(MiDatabaseError)
     await expect(scraper.scrape({ limit: 5 })).rejects.toMatchObject({
@@ -490,7 +523,9 @@ describe('LeetCodeScraper.scrape surfaces client MiError (T-9)', () => {
     })
     const stored = service.list({})
     expect(stored).toEqual([])
-    const rowCount = db.conn.query('SELECT COUNT(*) AS count FROM questions').get() as { count: number }
+    const rowCount = db.conn.query('SELECT COUNT(*) AS count FROM questions').get() as {
+      count: number
+    }
     expect(rowCount.count).toBe(0)
   })
 })
@@ -572,7 +607,10 @@ describe('LeetCodeScraper.scrape honors limit across mixed pages (limit semantic
         return makeDetail(id, slug)
       }),
     }
-    const scraper = new LeetCodeScraper({ client: stubClient as unknown as LeetCodeApiClient, service })
+    const scraper = new LeetCodeScraper({
+      client: stubClient as unknown as LeetCodeApiClient,
+      service,
+    })
 
     // limit=60 forces pagination past page 1: after page 1 there are only 48 importable
     // candidates (50 page entries - 1 paid - 1 existing); after page 2 there are 98.
@@ -594,7 +632,6 @@ describe('LeetCodeScraper.scrape honors limit across mixed pages (limit semantic
   })
 })
 
-
 describe('LeetCodeApiClient list query normalizes upstream totalNum (Q2)', () => {
   it('returns a page with a numeric total even when the upstream GraphQL response uses totalNum', async () => {
     const realEntry = {
@@ -614,10 +651,10 @@ describe('LeetCodeApiClient list query normalizes upstream totalNum (Q2)', () =>
       const pagePayload = aliasRequested
         ? { total: 3500, questions: [realEntry] }
         : { totalNum: 3500, questions: [realEntry] }
-      return new Response(
-        JSON.stringify({ data: { problemsetQuestionList: pagePayload } }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
-      )
+      return new Response(JSON.stringify({ data: { problemsetQuestionList: pagePayload } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
     })
     const client = new LeetCodeApiClient({ fetcher })
 
@@ -672,11 +709,12 @@ describe('LeetCodeApiClient honors injected sleep + delayMs (Q3)', () => {
 
   it('does not invoke the sleep hook when delayMs is 0', async () => {
     const sleep = vi.fn(async (_ms: number) => {})
-    const { fetcher } = createRecordingFetcher(() =>
-      new Response(stubListPayload(), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+    const { fetcher } = createRecordingFetcher(
+      () =>
+        new Response(stubListPayload(), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
     )
     const client = new LeetCodeApiClient({ fetcher, sleep, delayMs: 0 })
 
@@ -687,11 +725,12 @@ describe('LeetCodeApiClient honors injected sleep + delayMs (Q3)', () => {
 
   it('does not invoke the sleep hook when delayMs is omitted (defaults to 0)', async () => {
     const sleep = vi.fn(async (_ms: number) => {})
-    const { fetcher } = createRecordingFetcher(() =>
-      new Response(stubListPayload(), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+    const { fetcher } = createRecordingFetcher(
+      () =>
+        new Response(stubListPayload(), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
     )
     const client = new LeetCodeApiClient({ fetcher, sleep })
 

@@ -9,9 +9,9 @@ import { Database } from '../db/Database.ts'
 import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
 import {
   type BrowserHandle,
+  NiukeBrowser,
   type PageGotoOptions,
   type PageHandle,
-  NiukeBrowser,
 } from './niuke-browser.ts'
 import {
   type NiukeQuestionDetail,
@@ -20,7 +20,7 @@ import {
   mapNiukeDetailToImportRecord,
   mapNiukeListEntry,
 } from './niuke-scraper.ts'
-import { createQuestionService, type QuestionService } from './question-service.ts'
+import { type QuestionService, createQuestionService } from './question-service.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -75,7 +75,10 @@ class FakeBrowserHandle implements BrowserHandle {
   }
 }
 
-function makeEntry(id: string, type: NiukeQuestionListEntry['type'] = 'algorithm'): NiukeQuestionListEntry {
+function makeEntry(
+  id: string,
+  type: NiukeQuestionListEntry['type'] = 'algorithm',
+): NiukeQuestionListEntry {
   return {
     id,
     title: `Title ${id}`,
@@ -86,7 +89,10 @@ function makeEntry(id: string, type: NiukeQuestionListEntry['type'] = 'algorithm
   }
 }
 
-function makeDetail(id: string, type: NiukeQuestionListEntry['type'] = 'algorithm'): NiukeQuestionDetail {
+function makeDetail(
+  id: string,
+  type: NiukeQuestionListEntry['type'] = 'algorithm',
+): NiukeQuestionDetail {
   const base = makeEntry(id, type)
   return {
     ...base,
@@ -121,17 +127,24 @@ describe('mapNiukeListEntry validation and trimming (T-6)', () => {
     expect(mapNiukeListEntry(makeEntry('s1', 'system-design')).type).toBe('system-design')
     expect(mapNiukeListEntry(makeEntry('b1', 'behavioral')).type).toBe('behavioral')
     // Per design: unknown (e.g. raw upstream label) coerces to algorithm.
-    expect(mapNiukeListEntry({ ...makeEntry('u1'), type: 'unknown-type' as NiukeQuestionListEntry['type'] }).type).toBe(
-      'algorithm',
-    )
+    expect(
+      mapNiukeListEntry({
+        ...makeEntry('u1'),
+        type: 'unknown-type' as NiukeQuestionListEntry['type'],
+      }).type,
+    ).toBe('algorithm')
   })
 
   it('throws MiValidationError when id is empty after trim', () => {
-    expect(() => mapNiukeListEntry({ ...makeEntry('z'), id: '   ' })).toThrowError(MiValidationError)
+    expect(() => mapNiukeListEntry({ ...makeEntry('z'), id: '   ' })).toThrowError(
+      MiValidationError,
+    )
   })
 
   it('throws MiValidationError when title is empty after trim', () => {
-    expect(() => mapNiukeListEntry({ ...makeEntry('z'), title: '  ' })).toThrowError(MiValidationError)
+    expect(() => mapNiukeListEntry({ ...makeEntry('z'), title: '  ' })).toThrowError(
+      MiValidationError,
+    )
   })
 })
 
@@ -193,11 +206,7 @@ describe('NiukeScraper.scrape happy path (T-8)', () => {
 
   it('opens the list once, fetches each detail, and persists via QuestionService.importRecords', async () => {
     const page = new FakePage()
-    const listEntries: NiukeQuestionListEntry[] = [
-      makeEntry('a'),
-      makeEntry('b'),
-      makeEntry('c'),
-    ]
+    const listEntries: NiukeQuestionListEntry[] = [makeEntry('a'), makeEntry('b'), makeEntry('c')]
     for (const entry of listEntries) {
       page.detailByEntry.set(entry.id, makeDetail(entry.id))
     }
@@ -258,7 +267,17 @@ describe('NiukeScraper.scrape dedup (T-9)', () => {
            id, source, source_id, title, content, difficulty, category, created_at, updated_at
          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run('existing-a', 'niuke', 'a', 'A', 'content-a', 'medium', 'algorithm', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z')
+      .run(
+        'existing-a',
+        'niuke',
+        'a',
+        'A',
+        'content-a',
+        'medium',
+        'algorithm',
+        '2024-01-01T00:00:00Z',
+        '2024-01-01T00:00:00Z',
+      )
     db.conn
       .query(
         `INSERT INTO questions (

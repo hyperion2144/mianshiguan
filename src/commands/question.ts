@@ -4,8 +4,8 @@ import Table from 'cli-table3'
 import { Database } from '../db/Database.ts'
 import { MiDatabaseError, MiError, MiValidationError } from '../errors.ts'
 import { error as formatError, success } from '../output/colors.ts'
-import { ConfigService } from '../services/config-service.ts'
 import { type CodeRunner, normalizeLanguage } from '../services/code-runner.ts'
+import { ConfigService } from '../services/config-service.ts'
 import { createCodeRunner } from '../services/docker-runner.ts'
 import {
   LeetCodeApiClient,

@@ -6,7 +6,7 @@
  *   - T-14 — `BunDockerExecutor.run` uses `Bun.spawn` correctly
  *   - T-15 — `BunDockerExecutor.run` catches `ENOENT` from `Bun.spawn`
  */
-import { describe, expect, it, vi, type Mock } from 'vitest'
+import { type Mock, describe, expect, it, vi } from 'vitest'
 
 import { MiConfigError } from '../errors.ts'
 import {
@@ -20,11 +20,11 @@ import {
   DOCKER_IMAGE_NODE,
   DOCKER_IMAGE_PYTHON,
   DockerProbe,
-  SPAWN_OPTIONS_KEYS,
-  createCodeRunner,
   type DockerSpawnOptions,
   type DockerSpawnProcess,
+  SPAWN_OPTIONS_KEYS,
   type SpawnFn,
+  createCodeRunner,
 } from './docker-runner.ts'
 
 /**

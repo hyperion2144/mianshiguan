@@ -149,9 +149,7 @@ export class ConfigService {
         ? this.parseStyle(obj.interviewerStyle)
         : DEFAULT_CONFIG.interviewerStyle
     const questionSource: QuestionSource =
-      obj.questionSource !== undefined
-        ? this.parseQuestionSource(obj.questionSource)
-        : 'mixed'
+      obj.questionSource !== undefined ? this.parseQuestionSource(obj.questionSource) : 'mixed'
     const config: Config = {
       dataDir,
       dbPath,
