@@ -29,7 +29,8 @@
       },
       "style": {
         "useImportType": "error",
-        "useNodejsImportProtocol": "error"
+        "useNodejsImportProtocol": "error",
+        "noNonNullAssertion": "off"
       },
       "suspicious": {
         "noExplicitAny": "error"
