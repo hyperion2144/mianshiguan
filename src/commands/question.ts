@@ -221,7 +221,12 @@ async function runQuestion(
   // Production path: wire createCodeRunner() once when the test seam
   // is empty. Tests inject `deps.runner` and never hit the factory.
   const runner = deps.runner ?? createCodeRunner()
-  const source = readFileSync(code, 'utf8')
+  let source: string
+  try {
+    source = readFileSync(code, 'utf8')
+  } catch {
+    throw new MiValidationError(`代码文件不存在: ${code}`)
+  }
   const question = service.get(id)
   const canonicalLanguage = normalizeLanguage(language)
   const timeout = parseRunTimeout(options.timeout)

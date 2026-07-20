@@ -108,23 +108,39 @@ export interface DockerProbeResult {
  * (NEVER throws). The runner calls this exactly once per
  * `run` invocation, before any temp directory is staged (CE-7).
  *
- * T-12 ships a stub; T-14 lands the real implementation that uses
- * the injected spawn shim and never throws.
+ * Uses the injected spawn shim so tests can stub the docker
+ * binary without a real Docker daemon.
  */
 export class DockerProbe implements DockerAvailabilityProbe {
   private readonly _spawn: SpawnFn
-
+ 
   constructor(spawn: SpawnFn = bunSpawn) {
     this._spawn = spawn
   }
-
-  // eslint-disable-next-line @typescript-eslint/require-await
+ 
   async check(): Promise<DockerProbeResult> {
-    // T-12 stub — T-14 replaces with the real `docker --version`
-    // invocation. Reference `_spawn` so the field is "used" until
-    // T-14 lands.
-    void this._spawn
-    throw new Error('not implemented: DockerProbe.check')
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      try {
+        const proc = this._spawn(['docker', '--version'], {
+          stdin: 'pipe',
+          stdout: 'pipe',
+          stderr: 'pipe',
+          signal: controller.signal,
+          killSignal: 'SIGTERM',
+        })
+        proc.stdin?.end()
+        const stdout = await new Response(proc.stdout).text()
+        const version = stdout.trim()
+        if (version.length === 0) return { available: false }
+        return { available: true, version }
+      } finally {
+        clearTimeout(timeout)
+      }
+    } catch {
+      return { available: false }
+    }
   }
 }
 
