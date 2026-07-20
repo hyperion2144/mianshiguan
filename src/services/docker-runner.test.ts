@@ -140,8 +140,7 @@ describe('BunDockerExecutor.run (T-14 Bun.spawn contract)', () => {
     const executor = new BunDockerExecutor(spawn)
     const result = await executor.run(pythonReq)
     expect(calls).toHaveLength(1)
-    const call = calls[0]
-    if (!call) throw new Error('Expected call after length check')
+    const call = calls[0]!
     expect(call.argv.slice(0, 7)).toEqual([
       'docker',
       'run',
@@ -161,7 +160,7 @@ describe('BunDockerExecutor.run (T-14 Bun.spawn contract)', () => {
     const { spawn, calls } = installSpy()
     const executor = new BunDockerExecutor(spawn)
     await executor.run({ ...pythonReq, timeoutMs: 5000 })
-    const opts = calls[0]?.options
+    const opts = calls[0]!.options
     expect([...Object.keys(opts)].sort()).toEqual([
       'killSignal',
       'signal',
