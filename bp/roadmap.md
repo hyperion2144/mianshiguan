@@ -19,7 +19,7 @@
   - Change: listed under phase with [x] (done) or [ ] (pending)
 -->
 
-## Milestone: M1 - mianshiguan v1 [ACTIVE]
+## Milestone: M1 - mianshiguan v1 [COMPLETED]
 
 **Goal**: AI 面试教练 CLI — 求职者通过 mock 面试练习提升面试能力。Agent 出通用题 + 外部题库（LeetCode / 牛客网）混合出题，算法题自动评测
 **Status**: ACTIVE
@@ -71,19 +71,19 @@
  
  **Next**: All changes completed
  
-### Phase: P1.4 - Hybrid Interview & Launch [ACTIVE]
+### Phase: P1.4 - Hybrid Interview & Launch [COMPLETED]
  
  - **Goal**: Agent 主导的混合选题、算法题混合评估（测试用例 + Agent 评分）、文档、CI/CD、发布
  - **Spec domain**: interview, question-bank, cli
  - **Changes**: 5/5
- - **Status**: IN_PROGRESS
+ - **Status**: COMPLETED
  
  **Changes**:
  
  - [x] hybrid-question-source (archived 2026-07-19)
  - [x] code-execution-sandbox (archived 2026-07-20)
  - [x] auto-score-integration (archived 2026-07-20)
- - [-] release-prep (planned 2026-07-20)
+ - [x] release-prep (archived 2026-07-20)
  
 
 ---
@@ -92,4 +92,4 @@
 
 | Milestone | Phases | Changes | Status |
 |-----------|--------|---------|--------|
-| M1 - mianshiguan v1 | 3/4 | 9/9 | ACTIVE |
+| M1 - mianshiguan v1 | 4/4 | 14/14 | COMPLETED |
