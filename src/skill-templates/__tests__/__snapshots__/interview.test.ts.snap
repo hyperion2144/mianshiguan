@@ -21,6 +21,13 @@ exports[`questionSource mutual exclusivity and shared blocks (T-11) snapshot for
 - 默认依赖你自己的知识库出题
 - 仅当候选人明确要求某个领域、你的知识覆盖不足或评分需要参考答案时，才回退到本地题库，使用 \`mi question search <关键字>\` 检索题目
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 - 技术深度
 - 沟通表达
@@ -38,6 +45,7 @@ exports[`questionSource mutual exclusivity and shared blocks (T-11) snapshot for
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v0.1.0 -->"
 `;
@@ -63,6 +71,13 @@ exports[`questionSource mutual exclusivity and shared blocks (T-11) snapshot for
 - 优先从本地题库中选题，使用 \`mi question list\` 与 \`mi question search <关键字>\`
 - 仅当题库没有合适的题目时，才回退到依赖你自己的知识出题
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 - 技术深度
 - 沟通表达
@@ -80,6 +95,7 @@ exports[`questionSource mutual exclusivity and shared blocks (T-11) snapshot for
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v0.1.0 -->"
 `;
@@ -106,6 +122,13 @@ exports[`questionSource mutual exclusivity and shared blocks (T-11) snapshot for
 - 把握不准或候选人要求特定领域时，优先从题库中检索题目
 - 评分需要参考答案时，调用 \`mi question search <关键字>\` 找到标准答案
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 - 技术深度
 - 沟通表达
@@ -123,6 +146,7 @@ exports[`questionSource mutual exclusivity and shared blocks (T-11) snapshot for
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v0.1.0 -->"
 `;
@@ -161,6 +185,13 @@ platform: omp
 - 把握不准或候选人要求特定领域时，优先从题库中检索题目
 - 评分需要参考答案时，调用 \`mi question search <关键字>\` 找到标准答案
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 - 技术深度
 - 沟通表达
@@ -178,6 +209,7 @@ platform: omp
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v0.1.0 -->
 
@@ -214,6 +246,13 @@ version: 0.1.0
 - 把握不准或候选人要求特定领域时，优先从题库中检索题目
 - 评分需要参考答案时，调用 \`mi question search <关键字>\` 找到标准答案
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 - 技术深度
 - 沟通表达
@@ -231,6 +270,7 @@ version: 0.1.0
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v0.1.0 -->
 
@@ -269,6 +309,13 @@ prompt: |
   - 把握不准或候选人要求特定领域时，优先从题库中检索题目
   - 评分需要参考答案时，调用 \`mi question search <关键字>\` 找到标准答案
 
+  ## 代码执行与自动评分
+  - 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+  - 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+  - 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+  - 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+  - \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
   ## 评分维度（每题 1-10 整数评分）
   - 技术深度
   - 沟通表达
@@ -286,6 +333,7 @@ prompt: |
   - \`mi interview report\` — 生成最终面试报告
   - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
   - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+  - \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
   <!-- mianshiguan:interview v0.1.0 -->
 
@@ -326,6 +374,13 @@ platform: omp
 - 把握不准或候选人要求特定领域时，优先从题库中检索题目
 - 评分需要参考答案时，调用 \`mi question search <关键字>\` 找到标准答案
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 - 技术深度
 - 沟通表达
@@ -343,6 +398,7 @@ platform: omp
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v0.1.0 -->
 
@@ -383,6 +439,13 @@ platform: omp
 - 把握不准或候选人要求特定领域时，优先从题库中检索题目
 - 评分需要参考答案时，调用 \`mi question search <关键字>\` 找到标准答案
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 - 技术深度
 - 沟通表达
@@ -400,6 +463,7 @@ platform: omp
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v0.1.0 -->
 

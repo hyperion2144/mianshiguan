@@ -230,6 +230,13 @@ ${styleBlock}
 
 ${questionSourceBlock}
 
+## 代码执行与自动评分
+- 当候选人针对算法题或编程题给出代码时，使用 \`mi question run <id> --code <file> --language <lang>\` 在沙箱中执行候选人的代码，并使用题目的测试用例进行验证
+- 可选参数 \`--timeout <N>\` 用于覆盖默认执行超时（秒），\`--json\` 用于以机器可读 JSON 输出结果
+- 命令的 JSON 输出包含 \`passedTests\`（通过的用例数）、\`totalTests\`（总用例数）与 \`passRate\`（通过率，0-1 之间的浮点数），据此评估候选人的代码正确性
+- 执行完成后，使用 \`mi interview score\` 记录题目评分，并把 \`passRate\` 与测试结果一并写入 \`autoScore\` 字段
+- \`autoScore\` 会出现在最终的 \`mi interview report\` 中，与人工评分一起用于综合判断候选人的编码能力
+
 ## 评分维度（每题 1-10 整数评分）
 ${rubric}
 
@@ -243,6 +250,7 @@ ${rubric}
 - \`mi interview report\` — 生成最终面试报告
 - \`mi question search <关键字>\` — 在题库中按关键字检索题目（支持 --source / --difficulty / --category / --tag 过滤）
 - \`mi question list\` — 列出本地题库的题目（支持 --source / --difficulty / --category / --tag 过滤）
+- \`mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]\` — 在沙箱中执行候选人代码并返回测试结果（passedTests / totalTests / passRate）
 
 <!-- mianshiguan:interview v${MI_VERSION} -->`
 }

@@ -813,3 +813,81 @@ describe('golden file snapshots (T-8)', () => {
     expect(out).toContain('岗位匹配度')
   })
 })
+
+// ─── auto-score-integration T-3: 代码执行与自动评分 section ───────────────
+
+describe('buildPromptBody 代码执行与自动评分 section (auto-score T-3)', () => {
+  const base = {
+    platform: 'omp' as Platform,
+    interviewerStyle: 'coaching' as InterviewerStyle,
+    defaultProfile: 'P-frontend',
+    targetRole: 'Senior FE',
+  }
+
+  it('renders the `## 代码执行与自动评分` section header', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('## 代码执行与自动评分')
+  })
+
+  it('contains the canonical `mi question run <id> --code <file> --language <lang>` directive', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('mi question run <id> --code <file> --language <lang>')
+  })
+
+  it('mentions the JSON output fields passedTests / totalTests / passRate', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('passedTests')
+    expect(body).toContain('totalTests')
+    expect(body).toContain('passRate')
+  })
+
+  it('mentions autoScore and ties it to mi interview report', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('autoScore')
+    expect(body).toContain('mi interview report')
+  })
+
+  it('records autoScore via mi interview score directive', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain('mi interview score')
+  })
+
+  it('CLI reference block contains the full `mi question run` signature', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body).toContain(
+      'mi question run <id> --code <file> --language <lang> [--timeout <N>] [--json]',
+    )
+  })
+
+  it('code execution section appears in EVERY questionSource mode (shared block)', () => {
+    for (const questionSource of VALID_QUESTION_SOURCES) {
+      const body = buildPromptBody({ ...base, questionSource })
+      expect(body).toContain('## 代码执行与自动评分')
+      expect(body).toContain('mi question run')
+    }
+  })
+
+  it('code execution section appears regardless of interviewer style (shared block)', () => {
+    const styles: InterviewerStyle[] = ['strict', 'coaching', 'friendly']
+    for (const interviewerStyle of styles) {
+      const body = buildPromptBody({ ...base, interviewerStyle })
+      expect(body).toContain('## 代码执行与自动评分')
+      expect(body).toContain('mi question run')
+    }
+  })
+
+  it('code execution section sits between `## 题目来源` block and the scoring rubric', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    const codeIdx = body.indexOf('## 代码执行与自动评分')
+    const sourceIdx = body.indexOf('## 题目来源')
+    const rubricIdx = body.indexOf('## 评分维度')
+    expect(sourceIdx).toBeGreaterThanOrEqual(0)
+    expect(codeIdx).toBeGreaterThan(sourceIdx)
+    expect(rubricIdx).toBeGreaterThan(codeIdx)
+  })
+
+  it('rendered prompt stays under the 8 KB ceiling after the new section is added', () => {
+    const body = buildPromptBody({ ...base, questionSource: 'mixed' })
+    expect(body.length).toBeLessThanOrEqual(8 * 1024)
+  })
+})
