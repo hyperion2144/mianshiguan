@@ -262,4 +262,4 @@
 - [x] Every task in every wave is marked `[x]` with a commit hash (T-1..T-15 from Wave 1, T-16..T-25 from Wave 2; T-20 and T-21 were inferred and added by the executor to fill the gap in the original task list — both have full acceptance coverage and commit hashes)
 - [x] No `{{` template placeholders remaining in any artifact
 - [x] All wave acceptance criteria confirmed
-- [ ] Manual smoke against a real Docker daemon: `mi question run <id> --code /tmp/sol.py --language python --json` succeeds end-to-end (Docker installed, code staged, container spawned, JSON output parseable). Recorded as a checklist note, not a test. (PENDING — executor cannot exercise a real Docker daemon; deferred to the orchestrator's review cycle)
+ - [/] Manual smoke against a real Docker daemon: `mi question run <id> --code /tmp/sol.py --language python --json` succeeds end-to-end (Docker installed, code staged, container spawned, JSON output parseable). Recorded as a checklist note, not a test. (DEFERRED — requires Docker daemon, not runnable in this session)
